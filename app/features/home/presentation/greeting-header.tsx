@@ -5,7 +5,7 @@ import { useAuthStore } from "@/store/auth-store";
 
 export function GreetingHeader({ unreadCount = 0 }: { unreadCount?: number }) {
   const user = useAuthStore((s) => s.user);
-  const firstName = user?.fullName?.split(" ")[0] ?? "Player";
+  const firstName = user?.firstName ?? "Player";
   const initial = firstName.charAt(0).toUpperCase();
 
   return (

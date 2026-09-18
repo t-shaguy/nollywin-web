@@ -1,50 +1,80 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+// VERIFIED: Wallet only tracks tokenBalance. Points come from profile endpoint.
 interface WalletState {
-  tokens: number;
-  points: number;
+  tokenBalance: number;
+  isLoading: boolean;
   addTokens: (amount: number) => void;
   deductTokens: (amount: number) => boolean; // returns false if insufficient
-  addPoints: (amount: number) => void;
+  setBalance: (tokenBalance: number) => void;
+  setLoading: (loading: boolean) => void;
   resetWallet: () => void;
+  // Legacy getter for backward compatibility during migration
+  get tokens(): number;
 }
 
 export const useWalletStore = create<WalletState>()(
   persist(
     (set, get) => ({
-      // TODO: replace with GET /users/wallet once the backend is live.
-      tokens: 20, // Start with 20 tokens for testing
-      points: 1200, // Start with 1200 points (matching leaderboard rank 8)
+      // Initial balance - will be replaced by API call on mount/login
+      tokenBalance: 0,
+      isLoading: false,
+
+      // Legacy getter for backward compatibility
+      get tokens() {
+        return get().tokenBalance;
+      },
+
+      setBalance: (tokenBalance) =>
+        set({
+          tokenBalance,
+          isLoading: false,
+        }),
+
+      setLoading: (loading) =>
+        set({ isLoading: loading }),
 
       addTokens: (amount) =>
         set((state) => ({
-          tokens: state.tokens + amount,
+          tokenBalance: state.tokenBalance + amount,
         })),
 
       deductTokens: (amount) => {
-        const currentTokens = get().tokens;
-        if (currentTokens < amount) {
+        const currentBalance = get().tokenBalance;
+        if (currentBalance < amount) {
           return false; // Insufficient tokens
         }
-        set({ tokens: currentTokens - amount });
+        set({ tokenBalance: currentBalance - amount });
         return true; // Success
       },
 
-      addPoints: (amount) =>
-        set((state) => {
-          const newPoints = state.points + amount;
-          // TODO: When backend exists, POST /leaderboard/update-score
-          // For now, the leaderboard will update based on localStorage sync
-          return { points: newPoints };
-        }),
-
       resetWallet: () =>
         set({
-          tokens: 20,
-          points: 1200,
+          tokenBalance: 0,
+          isLoading: false,
         }),
     }),
     { name: "nollywin-wallet" }
   )
 );
+
+/**
+ * Fetch wallet balance from the API
+ * Call this on login or when the wallet needs to be refreshed
+ * 
+ * VERIFIED: GET /api/v1/wallet returns { authUserId, tokenBalance }
+ */
+export async function fetchWalletBalance() {
+  try {
+    const { getBalance } = await import("@/lib/api/wallet");
+    useWalletStore.getState().setLoading(true);
+    const balance = await getBalance();
+    useWalletStore.getState().setBalance(balance.tokenBalance);
+    return balance;
+  } catch (error) {
+    useWalletStore.getState().setLoading(false);
+    console.error("Failed to fetch wallet balance:", error);
+    throw error;
+  }
+}

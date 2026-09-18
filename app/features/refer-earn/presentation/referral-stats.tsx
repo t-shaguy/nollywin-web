@@ -1,15 +1,17 @@
 import { StatPill } from "@/components/ui/stat-pill";
 
+// VERIFIED: Backend returns totalReferred and verifiedReferred
 export function ReferralStats({
-  stats,
+  totalReferred,
+  verifiedReferred,
 }: {
-  stats: { totalInvited: number; totalJoined: number; totalEarned: number };
+  totalReferred: number;
+  verifiedReferred: number;
 }) {
   return (
     <div className="flex gap-3">
-      <StatPill label="Invited" value={stats.totalInvited} />
-      <StatPill label="Joined" value={stats.totalJoined} />
-      <StatPill label="Earned" value={`₦${stats.totalEarned.toLocaleString()}`} />
+      <StatPill label="Total Referred" value={totalReferred} />
+      <StatPill label="Verified" value={verifiedReferred} />
     </div>
   );
 }

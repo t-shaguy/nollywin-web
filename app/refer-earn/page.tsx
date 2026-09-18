@@ -1,24 +1,29 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AuthenticatedShell } from "@/components/layout/authenticated-shell";
-import { useReferralStore } from "@/store/referral-store";
+import { useReferralStore, fetchReferralData } from "@/store/referral-store";
+import { useWalletStore } from "@/store/wallet-store";
 import { InviteLinkCard } from "../features/refer-earn/presentation/invite-link-card";
 import { ShareRow } from "../features/refer-earn/presentation/share-row";
 import { ReferralStats } from "../features/refer-earn/presentation/referral-stats";
 
 export default function ReferEarnPage() {
-  const { code, stats, setReferral } = useReferralStore();
+  const { referralCode, referralLink, totalReferred, verifiedReferred, isLoading } = useReferralStore();
+  const { tokens } = useWalletStore();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // TODO: replace with GET /api/v1/referrals/me once the backend is live.
-    // Placeholder code + zeroed stats so the page renders meaningfully until then.
-    if (!code) {
-      setReferral("NW-DEMO123", { totalInvited: 0, totalJoined: 0, totalEarned: 0 });
+    // Fetch referral data on mount if not already loaded
+    if (!referralCode) {
+      fetchReferralData().catch((err) => {
+        console.error("Failed to fetch referral data:", err);
+        setError("Failed to load referral data. Please try again.");
+      });
     }
-  }, [code, setReferral]);
+  }, [referralCode]);
 
   return (
-    <AuthenticatedShell tokenBalance={0} unreadCount={0}>
+    <AuthenticatedShell tokenBalance={tokens} unreadCount={0}>
       <div className="max-w-2xl space-y-8">
         <div>
           <h1 className="text-2xl font-bold">Refer & Earn</h1>
@@ -27,11 +32,23 @@ export default function ReferEarnPage() {
           </p>
         </div>
 
-        {code && (
+        {isLoading && (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">Loading referral data...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+            <p className="text-destructive text-sm">{error}</p>
+          </div>
+        )}
+
+        {!isLoading && referralCode && (
           <>
-            <InviteLinkCard code={code} />
-            <ShareRow code={code} />
-            <ReferralStats stats={stats} />
+            <InviteLinkCard code={referralCode} link={referralLink} />
+            <ShareRow code={referralCode} link={referralLink} />
+            <ReferralStats totalReferred={totalReferred} verifiedReferred={verifiedReferred} />
           </>
         )}
       </div>

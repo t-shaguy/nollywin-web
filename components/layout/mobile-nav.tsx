@@ -15,7 +15,7 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
   const handleLogout = () => {
     logout();
     onClose();
-    router.push("/login");
+    router.push("/auth");
   };
 
   if (!open) return null;

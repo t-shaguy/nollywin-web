@@ -1,6 +1,7 @@
 "use client";
+import { useEffect } from "react";
 import { Trophy } from "lucide-react";
-import { useRaffleStore } from "@/store/raffle-store";
+import { useRaffleStore, fetchActiveDraws } from "@/store/raffle-store";
 
 // Scoped to what Home Dashboard needs (qualified / not yet qualified). The full raffle
 // status badge set (Won, Not Won, Pending Draw, Not Yet Drawn, Qualified, Entered) belongs
@@ -18,8 +19,23 @@ function QualificationBadge({ hasTickets }: { hasTickets: boolean }) {
 }
 
 export function ActiveRaffles() {
-  const { raffles, getUserTicketsForRaffle } = useRaffleStore();
-  const activeRaffles = raffles.filter((r) => r.status === "active");
+  const { raffles, isLoading } = useRaffleStore();
+  const activeRaffles = raffles.filter((r) => r.status === "ACTIVE");
+
+  useEffect(() => {
+    // Fetch active draws on mount
+    fetchActiveDraws().catch((err) => {
+      console.error("Failed to fetch active draws:", err);
+    });
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="bg-card border border-border rounded-2xl p-6 text-center text-sm text-muted-foreground">
+        Loading raffles...
+      </div>
+    );
+  }
 
   if (activeRaffles.length === 0) {
     return (
@@ -32,7 +48,7 @@ export function ActiveRaffles() {
   return (
     <div className="space-y-3">
       {activeRaffles.map((raffle) => {
-        const userTickets = getUserTicketsForRaffle(raffle.id);
+        const userTickets = raffle.userTicketCount || 0;
         
         return (
           <div key={raffle.id} className="bg-card border border-border rounded-2xl p-4 flex items-center gap-4">
@@ -42,7 +58,7 @@ export function ActiveRaffles() {
             <div className="flex-1 min-w-0">
               <p className="font-semibold truncate">{raffle.prizeName}</p>
               <p className="text-sm text-muted-foreground">
-                {raffle.costPerTicket.toLocaleString()} pts/ticket • Draws {raffle.drawDate}
+                {raffle.ticketCostTokens.toLocaleString()} tokens/ticket • {raffle.scheduleLabel}
               </p>
               {userTickets > 0 && (
                 <p className="text-xs text-primary mt-1">{userTickets} {userTickets === 1 ? "ticket" : "tickets"} owned</p>

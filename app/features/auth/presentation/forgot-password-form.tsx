@@ -3,9 +3,10 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { forgotPasswordSchema, ForgotPasswordInput } from "@/lib/validations/auth";
-import { simulateRequest } from "@/lib/api/simulate";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import * as authApi from "@/lib/api/auth";
+import type { ApiError } from "@/lib/api/client";
 
 export function ForgotPasswordForm() {
   const [sent, setSent] = useState(false);
@@ -15,21 +16,21 @@ export function ForgotPasswordForm() {
     resolver: zodResolver(forgotPasswordSchema),
   });
 
-  const onSubmit = async (_data: ForgotPasswordInput) => {
+  const onSubmit = async (data: ForgotPasswordInput) => {
     setError(null);
     try {
-      // TODO: swap back to apiClient("/auth/forgot-password", ...) once the backend exists.
-      await simulateRequest({ ok: true });
+      await authApi.forgotPassword({ email: data.email });
       setSent(true);
-    } catch {
-      setError("Something went wrong. Try again shortly.");
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError.message || "Something went wrong. Try again shortly.");
     }
   };
 
   if (sent) {
     return (
       <p className="text-center text-muted-foreground text-sm">
-        If an account exists for that email, a reset link is on its way. Check your inbox.
+        If an account exists for that email, a reset code is on its way. Check your inbox.
       </p>
     );
   }
@@ -45,7 +46,7 @@ export function ForgotPasswordForm() {
       {error && <p className="text-destructive text-sm">{error}</p>}
 
       <Button type="submit" disabled={isSubmitting} className="w-full justify-center">
-        {isSubmitting ? "Sending..." : "Send Reset Link"}
+        {isSubmitting ? "Sending..." : "Send Reset Code"}
       </Button>
     </form>
   );

@@ -21,7 +21,7 @@ export function SignOutButton() {
             <p className="text-muted-foreground text-sm mb-6">You&apos;ll need to log in again to access your account.</p>
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => setOpen(false)} className="flex-1 justify-center">Cancel</Button>
-              <Button onClick={() => { logout(); router.push("/login"); }} className="flex-1 justify-center">Sign Out</Button>
+              <Button onClick={() => { logout(); router.push("/auth"); }} className="flex-1 justify-center">Sign Out</Button>
             </div>
           </div>
         </div>

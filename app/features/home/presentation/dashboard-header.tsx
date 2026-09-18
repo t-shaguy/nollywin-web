@@ -12,7 +12,7 @@ export function DashboardHeader({
   tokenCost: number;
 }) {
   const user = useAuthStore((s) => s.user);
-  const firstName = user?.fullName?.split(" ")[0] ?? "Player";
+  const firstName = user?.firstName ?? "Player";
   const noAttemptsLeft = attemptsLeft <= 0;
 
   return (

@@ -1,17 +1,18 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
-import { simulateRequest } from "@/lib/api/simulate";
 import { useAuthStore } from "@/store/auth-store";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PasswordStrength } from "@/components/ui/password-strength";
 import { OtpInput } from "@/components/ui/otp-input";
 import { useCountdown } from "@/hooks/use-countdown";
+import * as authApi from "@/lib/api/auth";
+import type { ApiError } from "@/lib/api/client";
 
 type AuthMode = "login" | "signup";
 type AuthMethod = "phone" | "email";
@@ -25,6 +26,7 @@ const loginPhoneSchema = z.object({
 const loginEmailSchema = z.object({
   email: z.string().email("Enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  rememberMe: z.boolean().optional(),
 });
 
 const signupPhoneSchema = z.object({
@@ -32,9 +34,17 @@ const signupPhoneSchema = z.object({
 });
 
 const signupEmailSchema = z.object({
-  fullName: z.string().min(2, "Enter your full name"),
+  firstName: z.string().min(2, "Enter your first name"),
+  lastName: z.string().min(2, "Enter your last name"),
+  phoneNumber: z.string().min(10, "Enter a valid phone number"),
   email: z.string().email("Enter a valid email address"),
+  alias: z.string().min(2, "Enter your alias/username"),
+  referralCode: z.string().optional(),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string().min(8, "Confirm your password"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 type LoginPhoneInput = z.infer<typeof loginPhoneSchema>;
@@ -44,6 +54,14 @@ type SignupEmailInput = z.infer<typeof signupEmailSchema>;
 
 type FormData = LoginPhoneInput | LoginEmailInput | SignupPhoneInput | SignupEmailInput;
 
+// Helper: Convert local Nigerian phone format to international format
+function toInternationalPhone(input: string): string {
+  const digits = input.trim().replace(/\D/g, ""); // strip anything non-numeric
+  if (digits.startsWith("234")) return `+${digits}`;      // already has country code
+  if (digits.startsWith("0")) return `+234${digits.slice(1)}`; // strip leading 0, add +234
+  return `+234${digits}`; // no leading 0, just prepend
+}
+
 export function UnifiedAuthForm() {
   const [mode, setMode] = useState<AuthMode>("login");
   const [method, setMethod] = useState<AuthMethod>("phone");
@@ -51,7 +69,8 @@ export function UnifiedAuthForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [phoneNumber, setPhoneNumber] = useState<string>("");
-  const [otpDigits, setOtpDigits] = useState<string[]>(Array(4).fill(""));
+  const [emailForOtp, setEmailForOtp] = useState<string>("");
+  const [otpDigits, setOtpDigits] = useState<string[]>(Array(6).fill(""));
   const [otpError, setOtpError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const router = useRouter();
@@ -75,6 +94,25 @@ export function UnifiedAuthForm() {
   const { register, handleSubmit, watch, formState: { errors, isSubmitting }, reset: resetForm } = form;
   const passwordValue = watch("password") || "";
 
+  // WebOTP: auto-fill OTP from SMS where browser supports it
+  useEffect(() => {
+    if (step !== "otp") return; // Only active on OTP step
+    if (!("OTPCredential" in window)) return; // Check browser support
+    
+    const ac = new AbortController();
+    navigator.credentials
+      .get({ otp: { transport: ["sms"] }, signal: ac.signal } as CredentialRequestOptions)
+      .then((otp: Credential | null) => {
+        if (otp && "code" in otp) {
+          const code = (otp as { code: string }).code;
+          setOtpDigits(code.split(""));
+        }
+      })
+      .catch(() => {}); // Silently fail if not supported
+    
+    return () => ac.abort();
+  }, [step]);
+
   // Reset form when mode or method changes
   const handleModeChange = (newMode: AuthMode) => {
     setMode(newMode);
@@ -90,67 +128,94 @@ export function UnifiedAuthForm() {
     setServerError(null);
   };
 
-  const onSubmit = async (data: Record<string, string>) => {
+  const onSubmit = async (data: FormData) => {
     setServerError(null);
     try {
       if (mode === "login") {
         // Login flow
         if (method === "phone") {
-          // Login + Phone → OTP required
+          // Login + Phone → Request OTP
           const { phone } = data as LoginPhoneInput;
+          await authApi.requestPhoneOtp({ phoneNumber: toInternationalPhone(phone) });
           setPhoneNumber(phone);
-          await simulateRequest({ ok: true }, 800);
           setStep("otp");
           resetCountdown();
         } else {
-          // Login + Email → Direct to /home
-          const { email } = data as LoginEmailInput;
-          const res = await simulateRequest({ token: "dev-session-token", user: { email, fullName: "John Doe" } }, 1200);
-          setSession(res.token, res.user);
+          // Login + Email → Direct login with password
+          const { email, password, rememberMe } = data as LoginEmailInput;
+          const res = await authApi.login({ email, password });
+          setSession(res.accessToken, res.profile, rememberMe);
           router.push("/home");
         }
       } else {
         // Signup flow
         if (method === "phone") {
-          // Signup + Phone → OTP required
+          // Signup + Phone → Request OTP
           const { phone } = data as SignupPhoneInput;
+          await authApi.requestPhoneOtp({ phoneNumber: toInternationalPhone(phone) });
           setPhoneNumber(phone);
-          await simulateRequest({ ok: true }, 800);
           setStep("otp");
           resetCountdown();
         } else {
-          // Signup + Email → Direct to /home (no OTP)
-          const { email, fullName } = data as SignupEmailInput;
-          const res = await simulateRequest({ token: "dev-session-token", user: { email, fullName } }, 1200);
-          setSession(res.token, res.user);
-          router.push("/home");
+          // Signup + Email → Register with full details
+          const { firstName, lastName, phoneNumber, email, alias, referralCode, password, confirmPassword } = data as SignupEmailInput;
+          await authApi.register({
+            firstName,
+            lastName,
+            phoneNumber: toInternationalPhone(phoneNumber),
+            email,
+            alias,
+            referralCode: referralCode || undefined,
+            password,
+            confirmPassword,
+          });
+          // After registration, may need OTP verification - adjust based on actual API response
+          // For now, assume registration requires email OTP verification
+          setEmailForOtp(email);
+          setStep("otp");
+          resetCountdown();
         }
       }
-    } catch {
-      setServerError("Something went wrong. Please try again.");
+    } catch (error) {
+      const apiError = error as ApiError;
+      setServerError(apiError.message || "Something went wrong. Please try again.");
     }
   };
 
   const handleOtpVerify = async () => {
     const code = otpDigits.join("");
-    if (code.length < 4) {
-      setOtpError("Enter all 4 digits");
+    if (code.length < 6) {
+      setOtpError("Enter all 6 digits");
       return;
     }
     setOtpError(null);
     setIsVerifying(true);
     try {
-      await simulateRequest({ ok: true }, 1000);
-      const last4 = phoneNumber.slice(-4);
-      const userName = mode === "signup" ? `Player ${last4}` : "John Doe";
-      const res = await simulateRequest({
-        token: "dev-session-token",
-        user: { email: `phone-${phoneNumber}@nollywin.local`, fullName: userName },
-      }, 500);
-      setSession(res.token, res.user);
-      router.push("/home");
-    } catch {
-      setOtpError("That code didn't work. Check it and try again.");
+      if (method === "phone") {
+        // Phone OTP verification
+        const res = await authApi.verifyPhoneOtp({ phoneNumber: toInternationalPhone(phoneNumber), code });
+        if (res.accessToken && res.profile) {
+          setSession(res.accessToken, res.profile);
+          router.push("/home");
+        } else {
+          // OTP verified but no token yet - may need additional steps
+          setOtpError("Verification successful, but unable to complete login");
+        }
+      } else {
+        // Email OTP verification (for registration)
+        const purpose = mode === "signup" ? "REGISTRATION" : "PASSWORD_RESET";
+        const res = await authApi.verifyOtp({ email: emailForOtp, code, purpose });
+        if (res.accessToken && res.profile) {
+          setSession(res.accessToken, res.profile);
+          router.push("/home");
+        } else {
+          // Email verified - redirect to login or show success
+          router.push("/auth?verified=true");
+        }
+      }
+    } catch (error) {
+      const apiError = error as ApiError;
+      setOtpError(apiError.message || "That code didn't work. Check it and try again.");
     } finally {
       setIsVerifying(false);
     }
@@ -159,15 +224,21 @@ export function UnifiedAuthForm() {
   const handleOtpResend = async () => {
     resetCountdown();
     try {
-      await simulateRequest({ ok: true }, 800);
-    } catch {
-      setOtpError("Couldn't resend the code. Try again shortly.");
+      if (method === "phone") {
+        await authApi.requestPhoneOtp({ phoneNumber: toInternationalPhone(phoneNumber) });
+      } else {
+        const purpose = mode === "signup" ? "REGISTRATION" : "PASSWORD_RESET";
+        await authApi.resendOtp({ email: emailForOtp, purpose });
+      }
+    } catch (error) {
+      const apiError = error as ApiError;
+      setOtpError(apiError.message || "Couldn't resend the code. Try again shortly.");
     }
   };
 
   const handleBackToForm = () => {
     setStep("form");
-    setOtpDigits(Array(4).fill(""));
+    setOtpDigits(Array(6).fill(""));
     setOtpError(null);
   };
 
@@ -178,7 +249,17 @@ export function UnifiedAuthForm() {
   const handleContinueAsGuest = () => {
     const guestUser = {
       email: "guest@nollywin.local",
-      fullName: "Guest User"
+      firstName: "Guest",
+      lastName: "User",
+      phoneNumber: "",
+      alias: "Guest",
+      role: "PLAYER" as const,
+      status: "ACTIVE" as const,
+      lastPasswordChangedAt: new Date().toISOString(),
+      avatarUrl: null,
+      totalPoints: 0,
+      gamesPlayed: 0,
+      bestScore: 0,
     };
     setSession("guest-session-token", guestUser);
     router.push("/home");
@@ -211,13 +292,15 @@ export function UnifiedAuthForm() {
         </div>
 
         <div className="text-center space-y-2 pt-2">
-          <h2 className="text-2xl font-semibold text-white">Verify your number</h2>
+          <h2 className="text-2xl font-semibold text-white">
+            {method === "phone" ? "Verify your number" : "Verify your email"}
+          </h2>
           <p className="text-sm text-white/50">
-            We sent a 4-digit code to <span className="text-white font-medium">{phoneNumber}</span>
+            We sent a 6-digit code to <span className="text-white font-medium">{method === "phone" ? phoneNumber : emailForOtp}</span>
           </p>
         </div>
 
-        <OtpInput value={otpDigits} onChange={setOtpDigits} length={4} />
+        <OtpInput value={otpDigits} onChange={setOtpDigits} length={6} />
 
         {otpError && <p className="text-destructive text-xs text-center">{otpError}</p>}
 
@@ -330,18 +413,65 @@ export function UnifiedAuthForm() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-1">
-        {/* Full Name field (only for Signup + Email) */}
+        {/* Signup + Email fields */}
         {mode === "signup" && method === "email" && (
-          <div>
-            <label className="text-xs text-white mb-1.5 block font-medium">Full Name</label>
-            <Input 
-              placeholder="Adaeze Okonkwo" 
-              {...register("fullName")} 
-              className="bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary text-sm h-11 rounded-lg"
-            />
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {(errors as any).fullName && <p className="text-destructive text-xs mt-1">{String((errors as any).fullName.message)}</p>}
-          </div>
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-white mb-1.5 block font-medium">First Name</label>
+                <Input 
+                  placeholder="Adaeze" 
+                  {...register("firstName")} 
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary text-sm h-11 rounded-lg"
+                />
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {(errors as any).firstName && <p className="text-destructive text-xs mt-1">{String((errors as any).firstName.message)}</p>}
+              </div>
+              <div>
+                <label className="text-xs text-white mb-1.5 block font-medium">Last Name</label>
+                <Input 
+                  placeholder="Okonkwo" 
+                  {...register("lastName")} 
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary text-sm h-11 rounded-lg"
+                />
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {(errors as any).lastName && <p className="text-destructive text-xs mt-1">{String((errors as any).lastName.message)}</p>}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-white mb-1.5 block font-medium">Phone Number</label>
+              <div className="flex gap-2">
+                <div className="flex items-center justify-center px-3 h-11 rounded-lg bg-white/5 border border-white/10 text-white/50 text-xs font-medium whitespace-nowrap">
+                  NG +234
+                </div>
+                <Input 
+                  placeholder="080 1234 5678" 
+                  {...register("phoneNumber")} 
+                  className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary text-sm h-11"
+                />
+              </div>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {(errors as any).phoneNumber && <p className="text-destructive text-xs mt-1">{String((errors as any).phoneNumber.message)}</p>}
+            </div>
+            <div>
+              <label className="text-xs text-white mb-1.5 block font-medium">Alias/Username</label>
+              <Input 
+                placeholder="e.g. nolly_ace" 
+                {...register("alias")} 
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary text-sm h-11 rounded-lg"
+              />
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {(errors as any).alias && <p className="text-destructive text-xs mt-1">{String((errors as any).alias.message)}</p>}
+            </div>
+            <div>
+              <label className="text-xs text-white mb-1.5 block font-medium">Referral Code (Optional)</label>
+              <Input 
+                placeholder="Enter referral code" 
+                {...register("referralCode")} 
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary text-sm h-11 rounded-lg"
+              />
+            </div>
+          </>
         )}
 
         {/* Phone field */}
@@ -380,30 +510,66 @@ export function UnifiedAuthForm() {
 
         {/* Password field (only for Email method) */}
         {method === "email" && (
-          <div>
-            <label className="text-xs text-white mb-1.5 block font-medium">Password</label>
-            <div className="relative">
-              <Input
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                {...register("password")}
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary pr-10 text-sm h-11 rounded-lg"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/70 transition-colors"
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+          <>
+            <div>
+              <label className="text-xs text-white mb-1.5 block font-medium">Password</label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  {...register("password")}
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary pr-10 text-sm h-11 rounded-lg"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/70 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {mode === "signup" && <PasswordStrength password={passwordValue} />}
+              {(errors as { password?: { message?: string } }).password && (
+                <p className="text-destructive text-xs mt-1">
+                  {String((errors as { password?: { message?: string } }).password?.message)}
+                </p>
+              )}
             </div>
-            {mode === "signup" && <PasswordStrength password={passwordValue} />}
-            {(errors as { password?: { message?: string } }).password && (
-              <p className="text-destructive text-xs mt-1">
-                {String((errors as { password?: { message?: string } }).password?.message)}
-              </p>
+            {/* Confirm Password field (only for Signup + Email) */}
+            {mode === "signup" && (
+              <div>
+                <label className="text-xs text-white mb-1.5 block font-medium">Confirm Password</label>
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  {...register("confirmPassword")}
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary text-sm h-11 rounded-lg"
+                />
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {(errors as any).confirmPassword && <p className="text-destructive text-xs mt-1">{String((errors as any).confirmPassword.message)}</p>}
+              </div>
             )}
-          </div>
+            
+            {/* Remember Me & Forgot Password (only for Login + Email) */}
+            {mode === "login" && (
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-xs text-white/70">
+                  <input 
+                    type="checkbox" 
+                    {...register("rememberMe")} 
+                    className="accent-primary rounded"
+                  />
+                  Remember me
+                </label>
+                <a 
+                  href="/forgot-password" 
+                  className="text-xs text-primary font-medium hover:underline"
+                >
+                  Forgot password?
+                </a>
+              </div>
+            )}
+          </>
         )}
 
         {serverError && <p className="text-destructive text-xs">{serverError}</p>}

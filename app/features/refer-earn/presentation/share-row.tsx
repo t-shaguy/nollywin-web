@@ -2,8 +2,8 @@
 import { MoreHorizontal } from "lucide-react";
 import { WhatsAppIcon, XLogoIcon } from "@/components/icons/brand-icons";
 
-export function ShareRow({ code }: { code: string }) {
-  const inviteLink = `https://nollywin.example/join?ref=${code}`;
+export function ShareRow({ code, link }: { code: string; link?: string | null }) {
+  const inviteLink = link || `https://nollywin.app/join?ref=${code}`;
   const message = `Join me on NollyWin and start earning! Use my code ${code}: ${inviteLink}`;
 
   const shareWhatsApp = () => {

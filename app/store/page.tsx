@@ -7,7 +7,6 @@ import { usePackagesStore, type Package } from "@/store/packages-store";
 import { useTokenPackagesStore, type TokenPackage } from "@/store/token-packages-store";
 import { useWalletStore } from "@/store/wallet-store";
 import { Button } from "@/components/ui/button";
-import { simulateRequest } from "@/lib/api/simulate";
 
 // Literal hex values matching the Figma — see earlier fix notes: the
 // shared Badge component overrides custom bg-* classes, so these two
@@ -30,7 +29,7 @@ type PaymentMethod = "airtime" | "ussd" | "card";
 type View = "browse" | "checkout" | "success";
 
 export default function StorePage() {
-  const subscribe = useSubscriptionStore((s) => s.subscribe);
+  const { setSubscription } = useSubscriptionStore();
   const packages = usePackagesStore((s) => s.packages);
   const tokenPackages = useTokenPackagesStore((s) => s.packages);
   const { tokens, addTokens } = useWalletStore();
@@ -68,18 +67,41 @@ export default function StorePage() {
     
     setIsProcessing(true);
     try {
-      // TODO: replace with real API call once the backend exists
-      await simulateRequest({ success: true }, 1500);
-      
       if (selected.type === "subscription") {
-        subscribe(selected.item.id);
+        // Purchase subscription - may redirect to Paystack if payment required
+        const { purchaseSubscription } = await import("@/lib/api/payments");
+        const response = await purchaseSubscription({ packageId: selected.item.id });
+        
+        // If payment authorization URL is provided, redirect to Paystack
+        if (response.payment?.authorizationUrl) {
+          window.location.href = response.payment.authorizationUrl;
+          return;
+        }
+        
+        // Otherwise, subscription activated directly (maybe free or already paid)
+        // Refresh subscription status
+        const { fetchSubscriptionStatus } = await import("@/store/subscription-store");
+        await fetchSubscriptionStatus();
+        setView("success");
       } else {
-        addTokens(selected.item.tokens);
+        // Top up tokens - initiate payment
+        const { initiatePayment } = await import("@/lib/api/payments");
+        const response = await initiatePayment({
+          amount: selected.item.price,
+          purpose: "WALLET_TOPUP",
+        });
+        
+        // Redirect to Paystack checkout
+        if (response.authorizationUrl) {
+          window.location.href = response.authorizationUrl;
+          return;
+        }
+        
+        // If no redirect URL, show error
+        throw new Error("Payment initiation failed - no authorization URL received");
       }
-      
-      setView("success");
-    } catch {
-      // Error handling
+    } catch (error: any) {
+      alert(error.message || "Payment failed. Please try again.");
     } finally {
       setIsProcessing(false);
     }

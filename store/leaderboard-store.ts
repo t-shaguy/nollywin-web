@@ -7,29 +7,17 @@ export interface LeaderboardEntry {
   player: string;
   points: number;
   prize?: string;
+  isCurrentUser?: boolean;
 }
 
 interface LeaderboardState {
   entries: LeaderboardEntry[];
-  currentUserId: string | null;
+  currentUserRank: number | null;
   monthEndDate: Date;
-  updateLeaderboard: (entries: LeaderboardEntry[]) => void;
-  setCurrentUserId: (id: string) => void;
+  isLoading: boolean;
+  setLeaderboard: (entries: LeaderboardEntry[], currentUserRank?: number) => void;
+  setLoading: (loading: boolean) => void;
 }
-
-// Mock data matching the Figma spec
-const MOCK_ENTRIES: LeaderboardEntry[] = [
-  { rank: 1, playerId: "user1", player: "ChidiB", points: 15420, prize: "₦50,000" },
-  { rank: 2, playerId: "user2", player: "NollyQueen", points: 14200, prize: "₦30,000" },
-  { rank: 3, playerId: "user3", player: "FilmGeek99", points: 13850, prize: "₦10,000" },
-  { rank: 4, playerId: "user4", player: "Tola_Stars", points: 12100 },
-  { rank: 5, playerId: "user5", player: "WinnerMan", points: 11900 },
-  { rank: 6, playerId: "user6", player: "AyoQuiz", points: 10850 },
-  { rank: 7, playerId: "user7", player: "NaijaGenius", points: 9720 },
-  { rank: 8, playerId: "current-user", player: "You", points: 1200 },
-  { rank: 9, playerId: "user9", player: "LagosGamer", points: 980 },
-  { rank: 10, playerId: "user10", player: "MovieBuff", points: 850 },
-];
 
 // Calculate month end (last day of current month)
 function getMonthEndDate(): Date {
@@ -41,15 +29,58 @@ function getMonthEndDate(): Date {
 export const useLeaderboardStore = create<LeaderboardState>()(
   persist(
     (set) => ({
-      // TODO: replace with GET /leaderboard/monthly once the backend is live.
-      entries: MOCK_ENTRIES,
-      currentUserId: "current-user", // Simulated current user ID
+      entries: [],
+      currentUserRank: null,
       monthEndDate: getMonthEndDate(),
+      isLoading: false,
 
-      updateLeaderboard: (entries) => set({ entries }),
+      setLeaderboard: (entries, currentUserRank) => 
+        set({ 
+          entries, 
+          currentUserRank: currentUserRank ?? null,
+          isLoading: false 
+        }),
       
-      setCurrentUserId: (id) => set({ currentUserId: id }),
+      setLoading: (loading) => set({ isLoading: loading }),
     }),
     { name: "leaderboard-storage" }
   )
 );
+
+/**
+ * Fetch leaderboard data from the API
+ * Call this when the leaderboard page is loaded or when data needs to be refreshed
+ */
+export async function fetchLeaderboard(period: string = "monthly") {
+  try {
+    const { getLeaderboard } = await import("@/lib/api/leaderboard");
+    useLeaderboardStore.getState().setLoading(true);
+    
+    const response = await getLeaderboard(period);
+    
+    // Defensive: check if leaderboard exists in response
+    if (!response?.leaderboard || !Array.isArray(response.leaderboard)) {
+      console.warn("Leaderboard data not available in response");
+      useLeaderboardStore.getState().setLeaderboard([], undefined);
+      return response;
+    }
+    
+    // Map API response to store format
+    const entries: LeaderboardEntry[] = response.leaderboard.map((entry) => ({
+      rank: entry.rank,
+      playerId: entry.userId,
+      player: entry.alias || entry.playerName || `Player ${entry.userId.slice(0, 6)}`,
+      points: entry.score,
+      prize: undefined, // Prize info might come from a separate field
+      isCurrentUser: entry.isCurrentUser,
+    }));
+    
+    useLeaderboardStore.getState().setLeaderboard(entries, response.currentUserRank);
+    
+    return response;
+  } catch (error) {
+    useLeaderboardStore.getState().setLoading(false);
+    console.error("Failed to fetch leaderboard:", error);
+    throw error;
+  }
+}

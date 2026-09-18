@@ -3,7 +3,10 @@ import { useState } from "react";
 import { X, CheckCircle2, AlertCircle, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWalletStore } from "@/store/wallet-store";
+import { useAuthStore } from "@/store/auth-store";
 import { useRaffleStore, Raffle } from "@/store/raffle-store";
+import { purchaseRaffleTicket } from "@/store/raffle-store";
+import { fetchWalletBalance } from "@/store/wallet-store";
 
 interface PurchaseTicketModalProps {
   isOpen: boolean;
@@ -18,11 +21,13 @@ export function PurchaseTicketModal({ isOpen, onClose, raffle }: PurchaseTicketM
   const [errorMessage, setErrorMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   
-  const { points, addPoints } = useWalletStore();
-  const { purchaseTicket, getUserTicketsForRaffle } = useRaffleStore();
+  const { tokens } = useWalletStore(); // Get tokens from wallet
+  const { user } = useAuthStore(); // Get totalPoints from user profile
+  const { raffles } = useRaffleStore();
 
-  const userTickets = getUserTicketsForRaffle(raffle.id);
-  const hasEnoughPoints = points >= raffle.costPerTicket;
+  // Get user ticket count from raffle data
+  const userTickets = raffle.userTicketCount || 0;
+  const hasEnoughTokens = tokens >= raffle.ticketCostTokens;
 
   const handleClose = () => {
     setStep("confirm");
@@ -31,30 +36,28 @@ export function PurchaseTicketModal({ isOpen, onClose, raffle }: PurchaseTicketM
   };
 
   const handlePurchase = async () => {
-    if (!hasEnoughPoints) {
-      setErrorMessage(`You need ${raffle.costPerTicket - points} more points to buy this ticket`);
+    if (!hasEnoughTokens) {
+      setErrorMessage(`You need ${raffle.ticketCostTokens - tokens} more tokens to buy this ticket`);
       setStep("error");
       return;
     }
 
     setIsProcessing(true);
 
-    // Simulate processing delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    // Attempt purchase
-    const result = purchaseTicket(raffle.id);
-
-    if (result.success) {
-      // Deduct points
-      addPoints(-raffle.costPerTicket);
+    try {
+      // Call real API to purchase ticket
+      await purchaseRaffleTicket(raffle.id);
+      
+      // Refresh wallet balance after purchase
+      await fetchWalletBalance();
+      
       setStep("success");
-    } else {
-      setErrorMessage(result.message);
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Failed to purchase ticket. Please try again.");
       setStep("error");
+    } finally {
+      setIsProcessing(false);
     }
-
-    setIsProcessing(false);
   };
 
   if (!isOpen) return null;
@@ -85,12 +88,12 @@ export function PurchaseTicketModal({ isOpen, onClose, raffle }: PurchaseTicketM
             <div className="bg-secondary/50 rounded-xl p-4 space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Cost per Ticket</span>
-                <span className="font-semibold">{raffle.costPerTicket.toLocaleString()} points</span>
+                <span className="font-semibold">{raffle.ticketCostTokens.toLocaleString()} tokens</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Your Points</span>
-                <span className={`font-semibold ${hasEnoughPoints ? "text-primary" : "text-destructive"}`}>
-                  {points.toLocaleString()} points
+                <span className="text-muted-foreground">Your Tokens</span>
+                <span className={`font-semibold ${hasEnoughTokens ? "text-primary" : "text-destructive"}`}>
+                  {tokens.toLocaleString()} tokens
                 </span>
               </div>
               <div className="flex justify-between text-sm">
@@ -101,21 +104,21 @@ export function PurchaseTicketModal({ isOpen, onClose, raffle }: PurchaseTicketM
               <div className="flex justify-between">
                 <span className="font-semibold">After Purchase</span>
                 <span className="font-bold text-primary">
-                  {(points - raffle.costPerTicket).toLocaleString()} points
+                  {(tokens - raffle.ticketCostTokens).toLocaleString()} tokens
                 </span>
               </div>
             </div>
 
-            {!hasEnoughPoints && (
+            {!hasEnoughTokens && (
               <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3 text-sm text-destructive">
-                Insufficient points. Play more trivia to earn points.
+                Insufficient tokens. Play more trivia to earn tokens.
               </div>
             )}
 
             <div className="space-y-3">
               <Button
                 onClick={handlePurchase}
-                disabled={!hasEnoughPoints || isProcessing}
+                disabled={!hasEnoughTokens || isProcessing}
                 className="w-full justify-center"
               >
                 {isProcessing ? "Processing..." : "Confirm Purchase"}
@@ -142,8 +145,8 @@ export function PurchaseTicketModal({ isOpen, onClose, raffle }: PurchaseTicketM
             </div>
 
             <div className="bg-secondary/50 rounded-xl p-4">
-              <p className="text-sm text-muted-foreground">Draw Date</p>
-              <p className="font-semibold mt-1">{raffle.drawDate}</p>
+              <p className="text-sm text-muted-foreground">Draw Schedule</p>
+              <p className="font-semibold mt-1">{raffle.scheduleLabel}</p>
             </div>
 
             <Button onClick={handleClose} className="w-full justify-center">

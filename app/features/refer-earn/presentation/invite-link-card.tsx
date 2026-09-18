@@ -2,9 +2,10 @@
 import { useState } from "react";
 import { Copy, Check } from "lucide-react";
 
-export function InviteLinkCard({ code }: { code: string }) {
+export function InviteLinkCard({ code, link }: { code: string; link?: string | null }) {
   const [copied, setCopied] = useState(false);
-  const inviteLink = `https://nollywin.example/join?ref=${code}`;
+  // Use the link from API if available, otherwise construct it from code
+  const inviteLink = link || `https://nollywin.app/join?ref=${code}`;
 
   const handleCopy = async () => {
     try {

@@ -15,14 +15,14 @@ export function TopBar({
   const user = useAuthStore((s) => s.user);
   
   // Get two-letter initials (first + last name)
-  const getInitials = (name?: string) => {
-    if (!name) return "P";
-    const words = name.trim().split(/\s+/);
-    if (words.length === 1) return words[0].charAt(0).toUpperCase();
-    return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+  const getInitials = () => {
+    if (!user) return "P";
+    const first = user.firstName?.charAt(0).toUpperCase() || "";
+    const last = user.lastName?.charAt(0).toUpperCase() || "";
+    return first + last || "P";
   };
   
-  const initials = getInitials(user?.fullName);
+  const initials = getInitials();
 
   return (
     <div className="flex items-center justify-between md:justify-end gap-3 px-6 py-4 border-b border-border">

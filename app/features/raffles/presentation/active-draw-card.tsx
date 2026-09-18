@@ -14,7 +14,7 @@ export function ActiveDrawCard({
 }) {
   const [showModal, setShowModal] = useState(false);
 
-  const soldOutPercentage = Math.round((draw.ticketsSold / draw.totalTickets) * 100);
+  const soldOutPercentage = Math.round((draw.entryCount / draw.maxWinners) * 100);
 
   return (
     <>
@@ -31,7 +31,7 @@ export function ActiveDrawCard({
             Active Draw
           </span>
           <h2 className="text-2xl font-extrabold mt-4 break-words">{draw.prizeName}</h2>
-          <p className="text-muted-foreground mt-2">{draw.description}</p>
+          {/* No description field in verified backend response */}
           
           <div className="mt-4 space-y-2">
             <p className="text-sm">
@@ -46,7 +46,7 @@ export function ActiveDrawCard({
                 />
               </div>
               <span className="text-xs text-muted-foreground whitespace-nowrap">
-                {draw.ticketsSold}/{draw.totalTickets} sold
+                {draw.entryCount}/{draw.maxWinners} entries
               </span>
             </div>
           </div>
@@ -56,9 +56,9 @@ export function ActiveDrawCard({
           <p className="text-sm text-muted-foreground">Cost per Ticket</p>
           <p className="flex items-center justify-center gap-1.5 text-xl font-bold mt-2">
             <Star size={18} className="text-amber-500" />
-            {draw.costPerTicket.toLocaleString()}
+            {draw.ticketCostTokens.toLocaleString()}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">points</p>
+          <p className="text-xs text-muted-foreground mt-1">tokens</p>
           <Button onClick={() => setShowModal(true)} className="w-full justify-center mt-4">
             Buy Ticket
           </Button>

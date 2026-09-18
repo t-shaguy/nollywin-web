@@ -1,8 +1,10 @@
 import { z } from "zod";
 
 export const profileDetailsSchema = z.object({
-  fullName: z.string().min(2, "Enter your full name"),
-  email: z.string().email("Enter a valid email address"),
+  firstName: z.string().min(2, "Enter your first name"),
+  lastName: z.string().min(2, "Enter your last name"),
+  phoneNumber: z.string().min(10, "Enter a valid phone number"),
+  alias: z.string().min(2, "Enter your alias/username"),
 });
 export type ProfileDetailsInput = z.infer<typeof profileDetailsSchema>;
 

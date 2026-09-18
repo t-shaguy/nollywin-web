@@ -1,31 +1,62 @@
 "use client";
+import { useEffect } from "react";
 import { Star, User, Mail, Phone, ChevronRight, Lock, Bell, UserPlus, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { AuthenticatedShell } from "@/components/layout/authenticated-shell";
 import { useWalletStore } from "@/store/wallet-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useSubscriptionStore } from "@/store/subscription-store";
-import { useReferralStore } from "@/store/referral-store";
+import { useReferralStore, fetchReferralData } from "@/store/referral-store";
 import { Button } from "@/components/ui/button";
+import { getProfile } from "@/lib/api/profile";
 
 export default function ProfilePage() {
-  const { tokens, points } = useWalletStore();
+  const { tokens } = useWalletStore();
   const user = useAuthStore((s) => s.user);
+  const updateUser = useAuthStore((s) => s.updateUser);
   const { hasActivePlan, planName } = useSubscriptionStore();
-  const referralCode = useReferralStore((s) => s.code) || "AO7849";
+  const { referralLink } = useReferralStore();
 
-  const fullName = user?.fullName || "Adaeze Okonkwo";
+  // Fetch fresh profile data on mount (rehydrates totalPoints, gamesPlayed, bestScore)
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const profile = await getProfile();
+        updateUser(profile);
+      } catch (err) {
+        console.error("Failed to fetch profile:", err);
+      }
+    };
+    fetchProfile();
+  }, [updateUser]);
+
+  // Fetch real referral data from API
+  useEffect(() => {
+    fetchReferralData();
+  }, []);
+
+  const fullName = user ? `${user.firstName} ${user.lastName}` : "Adaeze Okonkwo";
   const email = user?.email || "adaeze.okonkwo@gmail.com";
-  const phoneNumber = "+234 801 234 5678";
+  const phoneNumber = user?.phoneNumber || "+234 801 234 5678";
+  const alias = user?.alias || "nolly_ace";
 
-  // Stats values matching Figma
-  const gamesPlayed = 14;
-  const bestScore = 150;
+  // VERIFIED: totalPoints, gamesPlayed, bestScore come from profile endpoint
+  const totalPoints = user?.totalPoints ?? 0;
+  const gamesPlayed = user?.gamesPlayed ?? 0;
+  const bestScore = user?.bestScore ?? 0;
 
-  const referralLink = `https://nollywin.app/join?ref=${referralCode}`;
+  // Calculate days since last password change
+  const lastPasswordChanged = user?.lastPasswordChangedAt 
+    ? Math.floor((Date.now() - new Date(user.lastPasswordChangedAt).getTime()) / (1000 * 60 * 60 * 24))
+    : 30;
+
+  // Use real referral link from API (no hardcoded domain)
+  const displayReferralLink = referralLink || "Loading...";
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(referralLink);
+    if (referralLink) {
+      navigator.clipboard.writeText(referralLink);
+    }
   };
 
   return (
@@ -34,14 +65,17 @@ export default function ProfilePage() {
         {/* Header with Avatar and Subscriber Badge */}
         <div className="flex flex-col items-center text-center gap-3">
           <div className="relative">
-            <div className="h-20 w-20 rounded-full bg-brand-gradient flex items-center justify-center text-white text-2xl font-bold">
-              {fullName
-                .split(" ")
-                .map((n) => n[0])
-                .slice(0, 2)
-                .join("")
-                .toUpperCase()}
-            </div>
+            {user?.avatarUrl ? (
+              <img 
+                src={user.avatarUrl} 
+                alt={fullName}
+                className="h-20 w-20 rounded-full object-cover"
+              />
+            ) : (
+              <div className="h-20 w-20 rounded-full bg-brand-gradient flex items-center justify-center text-white text-2xl font-bold">
+                {user ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase() : "AO"}
+              </div>
+            )}
             {hasActivePlan && (
               <div className="absolute bottom-0 right-0 h-6 w-6 rounded-full bg-secondary flex items-center justify-center border-2 border-background">
                 <Star size={12} className="text-primary fill-primary" />
@@ -57,7 +91,7 @@ export default function ProfilePage() {
         {/* Stat Cards - Colored values */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-card border border-border rounded-lg p-4 text-center">
-            <p className="text-3xl font-bold" style={{ color: "#F40289" }}>{points}</p>
+            <p className="text-3xl font-bold" style={{ color: "#F40289" }}>{totalPoints}</p>
             <p className="text-xs text-muted-foreground mt-1">Points</p>
           </div>
           <div className="bg-card border border-border rounded-lg p-4 text-center">
@@ -131,10 +165,11 @@ export default function ProfilePage() {
 
           {/* Referral Link */}
           <div className="bg-black/40 rounded-lg p-3 flex items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground font-mono truncate flex-1">{referralLink}</p>
+            <p className="text-xs text-muted-foreground font-mono truncate flex-1">{displayReferralLink}</p>
             <button 
               onClick={handleCopy}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md shrink-0"
+              disabled={!referralLink}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md shrink-0 disabled:opacity-50"
               style={{ backgroundColor: "#F40289", color: "white" }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -178,7 +213,9 @@ export default function ProfilePage() {
             </div>
             <div className="flex-1 text-left">
               <p className="text-sm font-medium">Change Password</p>
-              <p className="text-xs text-muted-foreground">Last changed 30 days ago</p>
+              <p className="text-xs text-muted-foreground">
+                Last changed {lastPasswordChanged} {lastPasswordChanged === 1 ? "day" : "days"} ago
+              </p>
             </div>
             <ChevronRight size={20} className="text-muted-foreground" />
           </Link>

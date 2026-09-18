@@ -7,6 +7,9 @@ import { simulateRequest } from "@/lib/api/simulate";
 import { useSubscriptionStore, PlanId } from "@/store/subscription-store";
 import type { Package } from "@/store/packages-store";
 
+// NOTE: This checkout modal is deprecated - real payment flow now happens via Paystack redirect
+// in store/page.tsx. This component is kept for UI reference but shouldn't be used in production.
+
 type PaymentMethod = "card" | "airtime" | null;
 type CheckoutStep = "method" | "details" | "success";
 
@@ -21,7 +24,7 @@ export function CheckoutModal({ isOpen, onClose, plan }: CheckoutModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const subscribe = useSubscriptionStore((s) => s.subscribe);
+  const { setSubscription } = useSubscriptionStore();
 
   // Card form state
   const [cardNumber, setCardNumber] = useState("");
@@ -68,7 +71,13 @@ export function CheckoutModal({ isOpen, onClose, plan }: CheckoutModalProps) {
     setIsProcessing(true);
     try {
       await simulateRequest({ success: true }, 1500);
-      subscribe(plan.id as PlanId);
+      // Mock subscription for demo - real flow uses Paystack redirect
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      setSubscription({
+        planId: plan.id as PlanId,
+        planName: plan.name,
+        expiresAt,
+      });
       setStep("success");
     } catch {
       setError("Payment failed. Please try again.");
@@ -87,7 +96,13 @@ export function CheckoutModal({ isOpen, onClose, plan }: CheckoutModalProps) {
     setIsProcessing(true);
     try {
       await simulateRequest({ success: true }, 1500);
-      subscribe(plan.id as PlanId);
+      // Mock subscription for demo - real flow uses Paystack redirect
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      setSubscription({
+        planId: plan.id as PlanId,
+        planName: plan.name,
+        expiresAt,
+      });
       setStep("success");
     } catch {
       setError("Payment failed. Please try again.");

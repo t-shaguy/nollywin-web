@@ -5,10 +5,10 @@ import { useRaffleStore } from "@/store/raffle-store";
 import { useWalletStore } from "@/store/wallet-store";
 
 export default function RafflesPage() {
-  const { raffles, getUserTicketsForRaffle } = useRaffleStore();
+  const { raffles } = useRaffleStore();
   const tokens = useWalletStore((s) => s.tokens);
 
-  const activeRaffles = raffles.filter((r) => r.status === "active");
+  const activeRaffles = raffles.filter((r) => r.status === "ACTIVE");
 
   return (
     <AuthenticatedShell tokenBalance={tokens} unreadCount={0}>
@@ -24,7 +24,7 @@ export default function RafflesPage() {
               <ActiveDrawCard
                 key={raffle.id}
                 draw={raffle}
-                userTickets={getUserTicketsForRaffle(raffle.id)}
+                userTickets={raffle.userTicketCount || 0}
               />
             ))}
           </div>

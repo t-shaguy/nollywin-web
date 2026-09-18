@@ -3,6 +3,8 @@ import { ReactNode, useState } from "react";
 import { Sidebar } from "./sidebar";
 import { TopBar } from "./top-bar";
 import { MobileNav } from "./mobile-nav";
+import { useWalletSync } from "@/hooks/use-wallet-sync";
+import { useSubscriptionSync } from "@/hooks/use-subscription-sync";
 
 export function AuthenticatedShell({
   children,
@@ -14,6 +16,10 @@ export function AuthenticatedShell({
   unreadCount?: number;
 }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  
+  // Sync wallet balance and subscription status with backend on mount/token change
+  useWalletSync();
+  useSubscriptionSync();
 
   return (
     <div className="h-screen bg-background text-foreground flex overflow-hidden">

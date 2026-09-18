@@ -6,6 +6,7 @@ import { DashboardStats } from "../features/home/presentation/dashboard-stats";
 import { PerformanceChart } from "../features/home/presentation/performance-chart";
 import { ActiveSubscriptionCard } from "../features/home/presentation/active-subscription-card";
 import { useWalletStore } from "@/store/wallet-store";
+import { useAuthStore } from "@/store/auth-store";
 
 // TODO: placeholder data standing in for:
 //   GET /users/profile       -> points, tokensLeft, monthlyRank, attemptsLeft, tokenCost, tokenBalance
@@ -18,7 +19,8 @@ const PLACEHOLDER = {
 };
 
 export default function HomePage() {
-  const { tokens, points } = useWalletStore();
+  const { tokens } = useWalletStore();
+  const { user } = useAuthStore();
 
   return (
     <AuthenticatedShell tokenBalance={tokens} unreadCount={PLACEHOLDER.unreadCount}>
@@ -27,7 +29,7 @@ export default function HomePage() {
 
         <DashboardStats
           monthlyRank={PLACEHOLDER.monthlyRank}
-          totalPoints={points}
+          totalPoints={user?.totalPoints || 0}
           tokensLeft={tokens}
         />
 

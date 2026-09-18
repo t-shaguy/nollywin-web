@@ -3,23 +3,33 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { changePasswordSchema, ChangePasswordInput } from "@/lib/validations/profile";
-import { apiClient } from "@/lib/api/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import * as authApi from "@/lib/api/auth";
+import type { ApiError } from "@/lib/api/client";
 
 export function ChangePasswordForm({ lastChangedAt }: { lastChangedAt?: string }) {
   const [saved, setSaved] = useState(false);
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ChangePasswordInput>({
+  const [error, setError] = useState<string | null>(null);
+  
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<ChangePasswordInput>({
     resolver: zodResolver(changePasswordSchema),
   });
 
   const onSubmit = async (data: ChangePasswordInput) => {
     setSaved(false);
+    setError(null);
     try {
-      await apiClient("/users/password", { method: "PUT", body: JSON.stringify(data) });
+      await authApi.changePassword({
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+        confirmPassword: data.confirmPassword,
+      });
       setSaved(true);
-    } catch {
-      // TODO: error toast once backend is live
+      reset(); // Clear form on success
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError.message || "Failed to update password");
     }
   };
 
@@ -41,7 +51,8 @@ export function ChangePasswordForm({ lastChangedAt }: { lastChangedAt?: string }
         <Input type="password" {...register("confirmPassword")} />
         {errors.confirmPassword && <p className="text-destructive text-sm mt-1">{errors.confirmPassword.message}</p>}
       </div>
-      {saved && <p className="text-primary text-sm">Password updated.</p>}
+      {saved && <p className="text-primary text-sm">Password updated successfully!</p>}
+      {error && <p className="text-destructive text-sm">{error}</p>}
       <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Updating..." : "Update Password"}</Button>
     </form>
   );

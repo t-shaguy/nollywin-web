@@ -4,29 +4,40 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import { resetPasswordSchema, ResetPasswordInput } from "@/lib/validations/auth";
-import { simulateRequest } from "@/lib/api/simulate";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import * as authApi from "@/lib/api/auth";
+import type { ApiError } from "@/lib/api/client";
 
 export function ResetPasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const token = searchParams.get("token") ?? "";
+  const email = searchParams.get("email") ?? "";
+  const code = searchParams.get("code") ?? "";
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ResetPasswordInput>({
     resolver: zodResolver(resetPasswordSchema),
   });
 
-  const onSubmit = async (_data: ResetPasswordInput) => {
+  const onSubmit = async (data: ResetPasswordInput) => {
     setError(null);
+    if (!email || !code) {
+      setError("Invalid reset link. Please request a new password reset.");
+      return;
+    }
+    
     try {
-      // TODO: swap back to apiClient("/auth/reset-password", ...) once the backend exists.
-      await simulateRequest({ ok: true });
-      router.push("/login");
-    } catch {
-      setError("That reset link may have expired. Request a new one.");
+      await authApi.resetPassword({
+        email,
+        code,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+      });
+      router.push("/auth?reset=success");
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError.message || "That reset code may have expired. Request a new one.");
     }
   };
 
