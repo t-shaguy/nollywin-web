@@ -124,6 +124,17 @@ export async function apiClient<T = any>(
 
     // Handle non-2xx responses
     if (!res.ok) {
+      // Handle expired/invalid session (only for authenticated requests)
+      if (res.status === 401 && playerToken) {
+        // Session is invalid/expired — clear it and send the user back to login
+        if (typeof window !== "undefined") {
+          const { useAuthStore } = await import("@/store/auth-store");
+          useAuthStore.getState().logout();
+          window.location.href = "/auth";
+        }
+        // Still throw the error so any pending promises can handle it
+      }
+
       let errorData: any;
       try {
         errorData = await res.json();
@@ -148,6 +159,114 @@ export async function apiClient<T = any>(
     }
 
     return res.json();
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+
+    // Handle timeout
+    if (error.name === "AbortError") {
+      throw new ApiError({
+        status: 408,
+        error: "Request Timeout",
+        message: "Request timed out after 15 seconds",
+      });
+    }
+
+    // Handle network errors
+    if (error instanceof TypeError && error.message === "Failed to fetch") {
+      throw new ApiError({
+        status: 0,
+        error: "Network Error",
+        message: "Network error - please check your connection",
+      });
+    }
+
+    // Re-throw ApiError as-is
+    if ("status" in error && "message" in error) {
+      throw error;
+    }
+
+    // Unknown error
+    throw new ApiError({
+      status: 500,
+      error: "Unknown Error",
+      message: error.message || "An unknown error occurred",
+    });
+  }
+}
+
+/**
+ * API client for binary responses (images, files)
+ * Uses the same two-layer auth as apiClient, but returns Blob instead of JSON
+ * 
+ * Use this for:
+ * - Get avatar image (GET /api/v1/users/avatar)
+ */
+export async function apiClientBinary(endpoint: string): Promise<Blob> {
+  // Get client token
+  const clientToken = await getClientToken();
+
+  // Get player token from auth store if available
+  let playerToken: string | null = null;
+  if (typeof window !== "undefined") {
+    try {
+      const { useAuthStore } = await import("@/store/auth-store");
+      playerToken = useAuthStore.getState().token;
+    } catch {
+      // Store not available yet, continue without player token
+    }
+  }
+
+  // Set up abort controller for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+  try {
+    const headers: Record<string, string> = {};
+
+    // CRITICAL: Add X-Client-Token header (required on ALL requests)
+    headers["X-Client-Token"] = clientToken;
+
+    // Add Authorization header if player token exists
+    if (playerToken) {
+      headers["Authorization"] = `Bearer ${playerToken}`;
+    }
+
+    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      headers,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    // Handle non-2xx responses
+    if (!res.ok) {
+      // Handle expired/invalid session (only for authenticated requests)
+      if (res.status === 401 && playerToken) {
+        // Session is invalid/expired — clear it and send the user back to login
+        if (typeof window !== "undefined") {
+          const { useAuthStore } = await import("@/store/auth-store");
+          useAuthStore.getState().logout();
+          window.location.href = "/auth";
+        }
+        // Still throw the error so any pending promises can handle it
+      }
+
+      if (res.status === 404) {
+        throw new ApiError({
+          status: 404,
+          error: "Not Found",
+          message: "No avatar uploaded",
+        });
+      }
+
+      throw new ApiError({
+        status: res.status,
+        error: res.statusText,
+        message: `Request failed with status ${res.status}`,
+      });
+    }
+
+    return res.blob();
   } catch (error: any) {
     clearTimeout(timeoutId);
 
@@ -240,6 +359,17 @@ export async function apiClientMultipart<T = any>(
 
     // Handle non-2xx responses
     if (!res.ok) {
+      // Handle expired/invalid session (only for authenticated requests)
+      if (res.status === 401 && playerToken) {
+        // Session is invalid/expired — clear it and send the user back to login
+        if (typeof window !== "undefined") {
+          const { useAuthStore } = await import("@/store/auth-store");
+          useAuthStore.getState().logout();
+          window.location.href = "/auth";
+        }
+        // Still throw the error so any pending promises can handle it
+      }
+
       let errorData: any;
       try {
         errorData = await res.json();

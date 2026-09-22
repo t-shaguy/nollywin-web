@@ -1,11 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
-import { AuthenticatedShell } from "@/components/layout/authenticated-shell";
 import { useReferralStore, fetchReferralData } from "@/store/referral-store";
 import { useWalletStore } from "@/store/wallet-store";
-import { InviteLinkCard } from "../features/refer-earn/presentation/invite-link-card";
-import { ShareRow } from "../features/refer-earn/presentation/share-row";
-import { ReferralStats } from "../features/refer-earn/presentation/referral-stats";
+import { InviteLinkCard } from "../../features/refer-earn/presentation/invite-link-card";
+import { ShareRow } from "../../features/refer-earn/presentation/share-row";
+import { ReferralStats } from "../../features/refer-earn/presentation/referral-stats";
 
 export default function ReferEarnPage() {
   const { referralCode, referralLink, totalReferred, verifiedReferred, isLoading } = useReferralStore();
@@ -23,8 +22,7 @@ export default function ReferEarnPage() {
   }, [referralCode]);
 
   return (
-    <AuthenticatedShell tokenBalance={tokens} unreadCount={0}>
-      <div className="max-w-2xl space-y-8">
+    <div className="max-w-2xl space-y-8">
         <div>
           <h1 className="text-2xl font-bold">Refer & Earn</h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -52,6 +50,5 @@ export default function ReferEarnPage() {
           </>
         )}
       </div>
-    </AuthenticatedShell>
   );
 }

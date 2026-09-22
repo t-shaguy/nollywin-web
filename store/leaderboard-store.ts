@@ -1,43 +1,35 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useAuthStore } from "./auth-store";
 
 export interface LeaderboardEntry {
   rank: number;
-  playerId: string;
-  player: string;
+  playerId: string; // authUserId from API
+  player: string; // displayName from API
   points: number;
-  prize?: string;
-  isCurrentUser?: boolean;
+  prizeAmount: number; // Cash prize in Naira
+  isCurrentUser: boolean; // Computed client-side
 }
 
 interface LeaderboardState {
   entries: LeaderboardEntry[];
-  currentUserRank: number | null;
-  monthEndDate: Date;
+  periodEndsAt: Date | null; // From API periodEndsAt field
   isLoading: boolean;
-  setLeaderboard: (entries: LeaderboardEntry[], currentUserRank?: number) => void;
+  setLeaderboard: (entries: LeaderboardEntry[], periodEndsAt: Date) => void;
   setLoading: (loading: boolean) => void;
-}
-
-// Calculate month end (last day of current month)
-function getMonthEndDate(): Date {
-  const now = new Date();
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-  return lastDay;
 }
 
 export const useLeaderboardStore = create<LeaderboardState>()(
   persist(
     (set) => ({
       entries: [],
-      currentUserRank: null,
-      monthEndDate: getMonthEndDate(),
+      periodEndsAt: null,
       isLoading: false,
 
-      setLeaderboard: (entries, currentUserRank) => 
+      setLeaderboard: (entries, periodEndsAt) => 
         set({ 
           entries, 
-          currentUserRank: currentUserRank ?? null,
+          periodEndsAt,
           isLoading: false 
         }),
       
@@ -50,6 +42,14 @@ export const useLeaderboardStore = create<LeaderboardState>()(
 /**
  * Fetch leaderboard data from the API
  * Call this when the leaderboard page is loaded or when data needs to be refreshed
+ * 
+ * VERIFIED API RESPONSE:
+ * {
+ *   "periodEndsAt": "2026-10-01T00:00:00Z",
+ *   "entries": [
+ *     { "rank": 1, "authUserId": "...", "displayName": "Khalid1234", "points": 1100, "prizeAmount": 20000.00 }
+ *   ]
+ * }
  */
 export async function fetchLeaderboard(period: string = "monthly") {
   try {
@@ -58,24 +58,30 @@ export async function fetchLeaderboard(period: string = "monthly") {
     
     const response = await getLeaderboard(period);
     
-    // Defensive: check if leaderboard exists in response
-    if (!response?.leaderboard || !Array.isArray(response.leaderboard)) {
-      console.warn("Leaderboard data not available in response");
-      useLeaderboardStore.getState().setLeaderboard([], undefined);
+    // Defensive: check if entries exists in response
+    if (!response?.entries || !Array.isArray(response.entries)) {
+      console.warn("Leaderboard entries not available in response");
+      useLeaderboardStore.getState().setLeaderboard([], new Date());
       return response;
     }
     
+    // Get current user ID from auth store
+    const currentUserId = useAuthStore.getState().user?.email || null; // Use email as unique identifier
+    
     // Map API response to store format
-    const entries: LeaderboardEntry[] = response.leaderboard.map((entry) => ({
+    const entries: LeaderboardEntry[] = response.entries.map((entry) => ({
       rank: entry.rank,
-      playerId: entry.userId,
-      player: entry.alias || entry.playerName || `Player ${entry.userId.slice(0, 6)}`,
-      points: entry.score,
-      prize: undefined, // Prize info might come from a separate field
-      isCurrentUser: entry.isCurrentUser,
+      playerId: entry.authUserId,
+      player: entry.displayName,
+      points: entry.points,
+      prizeAmount: entry.prizeAmount,
+      isCurrentUser: currentUserId ? entry.authUserId === currentUserId : false,
     }));
     
-    useLeaderboardStore.getState().setLeaderboard(entries, response.currentUserRank);
+    // Parse periodEndsAt from API
+    const periodEndsAt = new Date(response.periodEndsAt);
+    
+    useLeaderboardStore.getState().setLeaderboard(entries, periodEndsAt);
     
     return response;
   } catch (error) {

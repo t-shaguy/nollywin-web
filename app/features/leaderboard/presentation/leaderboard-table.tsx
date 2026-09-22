@@ -5,7 +5,8 @@ interface LeaderboardEntry {
   playerId: string;
   player: string;
   points: number;
-  prize?: string;
+  prizeAmount: number;
+  isCurrentUser: boolean;
 }
 
 function RankBadge({ rank }: { rank: number }) {
@@ -26,6 +27,18 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
+/**
+ * Get initials from display name for avatar placeholder
+ * Since API doesn't return avatarUrl, we generate initials client-side
+ */
+function getInitials(displayName: string): string {
+  const parts = displayName.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+  }
+  return displayName.slice(0, 2).toUpperCase();
+}
+
 export function LeaderboardTable({ 
   entries, 
   currentUserId 
@@ -43,7 +56,8 @@ export function LeaderboardTable({
       </div>
       <div className="divide-y divide-border">
         {entries.map((entry) => {
-          const isCurrentUser = entry.playerId === currentUserId;
+          const isCurrentUser = entry.isCurrentUser;
+          const initials = getInitials(entry.player);
           
           return (
             <div
@@ -54,17 +68,22 @@ export function LeaderboardTable({
             >
               <RankBadge rank={entry.rank} />
               <div className="flex items-center gap-3 min-w-0">
-                <div className={`h-8 w-8 rounded-full shrink-0 ${
-                  isCurrentUser ? "bg-primary/20" : "bg-secondary"
-                }`} />
+                {/* Avatar with initials (no real photo available from API) */}
+                <div 
+                  className={`h-8 w-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold ${
+                    isCurrentUser ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"
+                  }`}
+                >
+                  {initials}
+                </div>
                 <span className={`font-medium truncate ${isCurrentUser ? "text-primary" : ""}`}>
                   {entry.player}
                   {isCurrentUser && <span className="ml-2 text-xs text-muted-foreground">(You)</span>}
                 </span>
               </div>
               <span className="text-muted-foreground font-mono">{entry.points.toLocaleString()}</span>
-              <span className={entry.prize ? "text-primary font-medium" : "text-muted-foreground"}>
-                {entry.prize ?? "—"}
+              <span className={entry.prizeAmount > 0 ? "text-primary font-medium" : "text-muted-foreground"}>
+                {entry.prizeAmount > 0 ? `₦${entry.prizeAmount.toLocaleString()}` : "—"}
               </span>
             </div>
           );

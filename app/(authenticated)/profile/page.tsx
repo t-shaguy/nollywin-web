@@ -2,11 +2,11 @@
 import { useEffect } from "react";
 import { Star, User, Mail, Phone, ChevronRight, Lock, Bell, UserPlus, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
-import { AuthenticatedShell } from "@/components/layout/authenticated-shell";
 import { useWalletStore } from "@/store/wallet-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useSubscriptionStore } from "@/store/subscription-store";
 import { useReferralStore, fetchReferralData } from "@/store/referral-store";
+import { AvatarUpload } from "@/app/features/profile/presentation/avatar-upload";
 import { Button } from "@/components/ui/button";
 import { getProfile } from "@/lib/api/profile";
 
@@ -35,7 +35,11 @@ export default function ProfilePage() {
     fetchReferralData();
   }, []);
 
-  const fullName = user ? `${user.firstName} ${user.lastName}` : "Adaeze Okonkwo";
+  const fullName = user 
+    ? (user.firstName && user.lastName
+        ? `${user.firstName} ${user.lastName}`
+        : user.alias || user.phoneNumber || "NollyWin Player")
+    : "Adaeze Okonkwo";
   const email = user?.email || "adaeze.okonkwo@gmail.com";
   const phoneNumber = user?.phoneNumber || "+234 801 234 5678";
   const alias = user?.alias || "nolly_ace";
@@ -60,22 +64,11 @@ export default function ProfilePage() {
   };
 
   return (
-    <AuthenticatedShell tokenBalance={tokens} unreadCount={0}>
-      <div className="max-w-lg mx-auto space-y-6">
+    <div className="max-w-lg mx-auto space-y-6">
         {/* Header with Avatar and Subscriber Badge */}
         <div className="flex flex-col items-center text-center gap-3">
           <div className="relative">
-            {user?.avatarUrl ? (
-              <img 
-                src={user.avatarUrl} 
-                alt={fullName}
-                className="h-20 w-20 rounded-full object-cover"
-              />
-            ) : (
-              <div className="h-20 w-20 rounded-full bg-brand-gradient flex items-center justify-center text-white text-2xl font-bold">
-                {user ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase() : "AO"}
-              </div>
-            )}
+            <AvatarUpload currentUrl={user?.avatarUrl || undefined} />
             {hasActivePlan && (
               <div className="absolute bottom-0 right-0 h-6 w-6 rounded-full bg-secondary flex items-center justify-center border-2 border-background">
                 <Star size={12} className="text-primary fill-primary" />
@@ -232,6 +225,5 @@ export default function ProfilePage() {
           </Link>
         </section>
       </div>
-    </AuthenticatedShell>
   );
 }

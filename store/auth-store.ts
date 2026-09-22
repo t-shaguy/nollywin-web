@@ -4,8 +4,8 @@ import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
 // VERIFIED: Profile shape from backend (returned in login/verify-otp response and GET /api/v1/users/profile)
 export interface User {
   email: string;
-  firstName: string;
-  lastName: string;
+  firstName: string | null; // Can be null for phone-authenticated accounts
+  lastName: string | null;  // Can be null for phone-authenticated accounts
   phoneNumber: string;
   alias: string | null;
   role: "PLAYER" | "ADMIN";

@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { AuthenticatedShell } from "@/components/layout/authenticated-shell";
 import { useWalletStore } from "@/store/wallet-store";
 import { useNotificationPreferencesStore } from "@/store/notification-preferences-store";
 import { simulateRequest } from "@/lib/api/simulate";
@@ -46,8 +45,7 @@ export default function NotificationPreferencesPage() {
   };
 
   return (
-    <AuthenticatedShell tokenBalance={tokens} unreadCount={0}>
-      <div className="max-w-lg mx-auto space-y-6">
+    <div className="max-w-lg mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
           <button
@@ -229,6 +227,5 @@ export default function NotificationPreferencesPage() {
           </p>
         )}
       </div>
-    </AuthenticatedShell>
   );
 }

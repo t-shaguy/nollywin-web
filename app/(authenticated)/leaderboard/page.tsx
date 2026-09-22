@@ -1,13 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { AuthenticatedShell } from "@/components/layout/authenticated-shell";
-import { Countdown } from "../features/leaderboard/presentation/countdown";
-import { LeaderboardTable } from "../features/leaderboard/presentation/leaderboard-table";
+import { Countdown } from "../../features/leaderboard/presentation/countdown";
+import { LeaderboardTable } from "../../features/leaderboard/presentation/leaderboard-table";
 import { useLeaderboardStore, fetchLeaderboard } from "@/store/leaderboard-store";
 import { useWalletStore } from "@/store/wallet-store";
 
 export default function LeaderboardPage() {
-  const { entries, currentUserRank, monthEndDate, isLoading } = useLeaderboardStore();
+  const { entries, periodEndsAt, isLoading } = useLeaderboardStore();
   const tokens = useWalletStore((s) => s.tokens);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,24 +18,25 @@ export default function LeaderboardPage() {
     });
   }, []);
 
-  // Find current user ID from entries (marked with isCurrentUser)
+  // Find current user entry (marked with isCurrentUser from store)
   const currentUserEntry = entries.find((e) => e.isCurrentUser);
   const currentUserId = currentUserEntry?.playerId || null;
 
   return (
-    <AuthenticatedShell tokenBalance={tokens} unreadCount={0}>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold">Monthly Leaderboard</h1>
             <p className="text-muted-foreground text-sm mt-1">
-              Top 3 players win cash prizes at the end of the month.
+              Top players win cash prizes at the end of the month.
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">Ends in</p>
-            <Countdown targetDate={monthEndDate} />
-          </div>
+          {periodEndsAt && (
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Ends in</p>
+              <Countdown targetDate={periodEndsAt} />
+            </div>
+          )}
         </div>
 
         {isLoading && (
@@ -61,6 +61,5 @@ export default function LeaderboardPage() {
           </div>
         )}
       </div>
-    </AuthenticatedShell>
   );
 }

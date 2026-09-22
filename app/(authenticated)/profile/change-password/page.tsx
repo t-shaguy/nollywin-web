@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Lock, Eye, EyeOff } from "lucide-react";
-import { AuthenticatedShell } from "@/components/layout/authenticated-shell";
 import { useWalletStore } from "@/store/wallet-store";
 import { simulateRequest } from "@/lib/api/simulate";
 
@@ -39,8 +38,7 @@ export default function ChangePasswordPage() {
   };
 
   return (
-    <AuthenticatedShell tokenBalance={tokens} unreadCount={0}>
-      <div className="max-w-lg mx-auto space-y-6">
+    <div className="max-w-lg mx-auto space-y-6">
         {/* Header with Back Button */}
         <div className="flex items-center gap-3">
           <button
@@ -124,6 +122,5 @@ export default function ChangePasswordPage() {
           </button>
         </form>
       </div>
-    </AuthenticatedShell>
   );
 }

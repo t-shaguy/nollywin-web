@@ -26,13 +26,20 @@ export interface InitiatePaymentResponse {
   [key: string]: any;
 }
 
+/**
+ * VERIFIED: Real API response from GET /api/v1/payments/verify/{reference}
+ * {
+ *   "reference": "nw_RXrSEXYJ01VcTf5wEDpKy64C",
+ *   "status": "ABANDONED",
+ *   "amountKobo": 50000,
+ *   "currency": "NGN"
+ * }
+ */
 export interface VerifyPaymentResponse {
-  status: "success" | "failed" | "pending" | string;
-  amount: number;
   reference: string;
-  paidAt?: string;
-  message?: string;
-  [key: string]: any;
+  status: string; // Can be "success", "pending", "ABANDONED", or other values
+  amountKobo: number; // Amount in kobo (divide by 100 for Naira)
+  currency: string; // e.g., "NGN"
 }
 
 // ============================================================================

@@ -7,27 +7,30 @@
 import { apiClient } from "./client";
 
 // ============================================================================
-// Leaderboard Types
+// Leaderboard Types (VERIFIED from real API testing)
 // ============================================================================
 
+/**
+ * CONFIRMED API RESPONSE:
+ * GET /api/v1/game/leaderboard
+ * {
+ *   "periodEndsAt": "2026-10-01T00:00:00Z",
+ *   "entries": [
+ *     { "rank": 1, "authUserId": "...", "displayName": "Khalid1234", "points": 1100, "prizeAmount": 20000.00 }
+ *   ]
+ * }
+ */
 export interface LeaderboardEntry {
   rank: number;
-  userId: string;
-  playerName: string;
-  alias?: string;
-  score: number;
-  gamesPlayed?: number;
-  avatarUrl?: string;
-  isCurrentUser?: boolean;
-  [key: string]: any;
+  authUserId: string;
+  displayName: string;
+  points: number;
+  prizeAmount: number;
 }
 
 export interface LeaderboardResponse {
-  leaderboard: LeaderboardEntry[];
-  currentUserRank?: number;
-  totalPlayers?: number;
-  period?: "DAILY" | "WEEKLY" | "MONTHLY" | "ALL_TIME" | string;
-  [key: string]: any;
+  periodEndsAt: string; // ISO 8601 timestamp
+  entries: LeaderboardEntry[];
 }
 
 // ============================================================================

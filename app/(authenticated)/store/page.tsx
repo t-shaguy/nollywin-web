@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
-import { AuthenticatedShell } from "@/components/layout/authenticated-shell";
 import { useSubscriptionStore } from "@/store/subscription-store";
 import { usePackagesStore, type Package } from "@/store/packages-store";
 import { useTokenPackagesStore, type TokenPackage } from "@/store/token-packages-store";
@@ -120,8 +119,7 @@ export default function StorePage() {
   // ---- CHECKOUT VIEW — full replacement screen, not a section on the browse page ----
   if (view === "checkout" && selected) {
     return (
-      <AuthenticatedShell tokenBalance={tokens} unreadCount={0}>
-        <div className="space-y-5 max-w-lg mx-auto">
+      <div className="space-y-5 max-w-lg mx-auto">
           <button
             onClick={handleBackToBrowse}
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm"
@@ -367,15 +365,13 @@ export default function StorePage() {
             </div>
           </div>
         </div>
-      </AuthenticatedShell>
     );
   }
 
   // ---- SUCCESS VIEW ----
   if (view === "success" && selected) {
     return (
-      <AuthenticatedShell tokenBalance={tokens} unreadCount={0}>
-        <div className="max-w-lg mx-auto">
+      <div className="max-w-lg mx-auto">
           <div className="bg-card border border-border rounded-lg p-6 space-y-4 text-center">
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
               <CheckCircle2 size={32} className="text-primary" />
@@ -393,14 +389,12 @@ export default function StorePage() {
             </Button>
           </div>
         </div>
-      </AuthenticatedShell>
     );
   }
 
   // ---- BROWSE VIEW (default) ----
   return (
-    <AuthenticatedShell tokenBalance={tokens} unreadCount={0}>
-      <div className="space-y-8 max-w-lg mx-auto">
+    <div className="space-y-8 max-w-lg mx-auto">
         {/* Subscription Plans Section */}
         <div>
           <h2 className="text-xs font-bold mb-3 uppercase tracking-wider text-muted-foreground">Subscription Plans</h2>
@@ -481,6 +475,5 @@ export default function StorePage() {
           </p>
         </div>
       </div>
-    </AuthenticatedShell>
   );
 }

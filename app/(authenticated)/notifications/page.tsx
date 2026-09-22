@@ -1,7 +1,6 @@
 "use client";
 import { ArrowLeft, Play, Ticket, CreditCard, Trophy, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { AuthenticatedShell } from "@/components/layout/authenticated-shell";
 import { Badge } from "@/components/ui/badge";
 import { useWalletStore } from "@/store/wallet-store";
 
@@ -89,8 +88,7 @@ export default function NotificationsPage() {
   const unreadCount = MOCK_NOTIFICATIONS.filter((n) => !n.isRead).length;
 
   return (
-    <AuthenticatedShell tokenBalance={tokens} unreadCount={unreadCount}>
-      <div className="max-w-xl mx-auto space-y-6">
+    <div className="max-w-xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -159,6 +157,5 @@ export default function NotificationsPage() {
           </div>
         )}
       </div>
-    </AuthenticatedShell>
   );
 }

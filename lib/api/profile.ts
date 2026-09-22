@@ -4,7 +4,7 @@
  * User profile management endpoints
  */
 
-import { apiClient, apiClientMultipart } from "./client";
+import { apiClient, apiClientMultipart, apiClientBinary } from "./client";
 import type { User } from "@/store/auth-store";
 
 // ============================================================================
@@ -25,11 +25,7 @@ export interface UpdateProfileResponse {
 
 export interface UploadAvatarResponse {
   message: string;
-  avatarUrl: string;
-}
-
-export interface GetAvatarResponse {
-  avatarUrl: string;
+  // Note: avatarUrl is NOT in the response - backend only returns { message: "Avatar updated" }
 }
 
 // Note: Change password endpoint TBD - may use auth reset-password or a dedicated endpoint
@@ -63,10 +59,11 @@ export async function updateProfile(data: UpdateProfileRequest): Promise<UpdateP
 /**
  * Upload user avatar
  * POST /api/v1/users/avatar
+ * Field name must be "file" (not "avatar")
  */
 export async function uploadAvatar(file: File): Promise<UploadAvatarResponse> {
   const formData = new FormData();
-  formData.append("avatar", file);
+  formData.append("file", file); // CRITICAL: Backend expects "file" not "avatar"
   
   return apiClientMultipart<UploadAvatarResponse>("/api/v1/users/avatar", formData, {
     method: "POST",
@@ -74,11 +71,10 @@ export async function uploadAvatar(file: File): Promise<UploadAvatarResponse> {
 }
 
 /**
- * Get user avatar URL
+ * Get user avatar as binary blob
  * GET /api/v1/users/avatar
+ * Returns raw image binary (requires auth headers, not a public URL)
  */
-export async function getAvatar(): Promise<GetAvatarResponse> {
-  return apiClient<GetAvatarResponse>("/api/v1/users/avatar", {
-    method: "GET",
-  });
+export async function getAvatar(): Promise<Blob> {
+  return apiClientBinary("/api/v1/users/avatar");
 }

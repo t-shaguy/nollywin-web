@@ -1,12 +1,28 @@
 "use client";
 import Link from "next/link";
-import { Monitor } from "lucide-react";
+import { Monitor, User } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
+import { useAvatarUrl } from "@/hooks/use-avatar-url";
 
 export function Navbar() {
   const { token, user } = useAuthStore();
   const isLoggedIn = token && token !== "guest-session-token";
   const isAdmin = user?.role === "ADMIN";
+
+  // Convert authenticated avatar URL to displayable blob URL
+  const avatarBlobUrl = useAvatarUrl(user?.avatarUrl);
+
+  // Determine display name and initials for avatar
+  const displayName = user
+    ? (user.firstName && user.lastName
+        ? `${user.firstName} ${user.lastName}`
+        : user.alias || user.phoneNumber || "NollyWin Player")
+    : "User";
+  
+  const hasRealName = user?.firstName && user.lastName;
+  const initials = hasRealName 
+    ? `${user.firstName!.charAt(0)}${user.lastName!.charAt(0)}`.toUpperCase()
+    : null;
 
   return (
     <nav className="flex items-center justify-between px-8 py-6">
@@ -23,17 +39,21 @@ export function Navbar() {
             <Link 
               href="/home"
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-              title={`${user.firstName} ${user.lastName}`}
+              title={displayName}
             >
-              {user.avatarUrl ? (
+              {avatarBlobUrl ? (
                 <img 
-                  src={user.avatarUrl} 
-                  alt={`${user.firstName} ${user.lastName}`}
+                  src={avatarBlobUrl} 
+                  alt={displayName}
                   className="h-9 w-9 rounded-full object-cover border-2 border-primary/30"
                 />
-              ) : (
+              ) : initials ? (
                 <div className="h-9 w-9 rounded-full bg-brand-gradient flex items-center justify-center text-white text-sm font-bold border-2 border-primary/30">
-                  {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                  {initials}
+                </div>
+              ) : (
+                <div className="h-9 w-9 rounded-full bg-brand-gradient flex items-center justify-center text-white border-2 border-primary/30">
+                  <User size={18} strokeWidth={2} />
                 </div>
               )}
             </Link>
