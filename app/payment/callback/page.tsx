@@ -1,12 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Status = "verifying" | "success" | "failed" | "abandoned";
 
-export default function PaymentCallbackPage() {
+function PaymentCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<Status>("verifying");
@@ -154,5 +154,27 @@ export default function PaymentCallbackPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+
+export default function PaymentCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center px-4 bg-background">
+        <div className="w-full max-w-md">
+          <div className="bg-card border border-border rounded-2xl p-8 space-y-6 text-center">
+            <div className="h-20 w-20 rounded-full bg-secondary flex items-center justify-center mx-auto">
+              <Loader2 size={40} className="text-primary animate-spin" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold">Loading...</h1>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <PaymentCallbackContent />
+    </Suspense>
   );
 }

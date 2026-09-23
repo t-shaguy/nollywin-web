@@ -1,91 +1,109 @@
 "use client";
-import { useState } from "react";
-import { FileBarChart2, Gamepad2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { simulateRequest } from "@/lib/api/simulate";
+import { useState, useEffect } from "react";
+import { FileBarChart2 } from "lucide-react";
+import {
+  getSubscriptionReportSummary,
+  getSubscriptionReportList,
+  type SubscriptionReportSummary,
+} from "@/lib/api/admin";
 
 export default function ReportsPage() {
-  const [subReportLoading, setSubReportLoading] = useState(false);
-  const [gameplayReportLoading, setGameplayReportLoading] = useState(false);
-  const [subReportSuccess, setSubReportSuccess] = useState(false);
-  const [gameplayReportSuccess, setGameplayReportSuccess] = useState(false);
+  const [summary, setSummary] = useState<SubscriptionReportSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
 
-  const handleGenerateSubReport = async () => {
-    setSubReportLoading(true);
-    setSubReportSuccess(false);
-    // TODO: replace with real apiClient("/admin/reports/subscription", ...) once backend exists
-    await simulateRequest({ ok: true }, 1000);
-    setSubReportLoading(false);
-    setSubReportSuccess(true);
-    setTimeout(() => setSubReportSuccess(false), 5000);
-  };
+  useEffect(() => {
+    async function loadSummary() {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getSubscriptionReportSummary();
+        setSummary(data);
+      } catch (err) {
+        console.error("Error loading subscription report summary:", err);
+        setError(err instanceof Error ? err.message : "Failed to load subscription report");
+      } finally {
+        setLoading(false);
+      }
+    }
 
-  const handleGenerateGameplayReport = async () => {
-    setGameplayReportLoading(true);
-    setGameplayReportSuccess(false);
-    // TODO: replace with real apiClient("/admin/reports/gameplay", ...) once backend exists
-    await simulateRequest({ ok: true }, 1000);
-    setGameplayReportLoading(false);
-    setGameplayReportSuccess(true);
-    setTimeout(() => setGameplayReportSuccess(false), 5000);
-  };
+    async function checkListEndpoint() {
+      // TODO(backend): Subscription report list endpoint returns 404
+      // This is a known issue - the endpoint is not available yet
+      try {
+        await getSubscriptionReportList(0, 10);
+      } catch (err: unknown) {
+        if (err && typeof err === "object" && "status" in err && err.status === 404) {
+          setListError("Subscription report list endpoint not available yet (404)");
+        }
+      }
+    }
+    
+    loadSummary();
+    checkListEndpoint();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-extrabold">Reports</h1>
+          <p className="text-muted-foreground mt-1">View platform analytics and subscription reports</p>
+        </div>
+        <div className="bg-card border border-border rounded-2xl p-12 flex items-center justify-center">
+          <div className="text-muted-foreground">Loading reports...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-extrabold">Reports</h1>
-        <p className="text-muted-foreground mt-1">Generate and view platform analytics</p>
+        <p className="text-muted-foreground mt-1">View platform analytics and subscription reports</p>
+        {/* TODO: raffle report endpoint 404s as of 2026-09-22, confirm with backend before building this page */}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Subscription Reports */}
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <div className="h-12 w-12 rounded-full bg-primary/15 flex items-center justify-center mb-4">
-            <FileBarChart2 size={24} className="text-primary" />
-          </div>
-          <h2 className="text-xl font-bold mb-2">Subscription Reports</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            Generate detailed reports on subscription trends, revenue, and user plan distribution
-          </p>
-          {subReportSuccess && (
-            <div className="bg-primary/10 border border-primary text-primary rounded-xl p-3 text-sm font-medium mb-4">
-              Report generated — check your email
-            </div>
-          )}
-          <Button
-            onClick={handleGenerateSubReport}
-            disabled={subReportLoading}
-            variant="gradient"
-            className="w-full justify-center"
-          >
-            {subReportLoading ? "Generating..." : "Generate Sub Report"}
-          </Button>
+      {/* Error Message */}
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 text-destructive">
+          {error}
         </div>
+      )}
 
-        {/* Gameplay Reports */}
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <div className="h-12 w-12 rounded-full bg-primary/15 flex items-center justify-center mb-4">
-            <Gamepad2 size={24} className="text-primary" />
-          </div>
-          <h2 className="text-xl font-bold mb-2">Gameplay Reports</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            Analyze trivia performance, question difficulty, and player engagement metrics
-          </p>
-          {gameplayReportSuccess && (
-            <div className="bg-primary/10 border border-primary text-primary rounded-xl p-3 text-sm font-medium mb-4">
-              Report generated — check your email
-            </div>
-          )}
-          <Button
-            onClick={handleGenerateGameplayReport}
-            disabled={gameplayReportLoading}
-            variant="gradient"
-            className="w-full justify-center"
-          >
-            {gameplayReportLoading ? "Generating..." : "Generate Gameplay Report"}
-          </Button>
+      {/* Backend Status Message */}
+      {listError && (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 text-yellow-600">
+          <p className="font-medium">Note: {listError}</p>
+          <p className="text-sm mt-1 opacity-80">Summary data is available below.</p>
         </div>
-      </div>
+      )}
+
+      {/* Subscription Report Summary - Generic Render */}
+      {/* TODO(tartor): once real field names are confirmed via console.log, replace generic render with named cards */}
+      {summary && Object.keys(summary).length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {Object.entries(summary).map(([key, value]) => (
+            <div key={key} className="bg-card border border-border rounded-2xl p-6">
+              <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-4">
+                <FileBarChart2 size={24} className="text-blue-500" />
+              </div>
+              <p className="text-sm text-muted-foreground">{key}</p>
+              <p className="text-2xl font-extrabold mt-1">
+                {typeof value === "number" ? value.toLocaleString() : String(value || "—")}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!summary && !loading && !error && (
+        <div className="bg-card border border-border rounded-2xl p-12 text-center text-muted-foreground">
+          No subscription data available yet.
+        </div>
+      )}
     </div>
   );
 }

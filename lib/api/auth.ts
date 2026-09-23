@@ -236,3 +236,38 @@ export async function changePassword(data: ChangePasswordRequest): Promise<Chang
     body: JSON.stringify(data),
   });
 }
+
+
+// ============================================================================
+// Player Dashboard
+// ============================================================================
+
+export interface PlayerDashboard {
+  displayName: string;
+  totalPoints: number;
+  pointsToday: number;
+  tokensLeft: number;
+  tokenCostPerPlay: number;
+  monthlyRank: {
+    rank: number | null;
+    participants: number;
+    topPercent: number | null;
+    periodEndsAt: string;
+  } | null;
+  subscription: Record<string, unknown> | null;
+  freeAttemptsLeft: number | null;
+  activeRaffles: { id: string; prizeName: string; ticketCostTokens: number; entered: boolean; myTickets: number }[];
+  unreadNotifications: number;
+}
+
+/**
+ * Get player dashboard data (authenticated)
+ * GET /api/v1/user/dashboard
+ * 
+ * Returns dashboard data including unread notifications count and other metrics
+ */
+export async function getPlayerDashboard(): Promise<PlayerDashboard> {
+  return apiClient<PlayerDashboard>("/api/v1/user/dashboard", {
+    method: "GET",
+  });
+}
