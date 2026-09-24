@@ -23,7 +23,7 @@ export default function NotificationPreferencesPage() {
   const handleRequestPushPermission = async () => {
     try {
       await simulateRequest({ granted: true }, 800);
-      updatePreference("pushNotificationsEnabled", true);
+      updatePreference("pushEnabled", true);
     } catch {
       // Permission denied or error
     }
@@ -201,7 +201,7 @@ export default function NotificationPreferencesPage() {
                 <p className="text-xs text-muted-foreground">Enable device push for all alerts above</p>
               </div>
             </div>
-            {!preferences.pushNotificationsEnabled && (
+            {!preferences.pushEnabled && (
               <Button
                 onClick={handleRequestPushPermission}
                 className="bg-gradient-to-r from-[#F40289] to-[#FC0D28] text-white hover:opacity-90 text-sm px-4 py-2 h-auto"

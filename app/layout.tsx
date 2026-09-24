@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { appFont } from "./fonts";
+import { GoogleAuthProvider } from "@/components/providers/google-auth-provider";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -16,7 +17,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`dark ${appFont.variable} ${geistMono.variable}`}>
-      <body>{children}</body>
+      <body>
+        <GoogleAuthProvider>{children}</GoogleAuthProvider>
+      </body>
     </html>
   );
 }

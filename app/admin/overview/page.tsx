@@ -45,9 +45,8 @@ export default function AdminOverviewPage() {
     loadDashboard();
   }, []);
 
-  // Format kobo to naira (divide by 100)
-  const formatNaira = (kobo: number) => {
-    const naira = kobo / 100;
+  // Format naira (already in Naira from backend)
+  const formatNaira = (naira: number) => {
     if (naira >= 1_000_000) {
       return `₦${(naira / 1_000_000).toFixed(1)}M`;
     }
@@ -148,7 +147,7 @@ export default function AdminOverviewPage() {
               <BarChart
                 data={revenueTrend.map((entry) => ({
                   day: formatChartDate(entry.date),
-                  revenue: entry.revenue / 100,
+                  revenue: entry.revenue,
                   fullDate: entry.date,
                 }))}
               >

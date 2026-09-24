@@ -12,10 +12,10 @@ export default function AuditLogPage() {
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
-    action: "",
-    userId: "",
-    startDate: "",
-    endDate: "",
+    resourceType: "",
+    actorEmail: "",
+    from: "",
+    to: "",
   });
 
   useEffect(() => {
@@ -40,17 +40,13 @@ export default function AuditLogPage() {
     try {
       setLoading(true);
       setError(null);
-      
-      const params: Record<string, string> = {};
-      if (filters.action) params.action = filters.action;
-      if (filters.userId) params.userId = filters.userId;
-      if (filters.startDate) params.startDate = filters.startDate;
-      if (filters.endDate) params.endDate = filters.endDate;
-      
-      const data = await getAuditLog(params);
-      console.log("Audit log:", data);
-      
-      setLogs(Array.isArray(data) ? data : []);
+      const data = await getAuditLog({
+        resourceType: filters.resourceType || undefined,
+        actorEmail: filters.actorEmail || undefined,
+        from: filters.from || undefined,
+        to: filters.to || undefined,
+      });
+      setLogs(data.entries ?? []);
     } catch (err) {
       console.error("Error loading audit log:", err);
       setError(err instanceof Error ? err.message : "Failed to load audit log");
@@ -63,7 +59,7 @@ export default function AuditLogPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-extrabold">Audit Log</h1>
-        <p className="text-muted-foreground mt-1">Track system activity and administrative actions</p>
+        <p className="text-muted-foreground mt-1">See who made changes, when, and whether they went through</p>
       </div>
 
       {/* Error Message */}
@@ -74,20 +70,60 @@ export default function AuditLogPage() {
       )}
 
       {/* Summary Cards */}
-      {/* TODO(tartor): Generic render until response shape confirmed */}
-      {summary && Object.keys(summary).length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {Object.entries(summary).map(([key, value]) => (
-            <div key={key} className="bg-card border border-border rounded-2xl p-6">
+      {summary && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="bg-card border border-border rounded-2xl p-6">
               <div className="h-12 w-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-4">
                 <Activity size={24} className="text-purple-500" />
               </div>
-              <p className="text-sm text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
-              <p className="text-2xl font-extrabold mt-1">
-                {typeof value === "number" ? value.toLocaleString() : String(value || "—")}
-              </p>
+              <p className="text-sm text-muted-foreground">Total Actions</p>
+              <p className="text-2xl font-extrabold mt-1">{summary.totalActions.toLocaleString()}</p>
             </div>
-          ))}
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <div className="h-12 w-12 rounded-xl bg-green-500/20 flex items-center justify-center mb-4">
+                <Activity size={24} className="text-green-500" />
+              </div>
+              <p className="text-sm text-muted-foreground">Successful</p>
+              <p className="text-2xl font-extrabold mt-1">{summary.successCount.toLocaleString()}</p>
+            </div>
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <div className="h-12 w-12 rounded-xl bg-red-500/20 flex items-center justify-center mb-4">
+                <Activity size={24} className="text-red-500" />
+              </div>
+              <p className="text-sm text-muted-foreground">Didn't Go Through</p>
+              <p className="text-2xl font-extrabold mt-1">{summary.failureCount.toLocaleString()}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <h3 className="font-bold mb-3">By Resource Type</h3>
+              <div className="space-y-2">
+                {summary.byResourceType.map((r) => (
+                  <div key={r.resourceType} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{r.resourceType}</span>
+                    <span className="font-medium">{r.total} ({r.successCount} ok, {r.failureCount} failed)</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <h3 className="font-bold mb-3">By Admin</h3>
+              <div className="space-y-2">
+                {summary.byActor.map((a) => (
+                  <div key={a.actorEmail} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground truncate">{a.actorEmail}</span>
+                    <span className="font-medium">{a.total}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Showing activity from {new Date(summary.from).toLocaleDateString()} to {new Date(summary.to).toLocaleDateString()}
+          </p>
         </div>
       )}
 
@@ -96,35 +132,35 @@ export default function AuditLogPage() {
         <h2 className="text-lg font-bold mb-4">Filters</h2>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
-            <label className="text-sm font-medium mb-2 block">Action</label>
+            <label className="text-sm font-medium mb-2 block">Resource Type</label>
             <Input
-              value={filters.action}
-              onChange={(e) => setFilters({ ...filters, action: e.target.value })}
-              placeholder="e.g. CREATE, UPDATE"
+              value={filters.resourceType}
+              onChange={(e) => setFilters({ ...filters, resourceType: e.target.value })}
+              placeholder="e.g. TriviaPrize, RaffleDraw"
             />
           </div>
           <div>
-            <label className="text-sm font-medium mb-2 block">User ID</label>
+            <label className="text-sm font-medium mb-2 block">Admin Email</label>
             <Input
-              value={filters.userId}
-              onChange={(e) => setFilters({ ...filters, userId: e.target.value })}
-              placeholder="User UUID"
+              value={filters.actorEmail}
+              onChange={(e) => setFilters({ ...filters, actorEmail: e.target.value })}
+              placeholder="admin@example.com"
             />
           </div>
           <div>
-            <label className="text-sm font-medium mb-2 block">Start Date</label>
+            <label className="text-sm font-medium mb-2 block">From</label>
             <Input
               type="date"
-              value={filters.startDate}
-              onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+              value={filters.from}
+              onChange={(e) => setFilters({ ...filters, from: e.target.value })}
             />
           </div>
           <div>
-            <label className="text-sm font-medium mb-2 block">End Date</label>
+            <label className="text-sm font-medium mb-2 block">To</label>
             <Input
               type="date"
-              value={filters.endDate}
-              onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+              value={filters.to}
+              onChange={(e) => setFilters({ ...filters, to: e.target.value })}
             />
           </div>
           <div className="flex items-end">
@@ -136,7 +172,6 @@ export default function AuditLogPage() {
       </div>
 
       {/* Audit Log Table */}
-      {/* TODO(tartor): Generic render until response shape confirmed */}
       <div className="bg-card border border-border rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-6">
           <FileText size={20} className="text-primary" />

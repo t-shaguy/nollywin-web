@@ -13,12 +13,18 @@ export function DashboardStats({
   totalPoints,
   tokensLeft,
 }: {
-  monthlyRank: number;
+  monthlyRank: number | null;
   totalPoints: number;
   tokensLeft: number;
 }) {
   const stats: ColoredStat[] = [
-    { icon: Trophy, label: "Monthly Rank", value: `#${monthlyRank}`, iconBg: "bg-amber-500/15", iconColor: "text-amber-500" },
+    {
+      icon: Trophy,
+      label: "Monthly Rank",
+      value: monthlyRank !== null ? `#${monthlyRank}` : "Unranked",
+      iconBg: "bg-amber-500/15",
+      iconColor: "text-amber-500",
+    },
     { icon: Star, label: "Total Points", value: totalPoints.toLocaleString(), iconBg: "bg-primary/15", iconColor: "text-primary" },
     { icon: Coins, label: "Tokens Left", value: tokensLeft, iconBg: "bg-destructive/15", iconColor: "text-destructive" },
   ];

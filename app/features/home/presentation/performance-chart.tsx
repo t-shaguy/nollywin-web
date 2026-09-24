@@ -19,6 +19,9 @@ export function PerformanceChart({ data }: { data: DataPoint[] }) {
   const [view, setView] = useState<"line" | "bar">("line");
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
+  // Check if all values are zero (no data yet)
+  const hasData = data.some((d) => d.value > 0);
+
   const plotWidth = WIDTH - PADDING_LEFT;
   const plotHeight = HEIGHT - PADDING_BOTTOM - PADDING_TOP;
   const stepX = data.length > 1 ? plotWidth / (data.length - 1) : 0;
@@ -54,83 +57,92 @@ export function PerformanceChart({ data }: { data: DataPoint[] }) {
         </div>
       </div>
 
-      <div className="relative overflow-x-auto">
-        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="w-full min-w-[500px]" onMouseLeave={() => setHoverIndex(null)}>
-          {Y_TICKS.map((tick) => (
-            <g key={tick}>
-              <line
-                x1={PADDING_LEFT}
-                x2={WIDTH}
-                y1={yFor(tick)}
-                y2={yFor(tick)}
-                stroke="var(--border)"
-                strokeDasharray="4 4"
-              />
-              <text x={0} y={yFor(tick) + 4} fontSize="11" fill="var(--muted-foreground)">
-                {tick}
+      {!hasData ? (
+        <div className="flex items-center justify-center py-16 text-center">
+          <div className="space-y-2">
+            <Flame size={32} className="text-muted-foreground mx-auto opacity-50" />
+            <p className="text-sm text-muted-foreground">Play a few rounds to see your performance here</p>
+          </div>
+        </div>
+      ) : (
+        <div className="relative overflow-x-auto">
+          <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="w-full min-w-[500px]" onMouseLeave={() => setHoverIndex(null)}>
+            {Y_TICKS.map((tick) => (
+              <g key={tick}>
+                <line
+                  x1={PADDING_LEFT}
+                  x2={WIDTH}
+                  y1={yFor(tick)}
+                  y2={yFor(tick)}
+                  stroke="var(--border)"
+                  strokeDasharray="4 4"
+                />
+                <text x={0} y={yFor(tick) + 4} fontSize="11" fill="var(--muted-foreground)">
+                  {tick}
+                </text>
+              </g>
+            ))}
+
+            {data.map((d, i) => (
+              <text key={d.label} x={xFor(i)} y={HEIGHT - 4} fontSize="11" fill="var(--muted-foreground)" textAnchor="middle">
+                {d.label}
               </text>
-            </g>
-          ))}
+            ))}
 
-          {data.map((d, i) => (
-            <text key={d.label} x={xFor(i)} y={HEIGHT - 4} fontSize="11" fill="var(--muted-foreground)" textAnchor="middle">
-              {d.label}
-            </text>
-          ))}
+            {view === "line" ? (
+              <>
+                <path d={linePath} fill="none" stroke="var(--primary)" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                {data.map((d, i) => (
+                  <circle key={d.label} cx={xFor(i)} cy={yFor(d.value)} r={hoverIndex === i ? 6 : 4} fill="var(--primary)" />
+                ))}
+              </>
+            ) : (
+              data.map((d, i) => (
+                <rect
+                  key={d.label}
+                  x={xFor(i) - barWidth / 2}
+                  y={yFor(d.value)}
+                  width={barWidth}
+                  height={plotHeight + PADDING_TOP - yFor(d.value)}
+                  rx={4}
+                  fill="var(--primary)"
+                  opacity={hoverIndex === i ? 1 : 0.85}
+                />
+              ))
+            )}
 
-          {view === "line" ? (
-            <>
-              <path d={linePath} fill="none" stroke="var(--primary)" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-              {data.map((d, i) => (
-                <circle key={d.label} cx={xFor(i)} cy={yFor(d.value)} r={hoverIndex === i ? 6 : 4} fill="var(--primary)" />
-              ))}
-            </>
-          ) : (
-            data.map((d, i) => (
+            {data.map((d, i) => (
               <rect
-                key={d.label}
-                x={xFor(i) - barWidth / 2}
-                y={yFor(d.value)}
-                width={barWidth}
-                height={plotHeight + PADDING_TOP - yFor(d.value)}
-                rx={4}
-                fill="var(--primary)"
-                opacity={hoverIndex === i ? 1 : 0.85}
+                key={`hit-${d.label}`}
+                x={xFor(i) - stepX / 2}
+                y={0}
+                width={stepX || plotWidth}
+                height={HEIGHT}
+                fill="transparent"
+                onMouseEnter={() => setHoverIndex(i)}
               />
-            ))
-          )}
+            ))}
 
-          {data.map((d, i) => (
-            <rect
-              key={`hit-${d.label}`}
-              x={xFor(i) - stepX / 2}
-              y={0}
-              width={stepX || plotWidth}
-              height={HEIGHT}
-              fill="transparent"
-              onMouseEnter={() => setHoverIndex(i)}
-            />
-          ))}
+            {hoverIndex !== null && (
+              <line x1={xFor(hoverIndex)} x2={xFor(hoverIndex)} y1={PADDING_TOP} y2={PADDING_TOP + plotHeight} stroke="var(--muted-foreground)" strokeWidth={1} />
+            )}
+          </svg>
 
           {hoverIndex !== null && (
-            <line x1={xFor(hoverIndex)} x2={xFor(hoverIndex)} y1={PADDING_TOP} y2={PADDING_TOP + plotHeight} stroke="var(--muted-foreground)" strokeWidth={1} />
+            <div
+              className="absolute bg-popover border border-border rounded-lg px-3 py-2 text-sm pointer-events-none shadow-lg"
+              style={{
+                left: `${(xFor(hoverIndex) / WIDTH) * 100}%`,
+                top: `${(yFor(data[hoverIndex].value) / HEIGHT) * 100}%`,
+                transform: "translate(8px, -110%)",
+              }}
+            >
+              <p className="font-semibold">{data[hoverIndex].label}</p>
+              <p className="text-muted-foreground">score : {data[hoverIndex].value}</p>
+            </div>
           )}
-        </svg>
-
-        {hoverIndex !== null && (
-          <div
-            className="absolute bg-popover border border-border rounded-lg px-3 py-2 text-sm pointer-events-none shadow-lg"
-            style={{
-              left: `${(xFor(hoverIndex) / WIDTH) * 100}%`,
-              top: `${(yFor(data[hoverIndex].value) / HEIGHT) * 100}%`,
-              transform: "translate(8px, -110%)",
-            }}
-          >
-            <p className="font-semibold">{data[hoverIndex].label}</p>
-            <p className="text-muted-foreground">score : {data[hoverIndex].value}</p>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,12 +1,30 @@
 "use client";
+import { useEffect, useState } from "react";
 import { Play, Coins, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GAME_CONFIG } from "../data/mock-questions";
-import { useTriviaQuestionsStore } from "@/store/trivia-questions-store";
+import { getGameSettings, type GameSettings } from "@/lib/api/game";
 
-export function StageSelect({ onStart, currentTokens }: { onStart: () => void; currentTokens: number }) {
-  const questions = useTriviaQuestionsStore((s) => s.questions);
-  const hasEnoughTokens = currentTokens >= GAME_CONFIG.entryFeeTokens;
+export function StageSelect({ 
+  onStart, 
+  currentTokens, 
+  tokenCostPerPlay 
+}: { 
+  onStart: () => void; 
+  currentTokens: number;
+  tokenCostPerPlay: number;
+}) {
+  const [settings, setSettings] = useState<GameSettings | null>(null);
+
+  useEffect(() => {
+    // NOTE: This endpoint is currently admin-only in lib/api/admin.ts (uses adminApiClient).
+    // If it works with player tokens, great; if it 401s, we need a player-accessible version.
+    getGameSettings()
+      .then(setSettings)
+      .catch((err) => console.error("Failed to load game settings:", err));
+  }, []);
+
+  const secondsPerQuestion = settings?.secondsPerQuestion ?? 10; // fallback while loading
+  const hasEnoughTokens = currentTokens >= tokenCostPerPlay;
 
   return (
     <div className="flex flex-col items-center text-center max-w-md mx-auto py-10">
@@ -15,7 +33,7 @@ export function StageSelect({ onStart, currentTokens }: { onStart: () => void; c
       </div>
       <h1 className="text-3xl font-extrabold">Trivia Challenge</h1>
       <p className="text-muted-foreground mt-2">
-        10 seconds per question. {questions.length} questions.
+        {secondsPerQuestion} seconds per question.
       </p>
 
       {/* Current balance banner */}
@@ -32,7 +50,7 @@ export function StageSelect({ onStart, currentTokens }: { onStart: () => void; c
           <span className="text-sm text-muted-foreground">Entry Fee</span>
           <span className="flex items-center gap-1.5 font-semibold">
             <Coins size={16} className="text-primary" />
-            {GAME_CONFIG.entryFeeTokens} Tokens
+            {tokenCostPerPlay} {tokenCostPerPlay === 1 ? 'Token' : 'Tokens'}
           </span>
         </div>
         <div className="flex items-center justify-between">
@@ -50,13 +68,13 @@ export function StageSelect({ onStart, currentTokens }: { onStart: () => void; c
         className="w-full justify-center mt-6"
       >
         {hasEnoughTokens
-          ? `Pay ${GAME_CONFIG.entryFeeTokens} Tokens & Play`
+          ? `Pay ${tokenCostPerPlay} ${tokenCostPerPlay === 1 ? 'Token' : 'Tokens'} & Play`
           : "Insufficient Tokens"}
       </Button>
 
       {!hasEnoughTokens && (
         <p className="text-destructive text-sm mt-2">
-          You need {GAME_CONFIG.entryFeeTokens - currentTokens} more tokens to play
+          You need {tokenCostPerPlay - currentTokens} more {tokenCostPerPlay - currentTokens === 1 ? 'token' : 'tokens'} to play
         </p>
       )}
     </div>

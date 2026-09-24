@@ -19,7 +19,7 @@ import { AdminActionButton } from "@/components/admin/admin-action-button";
 interface PackageFormData {
   name: string;
   durationDays: number;
-  fee: number; // in naira (will convert to kobo)
+  fee: number; // in Naira (backend expects Naira)
   active: boolean;
 }
 
@@ -58,7 +58,7 @@ export default function PackagesPage() {
     reset({
       name: pkg.name,
       durationDays: pkg.durationDays,
-      fee: pkg.fee / 100, // Convert kobo to naira for form
+      fee: pkg.fee, // Already in Naira
       active: pkg.active,
     });
   };
@@ -74,7 +74,7 @@ export default function PackagesPage() {
       const updateData: UpdatePackageRequest = {
         name: data.name,
         durationDays: data.durationDays,
-        fee: Math.round(data.fee * 100), // Convert naira to kobo
+        fee: data.fee, // Already in Naira
         active: data.active,
       };
       
@@ -103,7 +103,7 @@ export default function PackagesPage() {
       const createData: CreatePackageRequest = {
         name: data.name,
         durationDays: data.durationDays,
-        fee: Math.round(data.fee * 100), // Convert naira to kobo
+        fee: data.fee, // Already in Naira
         active: data.active,
       };
       
@@ -123,9 +123,9 @@ export default function PackagesPage() {
     }
   };
 
-  // Format naira from kobo
-  const formatNaira = (kobo: number) => {
-    return `₦${(kobo / 100).toLocaleString()}`;
+  // Format naira (already in Naira from backend)
+  const formatNaira = (naira: number) => {
+    return `₦${naira.toLocaleString()}`;
   };
 
   if (loading) {

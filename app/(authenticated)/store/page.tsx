@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 import { useSubscriptionStore } from "@/store/subscription-store";
-import { usePackagesStore, type Package } from "@/store/packages-store";
+import { usePackagesStore } from "@/store/packages-store";
+import { type SubscriptionPackage } from "@/lib/api/subscriptions";
 import { useTokenPackagesStore, type TokenPackage } from "@/store/token-packages-store";
 import { useWalletStore } from "@/store/wallet-store";
 import { Button } from "@/components/ui/button";
@@ -14,11 +15,9 @@ const PINK = "#F40289";
 const RED = "#FC0D28";
 
 type SelectedItem = 
-  | { type: "subscription"; item: Package }
+  | { type: "subscription"; item: SubscriptionPackage }
   | { type: "tokens"; item: TokenPackage }
   | null;
-
-type PaymentMethod = "airtime" | "ussd" | "card";
 
 // "browse" = the plan/token grid, with a "Proceed to Payment" button
 // once something's selected. Clicking that REPLACES the whole view
@@ -29,26 +28,40 @@ type View = "browse" | "checkout" | "success";
 
 export default function StorePage() {
   const { setSubscription } = useSubscriptionStore();
-  const packages = usePackagesStore((s) => s.packages);
+  const { packages, loading, error: packagesError } = usePackagesStore();
   const tokenPackages = useTokenPackagesStore((s) => s.packages);
-  const { tokens, addTokens } = useWalletStore();
+  const { tokens } = useWalletStore();
   
   const [selected, setSelected] = useState<SelectedItem>(null);
   const [view, setView] = useState<View>("browse");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("airtime");
   const [isProcessing, setIsProcessing] = useState(false);
-  
-  // Card form state
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
-  const [cardHolder, setCardHolder] = useState("");
+  const [currentSubscription, setCurrentSubscription] = useState<string | null>(null);
+
+  // Load current active subscription on mount
+  useEffect(() => {
+    async function loadCurrentSubscription() {
+      try {
+        const { getMySubscriptions } = await import("@/lib/api/subscriptions");
+        const subs = await getMySubscriptions("ACTIVE");
+        if (subs.length > 0) {
+          setCurrentSubscription(subs[0].packageName);
+        }
+      } catch (err) {
+        console.error("Failed to load current subscription:", err);
+      }
+    }
+    loadCurrentSubscription();
+  }, []);
 
   const activePackages = packages.filter((p) => p.active);
   
-  const price = selected ? selected.item.price : 0;
+  const price = selected 
+    ? selected.type === "subscription" 
+      ? (selected.item as SubscriptionPackage).fee 
+      : (selected.item as TokenPackage).price
+    : 0;
 
-  const handleSelect = (type: "subscription" | "tokens", item: Package | TokenPackage) => {
+  const handleSelect = (type: "subscription" | "tokens", item: SubscriptionPackage | TokenPackage) => {
     setSelected({ type, item } as SelectedItem);
   };
 
@@ -67,21 +80,17 @@ export default function StorePage() {
     setIsProcessing(true);
     try {
       if (selected.type === "subscription") {
-        // Purchase subscription - may redirect to Paystack if payment required
-        const { purchaseSubscription } = await import("@/lib/api/payments");
-        const response = await purchaseSubscription({ packageId: selected.item.id });
+        // Purchase subscription using real UUID packageId
+        const { purchasePackage } = await import("@/lib/api/subscriptions");
+        const response = await purchasePackage({ packageId: selected.item.id });
         
-        // If payment authorization URL is provided, redirect to Paystack
-        if (response.payment?.authorizationUrl) {
-          window.location.href = response.payment.authorizationUrl;
+        // Redirect to Paystack authorization URL
+        if (response.authorizationUrl) {
+          window.location.href = response.authorizationUrl;
           return;
         }
         
-        // Otherwise, subscription activated directly (maybe free or already paid)
-        // Refresh subscription status
-        const { fetchSubscriptionStatus } = await import("@/store/subscription-store");
-        await fetchSubscriptionStatus();
-        setView("success");
+        throw new Error("No authorization URL received from server");
       } else {
         // Top up tokens - initiate payment
         const { initiatePayment } = await import("@/lib/api/payments");
@@ -96,7 +105,6 @@ export default function StorePage() {
           return;
         }
         
-        // If no redirect URL, show error
         throw new Error("Payment initiation failed - no authorization URL received");
       }
     } catch (error: any) {
@@ -109,11 +117,6 @@ export default function StorePage() {
   const resetCheckout = () => {
     setSelected(null);
     setView("browse");
-    setPaymentMethod("airtime");
-    setCardNumber("");
-    setCardExpiry("");
-    setCardCvv("");
-    setCardHolder("");
   };
 
   // ---- CHECKOUT VIEW — full replacement screen, not a section on the browse page ----
@@ -145,210 +148,12 @@ export default function StorePage() {
             </div>
 
             {/* Payment Method */}
-            <div className="bg-card border border-border rounded-lg p-5 space-y-4">
+            <div className="bg-card border border-border rounded-lg p-5 space-y-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Payment Method</h3>
-              
-              <div className="space-y-3">
-                {/* Pay with Airtime - selected state with pink border, icon, and checkmark */}
-                <button
-                  onClick={() => setPaymentMethod("airtime")}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 border rounded-lg transition-colors ${
-                    paymentMethod === "airtime"
-                      ? "border-[#F40289]"
-                      : "border-border hover:border-border/80"
-                  }`}
-                >
-                  <div 
-                    className={`flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center transition-colors ${
-                      paymentMethod === "airtime" ? "" : "bg-secondary"
-                    }`}
-                    style={paymentMethod === "airtime" ? { backgroundColor: PINK } : {}}
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={paymentMethod === "airtime" ? "white" : "currentColor"} strokeWidth="2">
-                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                    </svg>
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-semibold text-sm">Pay with Airtime</p>
-                    <p className="text-xs text-muted-foreground">Deducted from your airtime balance</p>
-                  </div>
-                  {paymentMethod === "airtime" && (
-                    <CheckCircle2 size={20} style={{ color: PINK }} />
-                  )}
-                </button>
-
-                {/* USSD Code and Bank Card - side by side */}
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setPaymentMethod("ussd")}
-                    className={`flex items-start gap-3 px-4 py-4 border rounded-lg transition-colors ${
-                      paymentMethod === "ussd"
-                        ? "border-[#F40289]"
-                        : "border-border hover:border-border/80"
-                    }`}
-                  >
-                    <div 
-                      className={`flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center transition-colors ${
-                        paymentMethod === "ussd" ? "" : "bg-secondary"
-                      }`}
-                      style={paymentMethod === "ussd" ? { backgroundColor: PINK } : {}}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={paymentMethod === "ussd" ? "white" : "currentColor"} strokeWidth="2">
-                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-                        <line x1="12" y1="18" x2="12.01" y2="18"></line>
-                      </svg>
-                    </div>
-                    <div className="text-left">
-                      <p className="font-semibold text-sm">USSD Code</p>
-                      <p className="text-xs text-muted-foreground">Dial a short code</p>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => setPaymentMethod("card")}
-                    className={`flex items-start gap-3 px-4 py-4 border rounded-lg transition-colors ${
-                      paymentMethod === "card"
-                        ? "border-[#F40289]"
-                        : "border-border hover:border-border/80"
-                    }`}
-                  >
-                    <div 
-                      className={`flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center transition-colors ${
-                        paymentMethod === "card" ? "" : "bg-secondary"
-                      }`}
-                      style={paymentMethod === "card" ? { backgroundColor: PINK } : {}}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={paymentMethod === "card" ? "white" : "currentColor"} strokeWidth="2">
-                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
-                        <line x1="1" y1="10" x2="23" y2="10"></line>
-                      </svg>
-                    </div>
-                    <div className="text-left">
-                      <p className="font-semibold text-sm">Bank Card</p>
-                      <p className="text-xs text-muted-foreground">Debit / credit card</p>
-                    </div>
-                  </button>
-                </div>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                You'll choose exactly how to pay — card, bank transfer, USSD, or airtime — on the next secure screen.
+              </p>
             </div>
-
-            {/* Payment Method Details */}
-            {paymentMethod === "airtime" && (
-              <div className="bg-card border border-border rounded-lg p-5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">Airtime Payment</h4>
-                <ol className="space-y-3 text-sm">
-                  <li className="flex gap-3">
-                    <span 
-                      className="flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                      style={{ backgroundColor: PINK }}
-                    >1</span>
-                    <span className="text-muted-foreground">Open your dialer</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span 
-                      className="flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                      style={{ backgroundColor: PINK }}
-                    >2</span>
-                    <span className="text-muted-foreground">Dial *20211# and follow prompts</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span 
-                      className="flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                      style={{ backgroundColor: PINK }}
-                    >3</span>
-                    <span className="text-muted-foreground">Select NollyWin and confirm amount</span>
-                  </li>
-                </ol>
-              </div>
-            )}
-
-            {paymentMethod === "ussd" && (
-              <div className="bg-card border border-border rounded-lg p-5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">USSD Payment</h4>
-                <div className="bg-secondary/50 border border-primary/30 rounded-lg p-6 text-center mb-4">
-                  <p className="text-3xl font-bold text-primary tracking-wider">*20211#</p>
-                </div>
-                <p className="text-xs text-muted-foreground text-center mb-4">
-                  Dial the code above to debit ₦{price.toLocaleString()} from your account
-                </p>
-                <ol className="space-y-3 text-sm">
-                  <li className="flex gap-3">
-                    <span 
-                      className="flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                      style={{ backgroundColor: PINK }}
-                    >1</span>
-                    <span className="text-muted-foreground">Dial the code on your device</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span 
-                      className="flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                      style={{ backgroundColor: PINK }}
-                    >2</span>
-                    <span className="text-muted-foreground">Follow the on-screen prompts</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span 
-                      className="flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                      style={{ backgroundColor: PINK }}
-                    >3</span>
-                    <span className="text-muted-foreground">Confirm deduction to activate</span>
-                  </li>
-                </ol>
-              </div>
-            )}
-
-            {paymentMethod === "card" && (
-              <div className="bg-card border border-border rounded-lg p-5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">Card Details</h4>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-2 block">Card Number</label>
-                    <input
-                      type="text"
-                      placeholder="0000 0000 0000 0000"
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value)}
-                      maxLength={19}
-                      className="w-full px-4 py-3 rounded-lg border-0 bg-secondary/50 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-2 block">Expiry</label>
-                      <input
-                        type="text"
-                        placeholder="MM / YY"
-                        value={cardExpiry}
-                        onChange={(e) => setCardExpiry(e.target.value)}
-                        maxLength={5}
-                        className="w-full px-4 py-3 rounded-lg border-0 bg-secondary/50 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-2 block">CVV</label>
-                      <input
-                        type="text"
-                        placeholder="•••"
-                        value={cardCvv}
-                        onChange={(e) => setCardCvv(e.target.value)}
-                        maxLength={3}
-                        className="w-full px-4 py-3 rounded-lg border-0 bg-secondary/50 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-2 block">Cardholder Name</label>
-                    <input
-                      type="text"
-                      placeholder="Name on card"
-                      value={cardHolder}
-                      onChange={(e) => setCardHolder(e.target.value.toUpperCase())}
-                      className="w-full px-4 py-3 rounded-lg border-0 bg-secondary/50 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Confirm Payment Button */}
             <div className="space-y-2">
@@ -395,37 +200,75 @@ export default function StorePage() {
   // ---- BROWSE VIEW (default) ----
   return (
     <div className="space-y-8 max-w-lg mx-auto">
+        {/* Loading state */}
+        {loading && (
+          <div className="bg-card border border-border rounded-lg p-6 text-center">
+            <p className="text-sm text-muted-foreground">Loading subscription packages...</p>
+          </div>
+        )}
+
+        {/* Error state */}
+        {packagesError && !loading && (
+          <div className="bg-card border border-border rounded-lg p-6 space-y-4 text-center">
+            <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+              <AlertCircle size={32} className="text-destructive" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold">Error Loading Packages</h3>
+              <p className="text-sm text-muted-foreground mt-2">{packagesError}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Packages loaded */}
+        {!loading && !packagesError && (
+        <>
+        {/* Current Subscription Banner */}
+        {currentSubscription && (
+          <div className="bg-primary/10 border border-primary/30 rounded-lg p-4">
+            <p className="text-sm font-medium">
+              <span className="text-muted-foreground">Currently on: </span>
+              <span className="text-primary font-bold">{currentSubscription}</span>
+            </p>
+          </div>
+        )}
+
         {/* Subscription Plans Section */}
         <div>
           <h2 className="text-xs font-bold mb-3 uppercase tracking-wider text-muted-foreground">Subscription Plans</h2>
           <div className="space-y-2">
-            {activePackages.map((plan) => (
-              <button
-                key={plan.id}
-                onClick={() => handleSelect("subscription", plan)}
-                className={`w-full flex items-center justify-between px-4 py-3 border rounded-lg transition-all hover:border-primary ${
-                  selected?.type === "subscription" && selected.item.id === plan.id
-                    ? "border-primary bg-primary/5"
-                    : "border-border"
-                }`}
-              >
-                <div className="flex-1 text-left">
-                  <div className="flex items-center gap-2">
-                    <p className="font-bold text-base">{plan.name}</p>
-                    {plan.bestValue && (
-                      <span style={{ backgroundColor: PINK, color: "#fff" }} className="text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                        Best value
-                      </span>
-                    )}
+            {activePackages.map((plan) => {
+              // Determine if this is the best value (most attempts per day)
+              const isBestValue = plan.name === "Monthly" || plan.durationDays === 30;
+              
+              return (
+                <button
+                  key={plan.id}
+                  onClick={() => handleSelect("subscription", plan)}
+                  className={`w-full flex items-center justify-between px-4 py-3 border rounded-lg transition-all hover:border-primary ${
+                    selected?.type === "subscription" && selected.item.id === plan.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border"
+                  }`}
+                >
+                  <div className="flex-1 text-left">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-base">{plan.name}</p>
+                      {isBestValue && (
+                        <span style={{ backgroundColor: PINK, color: "#fff" }} className="text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                          Best value
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{plan.attemptsIncluded} {plan.attemptsIncluded === 1 ? 'attempt' : 'attempts'} / {plan.attemptsPeriod.toLowerCase()}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">{plan.attempts}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-lg" style={{ color: PINK }}>₦{plan.price.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">{plan.duration}</p>
-                </div>
-              </button>
-            ))}
+                  <div className="text-right">
+                    <p className="font-bold text-lg" style={{ color: PINK }}>₦{plan.fee.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">{plan.durationDays} {plan.durationDays === 1 ? 'day' : 'days'}</p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -474,6 +317,8 @@ export default function StorePage() {
             Mobile: USSD / airtime billing · Web: card payment
           </p>
         </div>
+        </>
+        )}
       </div>
   );
 }

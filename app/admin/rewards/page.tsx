@@ -12,11 +12,9 @@ import {
   getRewardDrawById,
   selectDrawWinners,
   getDrawWinners,
-  getLeaderboardPrizes,
   setLeaderboardPrize,
   type RewardDraw,
   type CreateRewardDrawRequest,
-  type LeaderboardPrize,
 } from "@/lib/api/admin";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminActionButton } from "@/components/admin/admin-action-button";
@@ -41,7 +39,6 @@ export default function AdminRewardsPage() {
   const [selectedDrawId, setSelectedDrawId] = useState<string | null>(null);
   const [drawDetail, setDrawDetail] = useState<RewardDraw | null>(null);
   const [drawWinners, setDrawWinners] = useState<Record<string, unknown>[]>([]);
-  const [leaderboardPrizes, setLeaderboardPrizes] = useState<LeaderboardPrize[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +58,6 @@ export default function AdminRewardsPage() {
 
   useEffect(() => {
     loadDraws();
-    loadLeaderboardPrizes();
   }, []);
 
   async function loadDraws() {
@@ -75,16 +71,6 @@ export default function AdminRewardsPage() {
       setError(err instanceof Error ? err.message : "Failed to load reward draws");
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function loadLeaderboardPrizes() {
-    try {
-      const data = await getLeaderboardPrizes();
-      setLeaderboardPrizes(data);
-    } catch (err) {
-      console.error("Error loading leaderboard prizes:", err);
-      // Don't set error - this is optional
     }
   }
 
@@ -126,10 +112,9 @@ export default function AdminRewardsPage() {
       setError(null);
       setSuccessMessage(null);
 
-      await closeRewardDraw(drawId);
-      setSuccessMessage("Draw closed and winners selected successfully");
-      
-      // Reload draws to see updated status
+      const response = await closeRewardDraw(drawId);
+      setSuccessMessage(response.message || "Draw close submitted for approval");
+      // Do NOT assume the draw is actually closed yet - maker-checker pattern.
       await loadDraws();
     } catch (err) {
       console.error("Error closing draw:", err);
@@ -170,10 +155,9 @@ export default function AdminRewardsPage() {
       setError(null);
       setSuccessMessage(null);
 
-      await selectDrawWinners(drawId);
-      setSuccessMessage("Winners selected successfully");
-      
-      // Reload detail
+      const response = await selectDrawWinners(drawId);
+      setSuccessMessage(response.message || "Winner selection submitted for approval");
+      // Do NOT assume winners are actually selected yet - maker-checker pattern.
       if (selectedDrawId === drawId) {
         await handleViewDraw(drawId);
       }
@@ -193,11 +177,8 @@ export default function AdminRewardsPage() {
       setSuccessMessage(null);
 
       const response = await setLeaderboardPrize(data.rank, data.prizeAmount);
-      setSuccessMessage(response.message || "Leaderboard prize set successfully");
+      setSuccessMessage(response.message || "Leaderboard prize set and submitted for approval");
       resetPrize();
-      
-      // Reload prizes after successful set
-      await loadLeaderboardPrizes();
     } catch (err) {
       console.error("Error setting leaderboard prize:", err);
       setError(err instanceof Error ? err.message : "Failed to set leaderboard prize");
@@ -232,7 +213,10 @@ export default function AdminRewardsPage() {
         {successMessage && (
           <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-green-600 flex items-start gap-3 text-sm">
             <CheckCircle size={18} className="shrink-0 mt-0.5" />
-            <p className="font-medium">{successMessage}</p>
+            <div>
+              <p className="font-medium">{successMessage}</p>
+              <p className="text-xs mt-1 opacity-80">Changes will take effect after approval by a checker.</p>
+            </div>
           </div>
         )}
 
@@ -355,6 +339,7 @@ export default function AdminRewardsPage() {
           <CheckCircle size={18} className="shrink-0 mt-0.5" />
           <div>
             <p className="font-medium">{successMessage}</p>
+            <p className="text-xs mt-1 opacity-80">Changes will take effect after approval by a checker.</p>
           </div>
         </div>
       )}
@@ -372,41 +357,9 @@ export default function AdminRewardsPage() {
           <Trophy size={18} className="text-primary" />
           <h3 className="font-semibold">Configure Prizes</h3>
         </div>
-        {/* Current Prizes Table */}
-        {leaderboardPrizes.length > 0 && (
-          <div className="mb-4 sm:mb-6">
-            <h3 className="text-xs sm:text-sm font-medium mb-3">Current Prizes</h3>
-            <AdminTableWrapper>
-              <table className="w-full">
-                <thead className="bg-secondary/30">
-                  <tr>
-                    <th className="text-left py-2 px-3 text-xs font-medium text-muted-foreground">Rank</th>
-                    <th className="text-right py-2 px-3 text-xs font-medium text-muted-foreground">Prize Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaderboardPrizes.map((prize) => (
-                    <tr key={prize.rank} className="border-t border-border/50">
-                      <td className="py-2 px-3 text-xs sm:text-sm font-medium">#{prize.rank}</td>
-                      <td className="py-2 px-3 text-xs sm:text-sm text-right">
-                        ₦{(prize.prizeAmount / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </AdminTableWrapper>
-          </div>
-        )}
         
         <p className="text-xs sm:text-sm text-muted-foreground mb-4">
           Configure prize amounts for specific leaderboard ranks.
-          {leaderboardPrizes.length === 0 && (
-            <>
-              <br />
-              <strong className="text-yellow-600">Note:</strong> No prizes configured yet. Use the form below to add prizes.
-            </>
-          )}
         </p>
         <form onSubmit={handleSubmitPrize(handleSetLeaderboardPrize)} className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">

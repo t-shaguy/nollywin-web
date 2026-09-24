@@ -10,12 +10,11 @@ import {
   getTriviaStages,
   getTriviaPrizes,
   createTriviaCategory,
-  updateTriviaCategory,
   createTriviaStage,
-  updateTriviaStage,
   createTriviaPrize,
   createTriviaQuestion,
   downloadTriviaQuestionsCsvTemplate,
+  bulkUploadTriviaQuestions,
   type TriviaCategory,
   type TriviaStage,
   type TriviaPrize,
@@ -66,10 +65,9 @@ export default function TriviaSetupPage() {
   const [showStageModal, setShowStageModal] = useState(false);
   const [showPrizeModal, setShowPrizeModal] = useState(false);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<TriviaCategory | null>(null);
-  const [editingStage, setEditingStage] = useState<TriviaStage | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [uploadingCSV, setUploadingCSV] = useState(false);
 
   const { register: registerCat, handleSubmit: handleSubmitCat, reset: resetCat, formState: { errors: errorsCat } } = useForm<CategoryFormData>();
   const { register: registerStage, handleSubmit: handleSubmitStage, reset: resetStage, formState: { errors: errorsStage } } = useForm<StageFormData>();
@@ -107,23 +105,6 @@ export default function TriviaSetupPage() {
     loadData();
   }, []);
 
-  const handleEditCategory = (cat: TriviaCategory) => {
-    setEditingCategory(cat);
-    resetCat({ name: cat.name, active: cat.active });
-    setShowCategoryModal(true);
-  };
-
-  const handleEditStage = (stage: TriviaStage) => {
-    setEditingStage(stage);
-    resetStage({
-      name: stage.name,
-      sortOrder: stage.sortOrder,
-      active: stage.active,
-      difficultyLabel: stage.difficultyLabel || "",
-    });
-    setShowStageModal(true);
-  };
-
   const onSubmitCategory = async (data: CategoryFormData) => {
     try {
       setSubmitting(true);
@@ -135,16 +116,10 @@ export default function TriviaSetupPage() {
         active: data.active,
       };
 
-      let response;
-      if (editingCategory) {
-        response = await updateTriviaCategory(editingCategory.id, payload);
-      } else {
-        response = await createTriviaCategory(payload);
-      }
+      const response = await createTriviaCategory(payload);
 
-      setSuccessMessage(response.message || `Category ${editingCategory ? "updated" : "created"} and submitted for approval`);
+      setSuccessMessage(response.message || "Category created and submitted for approval");
       setShowCategoryModal(false);
-      setEditingCategory(null);
       resetCat();
     } catch (err) {
       console.error("Error saving category:", err);
@@ -167,16 +142,10 @@ export default function TriviaSetupPage() {
         difficultyLabel: data.difficultyLabel || undefined,
       };
 
-      let response;
-      if (editingStage) {
-        response = await updateTriviaStage(editingStage.id, payload);
-      } else {
-        response = await createTriviaStage(payload);
-      }
+      const response = await createTriviaStage(payload);
 
-      setSuccessMessage(response.message || `Stage ${editingStage ? "updated" : "created"} and submitted for approval`);
+      setSuccessMessage(response.message || "Stage created and submitted for approval");
       setShowStageModal(false);
-      setEditingStage(null);
       resetStage();
     } catch (err) {
       console.error("Error saving stage:", err);
@@ -248,6 +217,30 @@ export default function TriviaSetupPage() {
     }
   };
 
+  const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    if (!file.name.endsWith(".csv")) {
+      setError("Please select a valid CSV file");
+      return;
+    }
+    
+    try {
+      setUploadingCSV(true);
+      setError(null);
+      const response = await bulkUploadTriviaQuestions(file);
+      setSuccessMessage(`Bulk upload submitted for approval! Change Request ID: ${response.changeRequestId}`);
+      // Reset file input
+      event.target.value = "";
+    } catch (err) {
+      console.error("Error uploading CSV:", err);
+      setError(err instanceof Error ? err.message : "Failed to upload CSV file");
+    } finally {
+      setUploadingCSV(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-8">
@@ -291,7 +284,6 @@ export default function TriviaSetupPage() {
             <Button 
               variant="outline" 
               onClick={() => {
-                setEditingCategory(null);
                 resetCat({ name: "", active: true });
                 setShowCategoryModal(true);
               }}
@@ -312,9 +304,6 @@ export default function TriviaSetupPage() {
                       {cat.active ? "Active" : "Inactive"}
                     </p>
                   </div>
-                  <Button variant="outline" onClick={() => handleEditCategory(cat)} className="text-sm px-3 py-1">
-                    Edit
-                  </Button>
                 </div>
               ))
             ) : (
@@ -330,7 +319,6 @@ export default function TriviaSetupPage() {
             <Button 
               variant="outline" 
               onClick={() => {
-                setEditingStage(null);
                 resetStage({ name: "", sortOrder: stages.length + 1, active: true, difficultyLabel: "" });
                 setShowStageModal(true);
               }}
@@ -353,9 +341,6 @@ export default function TriviaSetupPage() {
                         Order: {stage.sortOrder} • {stage.difficultyLabel || "No label"} • {stage.active ? "Active" : "Inactive"}
                       </p>
                     </div>
-                    <Button variant="outline" onClick={() => handleEditStage(stage)} className="text-sm px-3 py-1">
-                      Edit
-                    </Button>
                   </div>
                 ))
             ) : (
@@ -419,6 +404,19 @@ export default function TriviaSetupPage() {
               <Download size={16} />
               CSV Template
             </Button>
+            <label className="cursor-pointer">
+              <Button variant="outline" disabled={uploadingCSV} className="gap-2">
+                <Plus size={16} />
+                {uploadingCSV ? "Uploading..." : "Bulk Upload CSV"}
+              </Button>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleBulkUpload}
+                className="hidden"
+                disabled={uploadingCSV}
+              />
+            </label>
             <Button 
               variant="outline" 
               onClick={() => {
@@ -453,10 +451,9 @@ export default function TriviaSetupPage() {
         open={showCategoryModal}
         onClose={() => {
           setShowCategoryModal(false);
-          setEditingCategory(null);
           setError(null);
         }}
-        title={editingCategory ? "Edit Category" : "Add Category"}
+        title="Add Category"
       >
         <form onSubmit={handleSubmitCat(onSubmitCategory)} className="space-y-4">
           <div>
@@ -486,10 +483,9 @@ export default function TriviaSetupPage() {
         open={showStageModal}
         onClose={() => {
           setShowStageModal(false);
-          setEditingStage(null);
           setError(null);
         }}
-        title={editingStage ? "Edit Stage" : "Add Stage"}
+        title="Add Stage"
       >
         <form onSubmit={handleSubmitStage(onSubmitStage)} className="space-y-4">
           <div>

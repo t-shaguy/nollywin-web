@@ -1,42 +1,35 @@
+/**
+ * Subscription Packages Store
+ * 
+ * Fetches real packages from GET /api/v1/subscriptions/packages
+ * Replaces hardcoded fake package list
+ */
+
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-
-export type PlanId = "daily" | "weekly" | "monthly";
-
-export interface Package {
-  id: PlanId;
-  name: string;
-  price: number; // in Naira
-  duration: string;
-  attempts: string;
-  active: boolean;
-  bestValue?: boolean;
-  mostPopular?: boolean; // Alias for bestValue for backward compatibility
-}
+import { getAvailablePackages, type SubscriptionPackage } from "@/lib/api/subscriptions";
 
 interface PackagesState {
-  packages: Package[];
-  updatePackage: (id: PlanId, patch: Partial<Package>) => void;
-  addPackage: (pkg: Package) => void;
+  packages: SubscriptionPackage[];
+  loading: boolean;
+  error: string | null;
+  fetchPackages: () => Promise<void>;
 }
 
-export const usePackagesStore = create<PackagesState>()(
-  persist(
-    (set) => ({
-      packages: [
-        { id: "daily", name: "Daily", price: 100, duration: "per day", attempts: "1 attempt / day", active: true },
-        { id: "weekly", name: "Weekly", price: 200, duration: "per week", attempts: "3 attempts / week", active: true },
-        { id: "monthly", name: "Monthly", price: 500, duration: "per month", attempts: "7 attempts / month", active: true, bestValue: true },
-      ],
-      updatePackage: (id, patch) =>
-        set((state) => ({
-          packages: state.packages.map((p) => (p.id === id ? { ...p, ...patch } : p)),
-        })),
-      addPackage: (pkg) =>
-        set((state) => ({
-          packages: [...state.packages, pkg],
-        })),
-    }),
-    { name: "packages-storage" }
-  )
-);
+export const usePackagesStore = create<PackagesState>()((set) => ({
+  packages: [],
+  loading: false,
+  error: null,
+  
+  fetchPackages: async () => {
+    set({ loading: true, error: null });
+    try {
+      const packages = await getAvailablePackages();
+      set({ packages, loading: false });
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : "Failed to load packages", loading: false });
+    }
+  },
+}));
+
+// Auto-fetch packages on store creation
+usePackagesStore.getState().fetchPackages();

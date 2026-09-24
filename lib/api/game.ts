@@ -8,51 +8,30 @@
 import { apiClient } from "./client";
 
 // ============================================================================
-// Request/Response Types
+// Request/Response Types (VERIFIED against real API responses)
 // ============================================================================
 
-export interface Question {
-  id: string;
-  text: string;
-  options: {
-    A: string;
-    B: string;
-    C: string;
-    D: string;
-  };
-  correctAnswer: "A" | "B" | "C" | "D";
-  difficulty: "EASY" | "MEDIUM" | "HARD" | string;
-  stage: number;
-  timeLimit?: number; // seconds
-  points?: number;
-  [key: string]: any;
+export interface GameQuestion {
+  gameAttemptId: string;
+  sequenceNumber: number;
+  totalQuestions: number;
+  stageName: string;
+  difficultyLabel: string | null;
+  questionText: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  secondsAllowed: number;
 }
+
+// Start attempt returns a GameQuestion directly — not wrapped in { attempt: {...} }
+export type StartAttemptResponse = GameQuestion;
 
 export interface AttemptState {
-  attemptId: string;
-  userId: string;
   status: "IN_PROGRESS" | "COMPLETED" | "ABANDONED" | string;
-  currentQuestionIndex: number;
-  totalQuestions: number;
-  questions: Question[];
-  answers: Array<{
-    questionId: string;
-    selectedAnswer: "A" | "B" | "C" | "D" | null;
-    isCorrect: boolean;
-    pointsEarned: number;
-    answeredAt?: string;
-  }>;
-  score: number;
-  tokensDeducted: number;
-  startedAt: string;
-  completedAt?: string;
-  [key: string]: any;
-}
-
-export interface StartAttemptResponse {
-  attempt: AttemptState;
-  message?: string;
-  [key: string]: any;
+  currentQuestion: GameQuestion | null;
+  summary: Record<string, unknown> | null; // shape unconfirmed — only ever seen null so far, log it raw the first time a real value appears
 }
 
 export interface SubmitAnswerRequest {
@@ -61,18 +40,32 @@ export interface SubmitAnswerRequest {
 
 export interface SubmitAnswerResponse {
   isCorrect: boolean;
-  correctAnswer: "A" | "B" | "C" | "D";
+  correctOption: "A" | "B" | "C" | "D";
   pointsEarned: number;
-  totalScore: number;
-  nextQuestion?: Question;
-  attemptCompleted: boolean;
-  message?: string;
-  [key: string]: any;
+  gameOver: boolean;
+  nextQuestion: GameQuestion | null;
+  summary: Record<string, unknown> | null;
+}
+
+export interface GameSettings {
+  pointsPerCorrectAnswer: number;
+  secondsPerQuestion: number;
+  leaderboardResetDay: number;
 }
 
 // ============================================================================
 // API Functions
 // ============================================================================
+
+/**
+ * Get game settings (player-facing)
+ * GET /api/v1/game/settings
+ */
+export async function getGameSettings(): Promise<GameSettings> {
+  return apiClient<GameSettings>("/api/v1/game/settings", {
+    method: "GET",
+  });
+}
 
 /**
  * Start a new game attempt (debits 1 token)

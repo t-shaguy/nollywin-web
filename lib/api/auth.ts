@@ -206,6 +206,30 @@ export async function resetPassword(data: ResetPasswordRequest): Promise<ResetPa
   });
 }
 
+// ============================================================================
+// Google OAuth
+// ============================================================================
+
+export interface GoogleAuthRequest {
+  idToken: string;
+  referralCode?: string;
+}
+
+export type GoogleAuthResponse = AuthResponse;
+
+/**
+ * Authenticate with Google OAuth
+ * POST /api/v1/auth/google
+ * 
+ * Sends Google ID token to backend for verification and authentication
+ * Backend verifies the token with Google, creates/logs in user, and returns access token + profile
+ */
+export async function googleAuth(data: GoogleAuthRequest): Promise<GoogleAuthResponse> {
+  return apiClient<GoogleAuthResponse>("/api/v1/auth/google", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
 
 // ============================================================================
 // Change Password (Authenticated)
@@ -267,7 +291,7 @@ export interface PlayerDashboard {
  * Returns dashboard data including unread notifications count and other metrics
  */
 export async function getPlayerDashboard(): Promise<PlayerDashboard> {
-  return apiClient<PlayerDashboard>("/api/v1/user/dashboard", {
+  return apiClient<PlayerDashboard>("/api/v1/dashboard", {
     method: "GET",
   });
 }

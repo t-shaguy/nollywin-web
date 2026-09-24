@@ -9,17 +9,17 @@
 
 ### Production URL:
 ```
-https://nollywin.com/payment/callback
+https://nollywin.com/payments/callback
 ```
 
 ### Staging/Development URL:
 ```
-https://staging.nollywin.com/payment/callback
+https://staging.nollywin.com/payments/callback
 ```
 
 ### Local Testing URL:
 ```
-http://localhost:3000/payment/callback
+http://localhost:3000/payments/callback
 ```
 
 ---
@@ -31,7 +31,7 @@ http://localhost:3000/payment/callback
 3. Backend initiates Paystack payment and returns `authorizationUrl`
 4. User is redirected to Paystack checkout page
 5. User completes payment on Paystack
-6. **Paystack redirects back to** `/payment/callback?reference=xxx`
+6. **Paystack redirects back to** `/payments/callback?reference=xxx`
 7. Callback page verifies payment with backend
 8. User sees success/failure message
 9. User redirected to appropriate page (home or store)
@@ -73,7 +73,7 @@ The callback page expects these query parameters from Paystack:
 
 **Example callback URL:**
 ```
-https://nollywin.com/payment/callback?reference=T1234567890&trxref=T1234567890
+https://nollywin.com/payments/callback?reference=T1234567890&trxref=T1234567890
 ```
 
 ---
@@ -125,7 +125,7 @@ https://nollywin.com/payment/callback?reference=T1234567890&trxref=T1234567890
 
 ### Test in Paystack Sandbox
 1. Switch Paystack dashboard to **Test Mode**
-2. Use test callback URL: `http://localhost:3000/payment/callback`
+2. Use test callback URL: `http://localhost:3000/payments/callback`
 3. Use test card: `4084084084084081` (Successful payment)
 4. Verify callback is triggered and verification works
 
@@ -142,7 +142,7 @@ https://nollywin.com/payment/callback?reference=T1234567890&trxref=T1234567890
 
 **Callback Page:**
 ```
-app/payment/callback/page.tsx
+app/payments/callback/page.tsx
 ```
 
 **Payment API:**

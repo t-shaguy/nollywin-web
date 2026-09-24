@@ -46,7 +46,7 @@ export function QuestionView({
     Hard: "bg-red-500/10 text-red-500 border-red-500",
   };
 
-  const optionLabels = ["A", "B", "C", "D", "E"];
+  const optionLabels = ["A", "B", "C", "D"];
 
   return (
     <div className="max-w-lg mx-auto space-y-6">

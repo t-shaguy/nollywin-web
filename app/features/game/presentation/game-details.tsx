@@ -1,17 +1,33 @@
 "use client";
+import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { STAGES, GAME_CONFIG } from "../data/mock-questions";
+import { STAGES } from "../data/mock-questions";
+import { getGameSettings, type GameSettings } from "@/lib/api/game";
 
 interface GameDetailsProps {
   currentTokens: number;
+  tokenCostPerPlay: number;
   onStartGame: () => void;
   onBack: () => void;
 }
 
-export function GameDetails({ currentTokens, onStartGame, onBack }: GameDetailsProps) {
-  const balanceAfterPlay = currentTokens - GAME_CONFIG.entryFeeTokens;
-  const canPlay = currentTokens >= GAME_CONFIG.entryFeeTokens;
+export function GameDetails({ currentTokens, tokenCostPerPlay, onStartGame, onBack }: GameDetailsProps) {
+  const [settings, setSettings] = useState<GameSettings | null>(null);
+
+  useEffect(() => {
+    // NOTE: This endpoint is currently admin-only in lib/api/admin.ts (uses adminApiClient).
+    // If it works with player tokens, great; if it 401s, we need a player-accessible version.
+    getGameSettings()
+      .then(setSettings)
+      .catch((err) => console.error("Failed to load game settings:", err));
+  }, []);
+
+  const secondsPerQuestion = settings?.secondsPerQuestion ?? 10; // fallback while loading
+  const pointsPerCorrect = settings?.pointsPerCorrectAnswer ?? 50; // fallback while loading
+  
+  const balanceAfterPlay = currentTokens - tokenCostPerPlay;
+  const canPlay = currentTokens >= tokenCostPerPlay;
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
@@ -35,7 +51,7 @@ export function GameDetails({ currentTokens, onStartGame, onBack }: GameDetailsP
         <div className="space-y-3 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-foreground">Cost per game</span>
-            <span className="font-medium">{GAME_CONFIG.entryFeeTokens} token</span>
+            <span className="font-medium">{tokenCostPerPlay} {tokenCostPerPlay === 1 ? 'token' : 'tokens'}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-foreground">Current balance</span>
@@ -62,12 +78,12 @@ export function GameDetails({ currentTokens, onStartGame, onBack }: GameDetailsP
                 <div className="text-sm">
                   <span className="font-medium">{stage.title}</span>
                   <span className="text-muted-foreground ml-2">
-                    {stage.difficulty} · {stage.secondsPerQuestion}s
+                    {stage.difficulty} · {secondsPerQuestion}s
                   </span>
                 </div>
               </div>
               <span className="text-sm font-medium text-[#F40289]">
-                +{stage.pointsPerCorrect} pts
+                +{pointsPerCorrect} pts
               </span>
             </div>
           ))}
@@ -89,12 +105,12 @@ export function GameDetails({ currentTokens, onStartGame, onBack }: GameDetailsP
             : 'bg-secondary/50 text-muted-foreground cursor-not-allowed'
         }`}
       >
-        Start Game · {GAME_CONFIG.entryFeeTokens} Token
+        Start Game · {tokenCostPerPlay} {tokenCostPerPlay === 1 ? 'Token' : 'Tokens'}
       </Button>
 
       {!canPlay && (
         <p className="text-destructive text-sm text-center">
-          You need at least {GAME_CONFIG.entryFeeTokens} token to play. Visit the Store to top up.
+          You need at least {tokenCostPerPlay} {tokenCostPerPlay === 1 ? 'token' : 'tokens'} to play. Visit the Store to top up.
         </p>
       )}
     </div>

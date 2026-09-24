@@ -6,52 +6,70 @@ import { QuestionView } from "./question-view";
 import { StageCleared } from "./stage-cleared";
 import { useWalletStore } from "@/store/wallet-store";
 import * as gameApi from "@/lib/api/game";
+import { getPlayerDashboard } from "@/lib/api/auth";
 import type { ApiError } from "@/lib/api/client";
-import type { Question, AttemptState } from "@/lib/api/game";
+import type { GameQuestion } from "@/lib/api/game";
 import type { TriviaQuestion } from "../data/mock-questions";
 
 type Step = "details" | "playing" | "cleared" | "error";
 
-// Adapter to convert API Question to TriviaQuestion format expected by UI
-function adaptQuestion(apiQuestion: Question): TriviaQuestion {
-  const options: [string, string, string, string, string] = [
-    apiQuestion.options.A,
-    apiQuestion.options.B,
-    apiQuestion.options.C,
-    apiQuestion.options.D,
-    "", // No E option from API
+// Adapter to convert GameQuestion to TriviaQuestion format expected by UI
+// Note: correctIndex is NOT known at question display time - only after answer submission
+function adaptQuestion(apiQuestion: GameQuestion, correctOption?: "A" | "B" | "C" | "D"): TriviaQuestion {
+  const options: [string, string, string, string] = [
+    apiQuestion.optionA,
+    apiQuestion.optionB,
+    apiQuestion.optionC,
+    apiQuestion.optionD,
   ];
   
-  // Map A/B/C/D to index 0/1/2/3
+  // Map correctOption to index (only available after submission)
   const correctIndexMap: Record<string, number> = { A: 0, B: 1, C: 2, D: 3 };
-  const correctIndex = correctIndexMap[apiQuestion.correctAnswer] || 0;
+  const correctIndex = correctOption ? (correctIndexMap[correctOption] ?? 0) : 0;
   
-  // Map API difficulty to UI difficulty
+  // Map difficultyLabel to UI difficulty (default to "Easy" if null)
   const difficultyMap: Record<string, "Easy" | "Medium" | "Hard"> = {
-    EASY: "Easy",
-    MEDIUM: "Medium",
-    HARD: "Hard",
+    "Beginner": "Easy",
+    "Easy": "Easy",
+    "Medium": "Medium",
+    "Hard": "Hard",
   };
-  const difficulty = difficultyMap[apiQuestion.difficulty] || "Easy";
+  const difficulty = apiQuestion.difficultyLabel ? (difficultyMap[apiQuestion.difficultyLabel] || "Easy") : "Easy";
   
   return {
-    id: apiQuestion.id,
-    question: apiQuestion.text,
+    id: apiQuestion.gameAttemptId, // Use gameAttemptId as unique identifier
+    question: apiQuestion.questionText,
     options,
     correctIndex,
-    stage: apiQuestion.stage as 1 | 2 | 3,
+    stage: 1 as 1 | 2 | 3, // Backend doesn't provide stage number, default to 1
     difficulty,
   };
 }
 
 export function TriviaFlow() {
   const router = useRouter();
-  const { tokens, setBalance } = useWalletStore();
+  const { tokens } = useWalletStore();
+  
+  // Token cost from dashboard API
+  const [tokenCostPerPlay, setTokenCostPerPlay] = useState<number>(1); // fallback
+  
+  // Load token cost from dashboard on mount
+  useEffect(() => {
+    getPlayerDashboard()
+      .then((dashboard) => setTokenCostPerPlay(dashboard.tokenCostPerPlay))
+      .catch((err) => console.error("Failed to load dashboard:", err));
+  }, []);
   
   // API-driven state
+  const [currentQuestion, setCurrentQuestion] = useState<GameQuestion | null>(null);
   const [attemptId, setAttemptId] = useState<string | null>(null);
-  const [attemptState, setAttemptState] = useState<AttemptState | null>(null);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [totalQuestions, setTotalQuestions] = useState<number>(0);
+  const [currentSequence, setCurrentSequence] = useState<number>(0);
+  const [stageName, setStageName] = useState<string>("");
+  
+  // Score tracking
+  const [totalScore, setTotalScore] = useState<number>(0);
+  const [answersHistory, setAnswersHistory] = useState<boolean[]>([]); // true = correct, false = wrong
   
   // UI state
   const [step, setStep] = useState<Step>("details");
@@ -60,26 +78,25 @@ export function TriviaFlow() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState(false);
+  const [lastCorrectOption, setLastCorrectOption] = useState<"A" | "B" | "C" | "D" | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const currentQuestion = attemptState?.questions[currentQuestionIndex];
-  const totalQuestions = attemptState?.totalQuestions || 3;
-  const currentScore = attemptState?.score || 0;
-
-  // Map question results for stage-cleared view (true = correct, false = wrong)
-  const questionResults = attemptState?.answers.map((a) => a.isCorrect) || [];
 
   const startGame = async () => {
     setError(null);
     try {
       // Start a new attempt - this debits 1 token on the backend
-      const response = await gameApi.startAttempt();
+      // Returns first question directly (not wrapped)
+      const question = await gameApi.startAttempt();
       
-      setAttemptId(response.attempt.attemptId);
-      setAttemptState(response.attempt);
-      setCurrentQuestionIndex(0);
+      setAttemptId(question.gameAttemptId);
+      setCurrentQuestion(question);
+      setTotalQuestions(question.totalQuestions);
+      setCurrentSequence(question.sequenceNumber);
+      setStageName(question.stageName);
       setSelectedIndex(null);
-      setTimeLeft(response.attempt.questions[0]?.timeLimit || 10);
+      setTimeLeft(question.secondsAllowed);
+      setTotalScore(0);
+      setAnswersHistory([]);
       setStep("playing");
       
       // Refresh wallet balance from server (token was debited)
@@ -111,36 +128,30 @@ export function TriviaFlow() {
       const response = await gameApi.submitAnswer(attemptId, { selectedOption });
       
       setLastAnswerCorrect(response.isCorrect);
+      setLastCorrectOption(response.correctOption);
       setShowFeedback(true);
+      setTotalScore((prev) => prev + response.pointsEarned);
+      setAnswersHistory((prev) => [...prev, response.isCorrect]);
       
-      // Update attempt state with new score and answers
-      if (attemptState) {
-        const updatedState: AttemptState = {
-          ...attemptState,
-          score: response.totalScore,
-          answers: [
-            ...attemptState.answers,
-            {
-              questionId: currentQuestion.id,
-              selectedAnswer: selectedOption,
-              isCorrect: response.isCorrect,
-              pointsEarned: response.pointsEarned,
-            },
-          ],
-          status: response.attemptCompleted ? "COMPLETED" : attemptState.status,
-        };
-        setAttemptState(updatedState);
+      // If game is over or no next question, show results
+      if (response.gameOver || !response.nextQuestion) {
+        // Refresh wallet balance (points were added)
+        const { fetchWalletBalance } = await import("@/store/wallet-store");
+        fetchWalletBalance().catch(console.error);
         
-        // If game is completed, show results
-        if (response.attemptCompleted) {
-          // Refresh wallet balance (points were added)
-          const { fetchWalletBalance } = await import("@/store/wallet-store");
-          fetchWalletBalance().catch(console.error);
-          
-          setTimeout(() => {
-            setStep("cleared");
-          }, 1500);
+        // Log summary if present
+        if (response.summary) {
+          console.log("Game summary:", response.summary);
         }
+        
+        setTimeout(() => {
+          setStep("cleared");
+        }, 1500);
+      } else {
+        // Prepare next question
+        setCurrentQuestion(response.nextQuestion);
+        setCurrentSequence(response.nextQuestion.sequenceNumber);
+        setTimeLeft(response.nextQuestion.secondsAllowed);
       }
     } catch (err) {
       const apiError = err as ApiError;
@@ -151,18 +162,10 @@ export function TriviaFlow() {
   };
 
   const handleNextAfterAnswer = () => {
-    if (!attemptState) return;
-    
-    // Move to next question
-    if (currentQuestionIndex + 1 < attemptState.questions.length) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setSelectedIndex(null);
-      setShowFeedback(false);
-      setTimeLeft(attemptState.questions[currentQuestionIndex + 1]?.timeLimit || 10);
-    } else {
-      // All questions answered, show results
-      setStep("cleared");
-    }
+    // Reset for next question
+    setSelectedIndex(null);
+    setShowFeedback(false);
+    setLastCorrectOption(null);
   };
 
   // Countdown timer per question
@@ -170,9 +173,8 @@ export function TriviaFlow() {
     if (step !== "playing" || selectedIndex !== null || !currentQuestion) return;
     
     if (timeLeft <= 0) {
-      // Timeout - auto-submit as timeout (will be marked wrong by backend)
-      // Submit with a special timeout indicator or just the first option
-      handleAnswer(0); // or -1 to indicate timeout
+      // Timeout - auto-submit first option (will be marked wrong by backend)
+      handleAnswer(0);
       return;
     }
     
@@ -185,11 +187,15 @@ export function TriviaFlow() {
   const restartGame = () => {
     setStep("details");
     setAttemptId(null);
-    setAttemptState(null);
-    setCurrentQuestionIndex(0);
+    setCurrentQuestion(null);
+    setCurrentSequence(0);
+    setTotalQuestions(0);
+    setStageName("");
     setSelectedIndex(null);
     setTimeLeft(10);
     setShowFeedback(false);
+    setTotalScore(0);
+    setAnswersHistory([]);
     setError(null);
   };
 
@@ -220,58 +226,55 @@ export function TriviaFlow() {
     return (
       <GameDetails
         currentTokens={tokens}
+        tokenCostPerPlay={tokenCostPerPlay}
         onStartGame={startGame}
         onBack={backToDashboard}
       />
     );
   }
 
-  if (step === "cleared" && attemptState) {
-    const correctCount = attemptState.answers.filter((a) => a.isCorrect).length;
+  if (step === "cleared") {
+    const correctCount = answersHistory.filter((correct) => correct).length;
     
     return (
       <StageCleared
         correctCount={correctCount}
-        total={attemptState.totalQuestions}
-        pointsEarned={attemptState.score}
+        total={totalQuestions}
+        pointsEarned={totalScore}
         bonusTokens={0}
         onBackToStages={backToDashboard}
         onNextStage={restartGame}
-        questionResults={questionResults}
+        questionResults={answersHistory}
       />
     );
   }
 
   // Playing view
-  if (!currentQuestion || !attemptState) {
+  if (!currentQuestion) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p className="text-muted-foreground">Loading question...</p>
       </div>
     );
   }
-
-  // Calculate current stage from question index (1 question per stage for now)
-  const currentStage = currentQuestionIndex + 1;
-  const totalStages = attemptState.questions.length;
   
-  // Adapt API question to UI format
-  const adaptedQuestion = adaptQuestion(currentQuestion);
+  // Adapt API question to UI format (with correctOption only after answer submission)
+  const adaptedQuestion = adaptQuestion(currentQuestion, showFeedback ? lastCorrectOption || undefined : undefined);
 
   return (
     <QuestionView
       question={adaptedQuestion}
-      currentStage={currentStage}
-      totalStages={totalStages}
+      currentStage={currentSequence}
+      totalStages={totalQuestions}
       stageDifficulty={adaptedQuestion.difficulty}
-      score={currentScore}
+      score={totalScore}
       timeLeft={Math.max(timeLeft, 0)}
       selectedIndex={selectedIndex}
       onAnswer={handleAnswer}
       onNext={handleNextAfterAnswer}
       isTimeout={timeLeft <= 0 && selectedIndex === null}
-      isLastQuestionInStage={true} // 1 question per stage
-      answeredQuestionsPerStage={questionResults.map(() => 1)} // All answered
+      isLastQuestionInStage={true} // Each question is treated as a stage
+      answeredQuestionsPerStage={answersHistory.map(() => 1)}
       currentQuestionInStage={0}
     />
   );

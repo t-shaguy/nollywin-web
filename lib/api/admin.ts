@@ -39,7 +39,7 @@ export interface MakerCheckerWriteResponse {
   timestamp: string;
   message: string;
   status: "PENDING_APPROVAL";
-  changeRequestId: number;
+  changeRequestId: string; // UUID string, not number
 }
 
 export interface ChangeRequest {
@@ -76,14 +76,14 @@ export type ChangeRequestListResponse = ChangeRequest[];
 export interface DashboardOverview {
   totalUsers: number;
   activeToday: number;
-  revenueMtd: number; // in kobo (not naira)
+  revenueMtd: number; // in Naira (not kobo)
   totalQuestions: number;
   [key: string]: unknown;
 }
 
 export interface RevenueTrendEntry {
   date: string; // "YYYY-MM-DD"
-  revenue: number; // in kobo
+  revenue: number; // in Naira (not kobo)
 }
 
 export interface RecentActivity {
@@ -142,7 +142,7 @@ export interface SubscriptionPackage {
   id: number;
   name: string;
   durationDays: number;
-  fee: number; // in kobo
+  fee: number; // in Naira (not kobo)
   active: boolean;
   attemptsIncluded: number; // READ-ONLY
   attemptsPeriod: string; // READ-ONLY, e.g. "DAILY"
@@ -152,14 +152,14 @@ export interface SubscriptionPackage {
 export interface CreatePackageRequest {
   name: string;
   durationDays: number;
-  fee: number; // in kobo
+  fee: number; // in Naira (not kobo)
   active: boolean;
 }
 
 export interface UpdatePackageRequest {
   name?: string;
   durationDays?: number;
-  fee?: number; // in kobo
+  fee?: number; // in Naira (not kobo)
   active?: boolean;
 }
 
@@ -246,8 +246,15 @@ export interface CloseDrawRequest {
 // Reports Types (REAL API)
 // ============================================================================
 
-// TODO(tartor): Field names unconfirmed — console.log the raw response first
-export type SubscriptionReportSummary = Record<string, unknown>;
+// REAL backend response shape (confirmed)
+export interface SubscriptionReportSummary {
+  from: string;
+  to: string;
+  totalSubscriptions: number;
+  totalRevenue: number; // in Naira
+  byPackage: Array<Record<string, unknown>>;
+  byStatus: Array<Record<string, unknown>>;
+}
 
 // ============================================================================
 // Helper: Extract paginated list from response
@@ -429,27 +436,6 @@ export async function createTriviaCategory(data: CreateCategoryRequest): Promise
 }
 
 /**
- * Update a trivia category (MAKER-CHECKER)
- * PUT /api/v1/admin/trivia/categories/{id}
- */
-export async function updateTriviaCategory(id: number, data: UpdateCategoryRequest): Promise<MakerCheckerWriteResponse> {
-  return adminApiClient<MakerCheckerWriteResponse>(`/api/v1/admin/trivia/categories/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(data),
-  });
-}
-
-/**
- * Delete a trivia category (MAKER-CHECKER)
- * DELETE /api/v1/admin/trivia/categories/{id}
- */
-export async function deleteTriviaCategory(id: number): Promise<MakerCheckerWriteResponse> {
-  return adminApiClient<MakerCheckerWriteResponse>(`/api/v1/admin/trivia/categories/${id}`, {
-    method: "DELETE",
-  });
-}
-
-/**
  * Get all trivia stages
  * GET /api/v1/admin/trivia/stages
  */
@@ -469,27 +455,6 @@ export async function createTriviaStage(data: CreateStageRequest): Promise<Maker
   return adminApiClient<MakerCheckerWriteResponse>("/api/v1/admin/trivia/stages", {
     method: "POST",
     body: JSON.stringify(data),
-  });
-}
-
-/**
- * Update a trivia stage (MAKER-CHECKER)
- * PUT /api/v1/admin/trivia/stages/{id}
- */
-export async function updateTriviaStage(id: number, data: UpdateStageRequest): Promise<MakerCheckerWriteResponse> {
-  return adminApiClient<MakerCheckerWriteResponse>(`/api/v1/admin/trivia/stages/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(data),
-  });
-}
-
-/**
- * Delete a trivia stage (MAKER-CHECKER)
- * DELETE /api/v1/admin/trivia/stages/{id}
- */
-export async function deleteTriviaStage(id: number): Promise<MakerCheckerWriteResponse> {
-  return adminApiClient<MakerCheckerWriteResponse>(`/api/v1/admin/trivia/stages/${id}`, {
-    method: "DELETE",
   });
 }
 
@@ -581,6 +546,44 @@ export async function downloadTriviaQuestionsCsvTemplate(): Promise<void> {
   link.download = "trivia-questions-template.csv";
   link.click();
   window.URL.revokeObjectURL(url);
+}
+
+/**
+ * Bulk upload trivia questions via CSV (MAKER-CHECKER)
+ * POST /api/v1/admin/trivia/questions/bulk-upload
+ * Content-Type: multipart/form-data
+ */
+export async function bulkUploadTriviaQuestions(file: File): Promise<MakerCheckerWriteResponse> {
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://3.211.19.155/nollywin/core";
+  const adminToken = typeof window !== "undefined" ? localStorage.getItem("admin_accessToken") : null;
+  
+  // Get client token
+  const clientTokenRes = await fetch("/api/client-token");
+  const { clientToken } = await clientTokenRes.json();
+  
+  const headers: HeadersInit = {
+    "X-Client-Token": clientToken,
+  };
+  
+  if (adminToken) {
+    headers["Authorization"] = `Bearer ${adminToken}`;
+  }
+  
+  const formData = new FormData();
+  formData.append("file", file);
+  
+  const response = await fetch(`${API_BASE_URL}/api/v1/admin/trivia/questions/bulk-upload`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Bulk upload failed: ${errorText}`);
+  }
+  
+  return response.json();
 }
 
 // ============================================================================
@@ -730,8 +733,16 @@ export interface LeaderboardPrize {
   prizeAmount: number;
 }
 
+/**
+ * Get current leaderboard prize configuration
+ * GET /api/v1/admin/leaderboard-prizes
+ */
 export async function getLeaderboardPrizes(): Promise<LeaderboardPrize[]> {
-  return adminApiClient<LeaderboardPrize[]>("/api/v1/admin/leaderboard-prizes");
+  const response = await adminApiClient<AdminJson>("/api/v1/admin/leaderboard-prizes");
+  if (Array.isArray(response)) {
+    return response as LeaderboardPrize[];
+  }
+  return [];
 }
 
 export async function setLeaderboardPrize(rank: number, prizeAmount: number): Promise<MakerCheckerWriteResponse> {

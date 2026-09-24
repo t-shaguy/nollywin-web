@@ -94,7 +94,7 @@ export interface VerifyPaymentResponse {
 
 ### 2. Fixed Payment Callback Page ✅
 
-**File:** `app/payment/callback/page.tsx`
+**File:** `app/payments/callback/page.tsx`
 
 **Key Changes:**
 
@@ -298,7 +298,7 @@ Shows actual status in message for debugging unforeseen values.
    - Removed non-existent fields (`message`, `paidAt`)
    - Added detailed API response comment
 
-2. **`app/payment/callback/page.tsx`**
+2. **`app/payments/callback/page.tsx`**
    - Updated status type to include "abandoned"
    - Added amount display state
    - Convert `amountKobo` to Naira for display
@@ -430,14 +430,14 @@ Test various amounts to verify kobo → Naira conversion:
 ### Edge Cases
 
 #### Missing Reference Parameter
-**URL:** `/payment/callback` (no `?reference=...`)
+**URL:** `/payments/callback` (no `?reference=...`)
 
 **Expected:**
 - Failed state
 - Message: "No payment reference found"
 
 #### Invalid Reference
-**URL:** `/payment/callback?reference=invalid_ref_123`
+**URL:** `/payments/callback?reference=invalid_ref_123`
 
 **Expected:**
 - API returns 404 or error

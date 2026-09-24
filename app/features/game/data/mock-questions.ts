@@ -1,7 +1,7 @@
 export interface TriviaQuestion {
   id: string;
   question: string;
-  options: [string, string, string, string, string]; // 5 options (A-E)
+  options: [string, string, string, string]; // 4 options (A-D)
   correctIndex: number;
   stage: 1 | 2 | 3;
   difficulty: "Easy" | "Medium" | "Hard";
@@ -14,7 +14,7 @@ export const MOCK_QUESTIONS: TriviaQuestion[] = [
   {
     id: "q1",
     question: "Which Nollywood movie is currently the highest-grossing film of all time?",
-    options: ["The Wedding Party", "Omo Ghetto: The Saga", "Battle on Buka Street", "A Tribe Called Judah", "King of Boys"],
+    options: ["The Wedding Party", "Omo Ghetto: The Saga", "Battle on Buka Street", "A Tribe Called Judah"],
     correctIndex: 3,
     stage: 1,
     difficulty: "Easy",
@@ -23,7 +23,7 @@ export const MOCK_QUESTIONS: TriviaQuestion[] = [
   {
     id: "q2",
     question: "Who directed the critically acclaimed Nollywood film 'King of Boys' released in 2018?",
-    options: ["Jade Osiberu", "Kunle Afolayan", "Kemi Adetiba", "EbonyLife Films", "Biyi Bandele"],
+    options: ["Jade Osiberu", "Kunle Afolayan", "Kemi Adetiba", "EbonyLife Films"],
     correctIndex: 2,
     stage: 2,
     difficulty: "Medium",
@@ -32,7 +32,7 @@ export const MOCK_QUESTIONS: TriviaQuestion[] = [
   {
     id: "q3",
     question: "What year did Nollywood become formally recognized as the world's second-largest film producer?",
-    options: ["1987", "1992", "2001", "2009", "2014"],
+    options: ["1987", "1992", "2001", "2009"],
     correctIndex: 3,
     stage: 3,
     difficulty: "Hard",
