@@ -2,6 +2,7 @@
 import { ReactNode } from "react";
 import { AuthenticatedShell } from "@/components/layout/authenticated-shell";
 import { useWalletStore } from "@/store/wallet-store";
+import { useNotificationsSync } from "@/hooks/use-notifications-sync";
 
 /**
  * Shared layout for all authenticated routes.
@@ -14,9 +15,10 @@ import { useWalletStore } from "@/store/wallet-store";
  */
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
   const { tokens } = useWalletStore();
+  const { unreadCount } = useNotificationsSync();
   
   return (
-    <AuthenticatedShell tokenBalance={tokens} unreadCount={0}>
+    <AuthenticatedShell tokenBalance={tokens} unreadCount={unreadCount}>
       {children}
     </AuthenticatedShell>
   );

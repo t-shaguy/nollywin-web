@@ -3,59 +3,8 @@ import { ArrowLeft, Play, Ticket, CreditCard, Trophy, Sparkles } from "lucide-re
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { useWalletStore } from "@/store/wallet-store";
-
-interface Notification {
-  id: string;
-  type: "game" | "raffle" | "subscription" | "leaderboard" | "feature";
-  title: string;
-  description: string;
-  timestamp: string;
-  isRead: boolean;
-}
-
-// Mock notification data
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: "1",
-    type: "game",
-    title: "Game Result",
-    description: "You scored 150 pts in today's trivia session!",
-    timestamp: "2 mins ago",
-    isRead: false,
-  },
-  {
-    id: "2",
-    type: "raffle",
-    title: "Raffle Entry Confirmed",
-    description: "Your 2 tickets for the iPhone draw are active.",
-    timestamp: "1 hr ago",
-    isRead: false,
-  },
-  {
-    id: "3",
-    type: "subscription",
-    title: "Subscription Active",
-    description: "Your Weekly plan is now active. Good luck!",
-    timestamp: "3 hrs ago",
-    isRead: true,
-  },
-  {
-    id: "4",
-    type: "leaderboard",
-    title: "Leaderboard Update",
-    description: "You've moved up to #42 on the monthly leaderboard.",
-    timestamp: "Yesterday",
-    isRead: true,
-  },
-  {
-    id: "5",
-    type: "game",
-    title: "New Trivia Available",
-    description: "A new Nollywood trivia session is now live!",
-    timestamp: "Yesterday",
-    isRead: true,
-  },
-];
+import { useEffect, useState } from "react";
+import { getNotifications, markAsRead, markAllAsRead, type Notification } from "@/lib/api/notifications";
 
 const NOTIFICATION_ICONS = {
   game: Play,
@@ -84,8 +33,52 @@ const NOTIFICATION_ICON_TEXT_COLORS = {
 export default function NotificationsPage() {
   const router = useRouter();
   const { tokens } = useWalletStore();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  const unreadCount = MOCK_NOTIFICATIONS.filter((n) => !n.isRead).length;
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  async function loadNotifications() {
+    try {
+      setLoading(true);
+      const data = await getNotifications();
+      setNotifications(data);
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleMarkAsRead(notificationId: string) {
+    try {
+      // Optimistic update
+      setNotifications(prev => 
+        prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
+      );
+      await markAsRead(notificationId);
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+      // Revert optimistic update
+      loadNotifications();
+    }
+  }
+
+  async function handleMarkAllAsRead() {
+    try {
+      // Optimistic update
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      await markAllAsRead();
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+      // Revert optimistic update
+      loadNotifications();
+    }
+  }
+  
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
@@ -101,51 +94,78 @@ export default function NotificationsPage() {
             </button>
             <h1 className="text-xl font-bold">Notifications</h1>
           </div>
-          {unreadCount > 0 && (
-            <Badge className="bg-primary text-white px-3 py-1 text-xs">
-              {unreadCount} new
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <>
+                <Badge className="bg-primary text-white px-3 py-1 text-xs">
+                  {unreadCount} new
+                </Badge>
+                <button
+                  onClick={handleMarkAllAsRead}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Mark all read
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Notifications List */}
-        <div className="space-y-3">
-          {MOCK_NOTIFICATIONS.map((notification) => {
-            const Icon = NOTIFICATION_ICONS[notification.type];
-            const iconBgClass = NOTIFICATION_ICON_COLORS[notification.type];
-            const iconTextClass = NOTIFICATION_ICON_TEXT_COLORS[notification.type];
-
-            return (
-              <div
-                key={notification.id}
-                className={`rounded-lg p-3 flex items-start gap-3 cursor-pointer transition-colors ${
-                  !notification.isRead 
-                    ? "bg-card/50 border border-primary/20 hover:bg-card/70" 
-                    : "bg-card border border-border hover:bg-secondary/30"
-                }`}
-              >
-                <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${iconBgClass}`}>
-                  <Icon size={18} className={iconTextClass} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm mb-0.5">{notification.title}</h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{notification.description}</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    {notification.timestamp}
-                  </span>
-                  {!notification.isRead && (
-                    <div className="h-2 w-2 rounded-full bg-primary" />
-                  )}
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="rounded-lg p-3 bg-card border border-border animate-pulse">
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-full bg-secondary" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-secondary rounded w-1/3" />
+                    <div className="h-3 bg-secondary rounded w-2/3" />
+                  </div>
                 </div>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {notifications.map((notification) => {
+              const Icon = NOTIFICATION_ICONS[notification.type];
+              const iconBgClass = NOTIFICATION_ICON_COLORS[notification.type];
+              const iconTextClass = NOTIFICATION_ICON_TEXT_COLORS[notification.type];
+
+              return (
+                <div
+                  key={notification.id}
+                  onClick={() => !notification.isRead && handleMarkAsRead(notification.id)}
+                  className={`rounded-lg p-3 flex items-start gap-3 cursor-pointer transition-colors ${
+                    !notification.isRead 
+                      ? "bg-card/50 border border-primary/20 hover:bg-card/70" 
+                      : "bg-card border border-border hover:bg-secondary/30"
+                  }`}
+                >
+                  <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${iconBgClass}`}>
+                    <Icon size={18} className={iconTextClass} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm mb-0.5">{notification.title}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{notification.description}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {notification.timestamp}
+                    </span>
+                    {!notification.isRead && (
+                      <div className="h-2 w-2 rounded-full bg-primary" />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Empty State */}
-        {MOCK_NOTIFICATIONS.length === 0 && (
+        {!loading && notifications.length === 0 && (
           <div className="bg-card border border-border rounded-lg p-12 text-center">
             <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
               <Sparkles size={28} className="text-muted-foreground" />
