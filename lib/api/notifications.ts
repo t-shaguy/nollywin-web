@@ -2,22 +2,52 @@ import { apiClient } from './client';
 
 export interface Notification {
   id: string;
-  type: 'game' | 'raffle' | 'subscription' | 'leaderboard' | 'feature';
+  type: 'game' | 'raffle' | 'subscription' | 'leaderboard' | 'feature' | string;
   title: string;
   description: string;
   timestamp: string;
   isRead: boolean;
+  // Additional metadata fields that may be present in backend response
+  amount?: number;
+  packageName?: string;
+  tokens?: number;
+  points?: number;
+  rank?: number;
+  metadata?: Record<string, any>;
 }
 
 export interface UnreadCountResponse {
   unreadCount: number;
 }
 
+export interface GetNotificationsParams {
+  unread?: boolean;
+  page?: number;
+  size?: number;
+}
+
 /**
- * Get all notifications for the current user
+ * Get all notifications for the current user with pagination
+ * @param params - Query parameters for filtering and pagination
  */
-export async function getNotifications(): Promise<Notification[]> {
-  return apiClient<Notification[]>('/api/v1/notifications', {
+export async function getNotifications(params?: GetNotificationsParams): Promise<Notification[]> {
+  const queryParams = new URLSearchParams();
+  
+  if (params?.unread !== undefined) {
+    queryParams.append('unread', String(params.unread));
+  }
+  if (params?.page !== undefined) {
+    queryParams.append('page', String(params.page));
+  }
+  if (params?.size !== undefined) {
+    queryParams.append('size', String(params.size));
+  }
+  
+  const endpoint = queryParams.toString() 
+    ? `/api/v1/notifications?${queryParams.toString()}`
+    : '/api/v1/notifications';
+  
+  return apiClient<Notification[]>(endpoint, {
     method: 'GET',
   });
 }

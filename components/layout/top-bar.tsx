@@ -44,7 +44,9 @@ export function TopBar({
         <Link href="/notifications" className="relative h-9 w-9 rounded-full flex items-center justify-center hover:bg-secondary transition-colors">
           <Bell size={18} className="text-muted-foreground" />
           {unreadCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
+            <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
           )}
         </Link>
 

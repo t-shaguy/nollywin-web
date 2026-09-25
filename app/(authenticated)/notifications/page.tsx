@@ -45,6 +45,50 @@ function getNotificationIcon(type: string) {
   return NOTIFICATION_ICONS[type] || NOTIFICATION_ICONS[type.toLowerCase()] || Bell;
 }
 
+// Helper to build rich description from notification metadata
+function buildRichDescription(notification: Notification): string {
+  // If backend provides metadata, use it to build richer descriptions
+  const { description, amount, tokens, packageName, points, rank, metadata } = notification;
+  
+  // Start with the base description
+  let richDesc = description;
+  
+  // Add specific details based on notification type and available data
+  const lowerType = notification.type.toLowerCase();
+  
+  if (lowerType.includes('wallet') || lowerType.includes('topup')) {
+    if (tokens && amount) {
+      richDesc = `${tokens} tokens added (₦${amount.toLocaleString()})`;
+    } else if (tokens) {
+      richDesc = `${tokens} tokens added to your wallet`;
+    }
+  } else if (lowerType.includes('subscription')) {
+    if (packageName) {
+      richDesc = `${packageName} subscription activated`;
+    }
+  } else if (lowerType.includes('game') || lowerType.includes('trivia')) {
+    if (points) {
+      richDesc = `You scored ${points} points in the trivia session`;
+    }
+  } else if (lowerType.includes('leaderboard')) {
+    if (rank) {
+      richDesc = `You've moved to #${rank} on the leaderboard`;
+    }
+  } else if (lowerType.includes('raffle')) {
+    if (tokens) {
+      richDesc = `Your ${tokens} ${tokens === 1 ? 'ticket' : 'tickets'} for the draw ${tokens === 1 ? 'is' : 'are'} active`;
+    }
+  }
+  
+  // If metadata has additional info, try to incorporate it
+  if (metadata && Object.keys(metadata).length > 0) {
+    // Log metadata for debugging/future enhancement
+    console.log('Notification metadata available:', metadata);
+  }
+  
+  return richDesc;
+}
+
 // Helper to get colors with fallback
 function getNotificationColors(type: string) {
   const lowerType = type.toLowerCase();
@@ -60,14 +104,26 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // CRITICAL: Always fetch fresh data on mount and page visibility
   useEffect(() => {
     loadNotifications();
+    
+    // Re-fetch when page becomes visible (user returns to tab)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadNotifications();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
   async function loadNotifications() {
     try {
       setLoading(true);
-      const data = await getNotifications();
+      // Fetch with pagination params to match expected backend structure
+      const data = await getNotifications({ unread: false, page: 0, size: 20 });
       setNotifications(data);
     } catch (error) {
       console.error('Failed to load notifications:', error);
@@ -78,27 +134,29 @@ export default function NotificationsPage() {
 
   async function handleMarkAsRead(notificationId: string) {
     try {
-      // Optimistic update
-      setNotifications(prev => 
-        prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
-      );
       await markAsRead(notificationId);
+      // CRITICAL: Re-fetch fresh data from backend after mark-read
+      await loadNotifications();
+      // Also trigger unread count refresh in the navbar
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('notifications-updated'));
+      }
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
-      // Revert optimistic update
-      loadNotifications();
     }
   }
 
   async function handleMarkAllAsRead() {
     try {
-      // Optimistic update
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       await markAllAsRead();
+      // CRITICAL: Re-fetch fresh data from backend after mark-all-read
+      await loadNotifications();
+      // Also trigger unread count refresh in the navbar
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('notifications-updated'));
+      }
     } catch (error) {
       console.error('Failed to mark all as read:', error);
-      // Revert optimistic update
-      loadNotifications();
     }
   }
   
@@ -155,6 +213,7 @@ export default function NotificationsPage() {
             {notifications.map((notification) => {
               const Icon = getNotificationIcon(notification.type);
               const { bgClass, textClass } = getNotificationColors(notification.type);
+              const richDescription = buildRichDescription(notification);
 
               return (
                 <div
@@ -171,7 +230,7 @@ export default function NotificationsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-sm mb-0.5">{notification.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{notification.description}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{richDescription}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
