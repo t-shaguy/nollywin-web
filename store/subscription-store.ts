@@ -73,20 +73,20 @@ export const useSubscriptionStore = create<SubscriptionState>()(
  */
 export async function fetchSubscriptionStatus() {
   try {
-    const { getMySubscriptions } = await import("@/lib/api/payments");
+    const { getMySubscriptions } = await import("@/lib/api/subscriptions");
     useSubscriptionStore.getState().setLoading(true);
     
-    const response = await getMySubscriptions();
+    // API returns plain array directly: [{ id, packageId, packageName, status, expiresAt, ... }]
+    const subscriptions = await getMySubscriptions("ACTIVE");
     
-    // Check if there's an active subscription
-    const activeSubscription = response.activeSubscription || 
-      response.subscriptions?.find((sub) => sub.status === "ACTIVE");
+    // Find active subscription from array
+    const activeSubscription = subscriptions.find((sub) => sub.status === "ACTIVE");
     
     if (activeSubscription) {
       useSubscriptionStore.getState().setSubscription({
-        planId: activeSubscription.packageId,
-        planName: activeSubscription.planName,
-        expiresAt: new Date(activeSubscription.expiryDate).toLocaleDateString("en-US", { 
+        planId: activeSubscription.packageId as PlanId,
+        planName: activeSubscription.packageName,
+        expiresAt: new Date(activeSubscription.expiresAt).toLocaleDateString("en-US", { 
           month: "short", 
           day: "numeric", 
           year: "numeric" 
@@ -96,7 +96,7 @@ export async function fetchSubscriptionStatus() {
       useSubscriptionStore.getState().setSubscription(null);
     }
     
-    return response;
+    return subscriptions;
   } catch (error) {
     useSubscriptionStore.getState().setLoading(false);
     console.error("Failed to fetch subscription status:", error);

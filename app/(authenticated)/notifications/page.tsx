@@ -1,20 +1,30 @@
 "use client";
-import { ArrowLeft, Play, Ticket, CreditCard, Trophy, Sparkles } from "lucide-react";
+import { ArrowLeft, Play, Ticket, CreditCard, Trophy, Sparkles, Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { useWalletStore } from "@/store/wallet-store";
 import { useEffect, useState } from "react";
 import { getNotifications, markAsRead, markAllAsRead, type Notification } from "@/lib/api/notifications";
 
-const NOTIFICATION_ICONS = {
+const NOTIFICATION_ICONS: Record<string, any> = {
   game: Play,
   raffle: Ticket,
   subscription: CreditCard,
   leaderboard: Trophy,
   feature: Sparkles,
+  // Add common backend variants (uppercase enum-style)
+  GAME: Play,
+  RAFFLE: Ticket,
+  SUBSCRIPTION: CreditCard,
+  LEADERBOARD: Trophy,
+  FEATURE: Sparkles,
+  GAME_SESSION_RESULT: Play,
+  RAFFLE_DRAW_RESULT: Ticket,
+  SUBSCRIPTION_REMINDER: CreditCard,
+  LEADERBOARD_UPDATE: Trophy,
 };
 
-const NOTIFICATION_ICON_COLORS = {
+const NOTIFICATION_ICON_COLORS: Record<string, string> = {
   game: "bg-primary/20",
   raffle: "bg-red-500/20",
   subscription: "bg-yellow-500/20",
@@ -22,13 +32,27 @@ const NOTIFICATION_ICON_COLORS = {
   feature: "bg-primary/20",
 };
 
-const NOTIFICATION_ICON_TEXT_COLORS = {
+const NOTIFICATION_ICON_TEXT_COLORS: Record<string, string> = {
   game: "text-primary",
   raffle: "text-red-500",
   subscription: "text-yellow-500",
   leaderboard: "text-green-500",
   feature: "text-primary",
 };
+
+// Helper to get icon with fallback
+function getNotificationIcon(type: string) {
+  return NOTIFICATION_ICONS[type] || NOTIFICATION_ICONS[type.toLowerCase()] || Bell;
+}
+
+// Helper to get colors with fallback
+function getNotificationColors(type: string) {
+  const lowerType = type.toLowerCase();
+  return {
+    bgClass: NOTIFICATION_ICON_COLORS[lowerType] || "bg-secondary",
+    textClass: NOTIFICATION_ICON_TEXT_COLORS[lowerType] || "text-muted-foreground",
+  };
+}
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -129,9 +153,8 @@ export default function NotificationsPage() {
         ) : (
           <div className="space-y-3">
             {notifications.map((notification) => {
-              const Icon = NOTIFICATION_ICONS[notification.type];
-              const iconBgClass = NOTIFICATION_ICON_COLORS[notification.type];
-              const iconTextClass = NOTIFICATION_ICON_TEXT_COLORS[notification.type];
+              const Icon = getNotificationIcon(notification.type);
+              const { bgClass, textClass } = getNotificationColors(notification.type);
 
               return (
                 <div
@@ -143,8 +166,8 @@ export default function NotificationsPage() {
                       : "bg-card border border-border hover:bg-secondary/30"
                   }`}
                 >
-                  <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${iconBgClass}`}>
-                    <Icon size={18} className={iconTextClass} />
+                  <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${bgClass}`}>
+                    <Icon size={18} className={textClass} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-sm mb-0.5">{notification.title}</h3>
