@@ -3,7 +3,7 @@ import { create } from "zustand";
 export interface TokenPackage {
   id: string;
   name: string;
-  tokens: number;
+  tokensEstimate?: string; // Estimate instead of exact number
   price: number; // in Naira
   popular?: boolean;
 }
@@ -12,48 +12,19 @@ interface TokenPackagesState {
   packages: TokenPackage[];
   loading: boolean;
   error: string | null;
-  fetchPackages: () => Promise<void>;
 }
 
-// Static Naira amounts for token top-up packages
-// Token amounts are calculated dynamically based on backend exchange rate
-const NAIRA_AMOUNTS = [
-  { id: "starter", name: "Starter", price: 100 },
-  { id: "standard", name: "Standard", price: 200, popular: true },
-  { id: "value", name: "Value", price: 500 },
-  { id: "pro", name: "Pro", price: 900 },
+// Static token packages - DO NOT call /admin/ endpoints from player-facing screens
+// Token estimates are approximations; actual tokens granted determined by backend
+const STATIC_PACKAGES: TokenPackage[] = [
+  { id: "starter", name: "Starter", price: 100, tokensEstimate: "~100 tokens" },
+  { id: "standard", name: "Standard", price: 200, popular: true, tokensEstimate: "~200 tokens" },
+  { id: "value", name: "Value", price: 500, tokensEstimate: "~500 tokens" },
+  { id: "pro", name: "Pro", price: 900, tokensEstimate: "~900 tokens" },
 ];
 
-export const useTokenPackagesStore = create<TokenPackagesState>()((set, get) => ({
-  packages: NAIRA_AMOUNTS.map(pkg => ({ ...pkg, tokens: 0 })), // Default to 0 until fetched
+export const useTokenPackagesStore = create<TokenPackagesState>()(() => ({
+  packages: STATIC_PACKAGES,
   loading: false,
   error: null,
-
-  fetchPackages: async () => {
-    try {
-      set({ loading: true, error: null });
-      
-      // Get current exchange rate from admin endpoint
-      const { getCurrentTokenExchangeRate } = await import("@/lib/api/admin");
-      const exchangeRate = await getCurrentTokenExchangeRate();
-      
-      // Calculate real token amounts based on exchange rate
-      // koboPerToken = how many kobo buys 1 token
-      // So: tokens = (Naira × 100 kobo) ÷ koboPerToken
-      const packages = NAIRA_AMOUNTS.map(pkg => ({
-        ...pkg,
-        tokens: Math.floor((pkg.price * 100) / exchangeRate.koboPerToken),
-      }));
-      
-      set({ packages, loading: false });
-    } catch (error) {
-      console.error("Failed to fetch token exchange rate:", error);
-      set({ 
-        error: "Failed to load token prices. Please try again.",
-        loading: false,
-        // Fallback to default packages with warning tokens=0
-        packages: NAIRA_AMOUNTS.map(pkg => ({ ...pkg, tokens: 0 }))
-      });
-    }
-  },
 }));

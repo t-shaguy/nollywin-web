@@ -30,8 +30,6 @@ export default function StorePage() {
   const { setSubscription } = useSubscriptionStore();
   const { packages, loading, error: packagesError } = usePackagesStore();
   const tokenPackages = useTokenPackagesStore((s) => s.packages);
-  const fetchTokenPackages = useTokenPackagesStore((s) => s.fetchPackages);
-  const tokenPackagesLoading = useTokenPackagesStore((s) => s.loading);
   const { tokens } = useWalletStore();
   
   const [selected, setSelected] = useState<SelectedItem>(null);
@@ -39,7 +37,7 @@ export default function StorePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentSubscription, setCurrentSubscription] = useState<string | null>(null);
 
-  // Load current active subscription and token packages on mount
+  // Load current active subscription on mount
   useEffect(() => {
     async function loadCurrentSubscription() {
       try {
@@ -53,8 +51,7 @@ export default function StorePage() {
       }
     }
     loadCurrentSubscription();
-    fetchTokenPackages();
-  }, [fetchTokenPackages]);
+  }, []);
 
   const activePackages = packages.filter((p) => p.active);
   
@@ -189,7 +186,7 @@ export default function StorePage() {
               <p className="text-sm text-muted-foreground mt-1">
                 {selected.type === "subscription"
                   ? `You're now subscribed to ${selected.item.name}`
-                  : `${(selected.item as TokenPackage).tokens} tokens added to your account`}
+                  : `Tokens added to your account`}
               </p>
             </div>
             <Button onClick={resetCheckout} className="w-full justify-center">
@@ -280,36 +277,33 @@ export default function StorePage() {
           <h2 className="text-xs font-bold mb-3 uppercase tracking-wider text-muted-foreground">
             Token Top-Up · 1 Token = 1 Play
           </h2>
-          {tokenPackagesLoading ? (
-            <div className="bg-card border border-border rounded-lg p-6 text-center">
-              <p className="text-sm text-muted-foreground">Loading token packages...</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {tokenPackages.map((pkg) => (
-                <button
-                  key={pkg.id}
-                  onClick={() => handleSelect("tokens", pkg)}
-                  disabled={pkg.tokens === 0}
-                  className={`relative px-4 py-3 border rounded-lg transition-all hover:border-primary text-left ${
-                    selected?.type === "tokens" && selected.item.id === pkg.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border"
-                  } ${pkg.tokens === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
-                >
-                  {pkg.popular && (
-                    <span style={{ backgroundColor: RED, color: "#fff" }} className="absolute top-2 right-2 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                      Popular
-                    </span>
-                  )}
-                  <p className="text-sm text-muted-foreground mb-1">{pkg.name}</p>
-                  <p className="text-3xl font-extrabold leading-none mb-1">{pkg.tokens}</p>
-                  <p className="text-xs text-muted-foreground mb-2">{pkg.tokens} plays</p>
-                  <p className="font-bold text-sm" style={{ color: PINK }}>₦{pkg.price.toLocaleString()}</p>
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="grid grid-cols-2 gap-3">
+            {tokenPackages.map((pkg) => (
+              <button
+                key={pkg.id}
+                onClick={() => handleSelect("tokens", pkg)}
+                className={`relative px-4 py-3 border rounded-lg transition-all hover:border-primary text-left ${
+                  selected?.type === "tokens" && selected.item.id === pkg.id
+                    ? "border-primary bg-primary/5"
+                    : "border-border"
+                }`}
+              >
+                {pkg.popular && (
+                  <span style={{ backgroundColor: RED, color: "#fff" }} className="absolute top-2 right-2 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                    Popular
+                  </span>
+                )}
+                <p className="text-sm text-muted-foreground mb-1">{pkg.name}</p>
+                {pkg.tokensEstimate && (
+                  <>
+                    <p className="text-2xl font-extrabold leading-none mb-1">{pkg.tokensEstimate}</p>
+                    <p className="text-xs text-muted-foreground mb-2">Approximate tokens</p>
+                  </>
+                )}
+                <p className="font-bold text-sm" style={{ color: PINK }}>₦{pkg.price.toLocaleString()}</p>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Bottom bar — "Select a package first" or "Proceed to Payment" once something's chosen */}
