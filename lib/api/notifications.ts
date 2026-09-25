@@ -2,18 +2,12 @@ import { apiClient } from './client';
 
 export interface Notification {
   id: string;
-  type: 'game' | 'raffle' | 'subscription' | 'leaderboard' | 'feature' | string;
+  type: string; // e.g. "WALLET_TOPUP", "SUBSCRIPTION_ACTIVATED" - open string for future types
   title: string;
-  description: string;
-  timestamp: string;
-  isRead: boolean;
-  // Additional metadata fields that may be present in backend response
-  amount?: number;
-  packageName?: string;
-  tokens?: number;
-  points?: number;
-  rank?: number;
-  metadata?: Record<string, any>;
+  body: string; // Complete human-readable message from backend
+  data?: Record<string, any>; // Varies by type - e.g. { tokens: "5", reference: "..." }
+  read: boolean;
+  createdAt: string; // ISO 8601 date string
 }
 
 export interface UnreadCountResponse {

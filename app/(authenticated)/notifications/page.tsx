@@ -1,5 +1,5 @@
 "use client";
-import { ArrowLeft, Play, Ticket, CreditCard, Trophy, Sparkles, Bell } from "lucide-react";
+import { ArrowLeft, Play, Ticket, CreditCard, Trophy, Sparkles, Bell, Coins } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { useWalletStore } from "@/store/wallet-store";
@@ -22,6 +22,9 @@ const NOTIFICATION_ICONS: Record<string, any> = {
   RAFFLE_DRAW_RESULT: Ticket,
   SUBSCRIPTION_REMINDER: CreditCard,
   LEADERBOARD_UPDATE: Trophy,
+  // Real confirmed types from backend
+  WALLET_TOPUP: Coins,
+  SUBSCRIPTION_ACTIVATED: CreditCard,
 };
 
 const NOTIFICATION_ICON_COLORS: Record<string, string> = {
@@ -30,6 +33,8 @@ const NOTIFICATION_ICON_COLORS: Record<string, string> = {
   subscription: "bg-yellow-500/20",
   leaderboard: "bg-green-500/20",
   feature: "bg-primary/20",
+  wallet_topup: "bg-yellow-500/20",
+  subscription_activated: "bg-yellow-500/20",
 };
 
 const NOTIFICATION_ICON_TEXT_COLORS: Record<string, string> = {
@@ -38,55 +43,13 @@ const NOTIFICATION_ICON_TEXT_COLORS: Record<string, string> = {
   subscription: "text-yellow-500",
   leaderboard: "text-green-500",
   feature: "text-primary",
+  wallet_topup: "text-yellow-500",
+  subscription_activated: "text-yellow-500",
 };
 
 // Helper to get icon with fallback
 function getNotificationIcon(type: string) {
   return NOTIFICATION_ICONS[type] || NOTIFICATION_ICONS[type.toLowerCase()] || Bell;
-}
-
-// Helper to build rich description from notification metadata
-function buildRichDescription(notification: Notification): string {
-  // If backend provides metadata, use it to build richer descriptions
-  const { description, amount, tokens, packageName, points, rank, metadata } = notification;
-  
-  // Start with the base description
-  let richDesc = description;
-  
-  // Add specific details based on notification type and available data
-  const lowerType = notification.type.toLowerCase();
-  
-  if (lowerType.includes('wallet') || lowerType.includes('topup')) {
-    if (tokens && amount) {
-      richDesc = `${tokens} tokens added (₦${amount.toLocaleString()})`;
-    } else if (tokens) {
-      richDesc = `${tokens} tokens added to your wallet`;
-    }
-  } else if (lowerType.includes('subscription')) {
-    if (packageName) {
-      richDesc = `${packageName} subscription activated`;
-    }
-  } else if (lowerType.includes('game') || lowerType.includes('trivia')) {
-    if (points) {
-      richDesc = `You scored ${points} points in the trivia session`;
-    }
-  } else if (lowerType.includes('leaderboard')) {
-    if (rank) {
-      richDesc = `You've moved to #${rank} on the leaderboard`;
-    }
-  } else if (lowerType.includes('raffle')) {
-    if (tokens) {
-      richDesc = `Your ${tokens} ${tokens === 1 ? 'ticket' : 'tickets'} for the draw ${tokens === 1 ? 'is' : 'are'} active`;
-    }
-  }
-  
-  // If metadata has additional info, try to incorporate it
-  if (metadata && Object.keys(metadata).length > 0) {
-    // Log metadata for debugging/future enhancement
-    console.log('Notification metadata available:', metadata);
-  }
-  
-  return richDesc;
 }
 
 // Helper to get colors with fallback
@@ -96,6 +59,22 @@ function getNotificationColors(type: string) {
     bgClass: NOTIFICATION_ICON_COLORS[lowerType] || "bg-secondary",
     textClass: NOTIFICATION_ICON_TEXT_COLORS[lowerType] || "text-muted-foreground",
   };
+}
+
+// Format ISO 8601 timestamp to relative time
+function formatTimestamp(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
 }
 
 export default function NotificationsPage() {
@@ -180,7 +159,7 @@ export default function NotificationsPage() {
     }
   }
   
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
@@ -233,14 +212,13 @@ export default function NotificationsPage() {
             {notifications.map((notification) => {
               const Icon = getNotificationIcon(notification.type);
               const { bgClass, textClass } = getNotificationColors(notification.type);
-              const richDescription = buildRichDescription(notification);
 
               return (
                 <div
                   key={notification.id}
-                  onClick={() => !notification.isRead && handleMarkAsRead(notification.id)}
+                  onClick={() => !notification.read && handleMarkAsRead(notification.id)}
                   className={`rounded-lg p-3 flex items-start gap-3 cursor-pointer transition-colors ${
-                    !notification.isRead 
+                    !notification.read 
                       ? "bg-card/50 border border-primary/20 hover:bg-card/70" 
                       : "bg-card border border-border hover:bg-secondary/30"
                   }`}
@@ -250,13 +228,13 @@ export default function NotificationsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-sm mb-0.5">{notification.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{richDescription}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{notification.body}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {notification.timestamp}
+                      {formatTimestamp(notification.createdAt)}
                     </span>
-                    {!notification.isRead && (
+                    {!notification.read && (
                       <div className="h-2 w-2 rounded-full bg-primary" />
                     )}
                   </div>
