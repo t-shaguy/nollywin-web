@@ -28,16 +28,47 @@ export class ApiError extends Error {
   }
 }
 
-// In-memory cache for client token
+// In-memory cache for client token with expiry tracking
 let clientTokenCache: string | null = null;
+let clientTokenExpiry: number | null = null; // Unix timestamp in seconds
 let clientTokenPromise: Promise<string> | null = null;
+
+/**
+ * Decode JWT and extract expiry timestamp (exp claim)
+ */
+function decodeJwtExpiry(token: string): number | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    
+    const payload = JSON.parse(atob(parts[1]));
+    return payload.exp || null; // exp is in seconds since epoch
+  } catch (error) {
+    console.error("Failed to decode JWT expiry:", error);
+    return null;
+  }
+}
+
+/**
+ * Check if cached token is still valid (not expired or within 60s of expiry)
+ */
+function isCachedTokenValid(): boolean {
+  if (!clientTokenCache || !clientTokenExpiry) {
+    return false;
+  }
+  
+  const nowInSeconds = Math.floor(Date.now() / 1000);
+  const bufferSeconds = 60; // Refresh token if it expires within 60 seconds
+  
+  return clientTokenExpiry > (nowInSeconds + bufferSeconds);
+}
 
 /**
  * Fetch the client token from our server route (keeps secrets server-side)
  */
 async function getClientToken(): Promise<string> {
-  // Return cached token if available
-  if (clientTokenCache) {
+  // Return cached token if still valid
+  if (isCachedTokenValid() && clientTokenCache) {
     return clientTokenCache;
   }
 
@@ -54,8 +85,17 @@ async function getClientToken(): Promise<string> {
         throw new Error("Failed to fetch client token");
       }
       const data = await res.json();
-      clientTokenCache = data.accessToken;
-      return data.accessToken;
+      const token = data.accessToken;
+      
+      // Cache token and its expiry
+      clientTokenCache = token;
+      clientTokenExpiry = decodeJwtExpiry(token);
+      
+      if (!clientTokenExpiry) {
+        console.warn("Client token has no expiry claim - will not proactively refresh");
+      }
+      
+      return token;
     } catch (error) {
       console.error("Error fetching client token:", error);
       throw error;
@@ -72,16 +112,67 @@ async function getClientToken(): Promise<string> {
  */
 export function clearClientToken() {
   clientTokenCache = null;
+  clientTokenExpiry = null;
+}
+
+/**
+ * Check if an error indicates a client token problem
+ */
+function isClientTokenError(error: any): boolean {
+  // 500 with "Error invoking subclass method" message
+  if (error.status === 500 && error.message?.includes("Error invoking subclass method")) {
+    return true;
+  }
+  
+  // 401/403 when we actually have a valid player token (means client token is the issue)
+  if ((error.status === 401 || error.status === 403)) {
+    // Only treat as client token error if we have a player token
+    // (if no player token, it's a normal auth error)
+    if (typeof window !== "undefined") {
+      try {
+        const authStore = require("@/store/auth-store").useAuthStore;
+        const playerToken = authStore.getState().token;
+        if (playerToken) {
+          return true;
+        }
+      } catch {
+        // Can't check player token, assume not a client token issue
+      }
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Shared retry logic for client token refresh
+ * Returns true if should retry, false otherwise
+ */
+async function handleClientTokenError(error: any, isRetry: boolean): Promise<boolean> {
+  if (isRetry) {
+    // Already retried once, don't retry again
+    return false;
+  }
+  
+  if (isClientTokenError(error)) {
+    console.warn("Client token error detected, refreshing token and retrying...");
+    clearClientToken();
+    return true;
+  }
+  
+  return false;
 }
 
 /**
  * Base API client with two-layer auth (X-Client-Token + Authorization), timeout, and typed error handling
+ * Automatically retries once with fresh client token if token expires mid-session
  */
 export async function apiClient<T = any>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  isRetry: boolean = false
 ): Promise<T> {
-  // Get client token (cached after first fetch)
+  // Get client token (cached after first fetch, auto-refreshes if near expiry)
   const clientToken = await getClientToken();
 
   // Get player token from auth store if available
@@ -143,13 +234,21 @@ export async function apiClient<T = any>(
       }
 
       // Backend returns { status, error, message, path }
-      throw new ApiError({
+      const error = new ApiError({
         status: res.status,
         error: errorData.error || res.statusText,
         message: errorData.message || `Request failed with status ${res.status}`,
         path: errorData.path,
         data: errorData,
       });
+      
+      // Check if this is a client token error and retry if needed
+      const shouldRetry = await handleClientTokenError(error, isRetry);
+      if (shouldRetry) {
+        return apiClient<T>(endpoint, options, true);
+      }
+      
+      throw error;
     }
 
     // Handle empty responses (204 No Content, etc.)
@@ -197,12 +296,13 @@ export async function apiClient<T = any>(
 /**
  * API client for binary responses (images, files)
  * Uses the same two-layer auth as apiClient, but returns Blob instead of JSON
+ * Automatically retries once with fresh client token if token expires mid-session
  * 
  * Use this for:
  * - Get avatar image (GET /api/v1/users/avatar)
  */
-export async function apiClientBinary(endpoint: string): Promise<Blob> {
-  // Get client token
+export async function apiClientBinary(endpoint: string, isRetry: boolean = false): Promise<Blob> {
+  // Get client token (auto-refreshes if near expiry)
   const clientToken = await getClientToken();
 
   // Get player token from auth store if available
@@ -251,19 +351,25 @@ export async function apiClientBinary(endpoint: string): Promise<Blob> {
         // Still throw the error so any pending promises can handle it
       }
 
-      if (res.status === 404) {
-        throw new ApiError({
-          status: 404,
-          error: "Not Found",
-          message: "No avatar uploaded",
-        });
+      const error = res.status === 404 
+        ? new ApiError({
+            status: 404,
+            error: "Not Found",
+            message: "No avatar uploaded",
+          })
+        : new ApiError({
+            status: res.status,
+            error: res.statusText,
+            message: `Request failed with status ${res.status}`,
+          });
+      
+      // Check if this is a client token error and retry if needed
+      const shouldRetry = await handleClientTokenError(error, isRetry);
+      if (shouldRetry) {
+        return apiClientBinary(endpoint, true);
       }
-
-      throw new ApiError({
-        status: res.status,
-        error: res.statusText,
-        message: `Request failed with status ${res.status}`,
-      });
+      
+      throw error;
     }
 
     return res.blob();
@@ -305,6 +411,7 @@ export async function apiClientBinary(endpoint: string): Promise<Blob> {
 /**
  * API client for multipart/form-data requests (file uploads)
  * Uses the same two-layer auth as apiClient
+ * Automatically retries once with fresh client token if token expires mid-session
  * 
  * Use this for:
  * - Avatar upload (POST /api/v1/users/avatar)
@@ -315,9 +422,10 @@ export async function apiClientBinary(endpoint: string): Promise<Blob> {
 export async function apiClientMultipart<T = any>(
   endpoint: string,
   formData: FormData,
-  options: Omit<RequestInit, "body" | "headers"> = {}
+  options: Omit<RequestInit, "body" | "headers"> = {},
+  isRetry: boolean = false
 ): Promise<T> {
-  // Get client token
+  // Get client token (auto-refreshes if near expiry)
   const clientToken = await getClientToken();
 
   // Get player token from auth store if available
@@ -377,13 +485,21 @@ export async function apiClientMultipart<T = any>(
         errorData = { message: `HTTP ${res.status}: ${res.statusText}` };
       }
 
-      throw new ApiError({
+      const error = new ApiError({
         status: res.status,
         error: errorData.error || res.statusText,
         message: errorData.message || `Upload failed with status ${res.status}`,
         path: errorData.path,
         data: errorData,
       });
+      
+      // Check if this is a client token error and retry if needed
+      const shouldRetry = await handleClientTokenError(error, isRetry);
+      if (shouldRetry) {
+        return apiClientMultipart<T>(endpoint, formData, options, true);
+      }
+      
+      throw error;
     }
 
     // Handle empty responses
