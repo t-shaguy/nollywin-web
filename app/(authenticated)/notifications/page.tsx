@@ -124,6 +124,16 @@ export default function NotificationsPage() {
       setLoading(true);
       // Fetch with pagination params to match expected backend structure
       const data = await getNotifications({ unread: false, page: 0, size: 20 });
+      
+      // DEBUG: Log actual backend response to see what fields are available
+      console.log('=== NOTIFICATIONS DEBUG ===');
+      console.log('Total notifications:', data.length);
+      if (data.length > 0) {
+        console.log('Sample notification (first one):', JSON.stringify(data[0], null, 2));
+        console.log('All notification fields available:', Object.keys(data[0]));
+      }
+      console.log('=========================');
+      
       setNotifications(data);
     } catch (error) {
       console.error('Failed to load notifications:', error);
@@ -134,29 +144,39 @@ export default function NotificationsPage() {
 
   async function handleMarkAsRead(notificationId: string) {
     try {
+      console.log('Marking notification as read:', notificationId);
       await markAsRead(notificationId);
+      console.log('Mark as read API call completed successfully');
+      
       // CRITICAL: Re-fetch fresh data from backend after mark-read
       await loadNotifications();
+      
       // Also trigger unread count refresh in the navbar
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('notifications-updated'));
       }
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
+      console.error('Error details:', error);
     }
   }
 
   async function handleMarkAllAsRead() {
     try {
+      console.log('Marking all notifications as read...');
       await markAllAsRead();
+      console.log('Mark all as read API call completed successfully');
+      
       // CRITICAL: Re-fetch fresh data from backend after mark-all-read
       await loadNotifications();
+      
       // Also trigger unread count refresh in the navbar
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('notifications-updated'));
       }
     } catch (error) {
       console.error('Failed to mark all as read:', error);
+      console.error('Error details:', error);
     }
   }
   

@@ -66,16 +66,30 @@ export async function getUnreadCount(): Promise<number> {
  * Mark a specific notification as read
  */
 export async function markAsRead(notificationId: string): Promise<void> {
-  await apiClient(`/api/v1/notifications/${notificationId}/read`, {
-    method: 'POST',
-  });
+  console.log(`[API] Calling POST /api/v1/notifications/${notificationId}/read`);
+  try {
+    const response = await apiClient(`/api/v1/notifications/${notificationId}/read`, {
+      method: 'POST',
+    });
+    console.log(`[API] Mark as read successful for ID: ${notificationId}`, response);
+  } catch (error) {
+    console.error(`[API] Mark as read FAILED for ID: ${notificationId}`, error);
+    throw error;
+  }
 }
 
 /**
  * Mark all notifications as read
  */
 export async function markAllAsRead(): Promise<void> {
-  await apiClient('/api/v1/notifications/read-all', {
-    method: 'POST',
-  });
+  console.log('[API] Calling POST /api/v1/notifications/read-all');
+  try {
+    const response = await apiClient('/api/v1/notifications/read-all', {
+      method: 'POST',
+    });
+    console.log('[API] Mark all as read successful', response);
+  } catch (error) {
+    console.error('[API] Mark all as read FAILED', error);
+    throw error;
+  }
 }
