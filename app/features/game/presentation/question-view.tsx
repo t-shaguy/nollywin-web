@@ -1,3 +1,4 @@
+import { CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TriviaQuestion } from "../data/mock-questions";
@@ -48,116 +49,129 @@ export function QuestionView({
   const optionLabels = ["A", "B", "C", "D", "E"];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5 px-4">
-      {/* Top Bar: Timer, Progress Dots, Difficulty */}
+    <div className="max-w-lg mx-auto space-y-6">
+      {/* Stage Progress Row */}
       <div className="flex items-center justify-between">
-        {/* Circular Timer */}
+        <div className="flex items-center gap-2 flex-1">
+          {Array.from({ length: totalStages }).map((_, i) => {
+            const stageNum = i + 1;
+            const stageAnswered = answeredQuestionsPerStage[i];
+            const isCompleted = stageAnswered >= 1; // 1 question per stage
+            const isCurrent = stageNum === currentStage;
+
+            return (
+              <div key={stageNum} className="flex items-center">
+                <div
+                  className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
+                    isCompleted
+                      ? "bg-green-500 text-white"
+                      : isCurrent
+                      ? "bg-primary text-white ring-2 ring-primary/30"
+                      : "bg-secondary text-muted-foreground"
+                  }`}
+                >
+                  {isCompleted ? "✓" : stageNum}
+                </div>
+                {i < totalStages - 1 && (
+                  <div
+                    className={`h-0.5 w-6 ${
+                      isCompleted ? "bg-green-500" : "bg-border"
+                    }`}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <Badge
+          className={`${difficultyColors[stageDifficulty]} text-xs px-3 py-1 border`}
+        >
+          {stageDifficulty}
+        </Badge>
+      </div>
+
+      {/* Timer and Score Row */}
+      <div className="flex items-center gap-4">
+        {/* Circular Countdown */}
         <div className="relative">
-          <svg className="transform -rotate-90" width="56" height="56">
+          <svg className="transform -rotate-90" width="64" height="64">
             <circle
-              cx="28"
-              cy="28"
-              r="24"
+              cx="32"
+              cy="32"
+              r="28"
               stroke="currentColor"
               strokeWidth="3"
               fill="none"
               className="text-border"
             />
             <circle
-              cx="28"
-              cy="28"
-              r="24"
+              cx="32"
+              cy="32"
+              r="28"
               stroke="currentColor"
               strokeWidth="3"
               fill="none"
               strokeLinecap="round"
               className="text-primary transition-all duration-1000"
-              strokeDasharray={`${2 * Math.PI * 24}`}
-              strokeDashoffset={`${2 * Math.PI * 24 * (1 - timeLeft / 10)}`}
+              strokeDasharray={`${2 * Math.PI * 28}`}
+              strokeDashoffset={`${2 * Math.PI * 28 * (1 - timeLeft / 10)}`}
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-lg font-bold">{timeLeft}</span>
+            <span className="text-xl font-bold">{timeLeft}</span>
           </div>
         </div>
 
-        {/* Stage Progress Dots */}
-        <div className="flex items-center gap-1.5">
-          {Array.from({ length: totalStages }).map((_, i) => {
-            const stageAnswered = answeredQuestionsPerStage[i];
-            const isCompleted = stageAnswered >= 1;
-            const isCurrent = i + 1 === currentStage;
-
-            return (
-              <div
-                key={i}
-                className={`h-2 w-2 rounded-full transition-all ${
-                  isCompleted
-                    ? "bg-green-500"
-                    : isCurrent
-                    ? "bg-primary"
-                    : "bg-border"
-                }`}
-              />
-            );
-          })}
+        {/* Points Display */}
+        <div className="flex-1 bg-secondary/30 rounded-lg px-4 py-3">
+          <p className="text-xs text-muted-foreground">Points this attempt</p>
+          <p className="text-2xl font-bold text-primary">{score} pts</p>
         </div>
-
-        {/* Difficulty Badge */}
-        <Badge className={`${difficultyColors[stageDifficulty]} text-xs px-2.5 py-0.5 border`}>
-          {stageDifficulty}
-        </Badge>
       </div>
 
-      {/* Points Display */}
-      <div className="bg-secondary/30 rounded-lg px-4 py-2.5 text-center">
-        <p className="text-xs text-muted-foreground">Points this attempt</p>
-        <p className="text-xl font-bold text-primary">{score} pts</p>
+      {/* Question Text */}
+      <div className="bg-card border border-border rounded-lg p-5">
+        <p className="text-base font-semibold leading-relaxed">{question.question}</p>
       </div>
 
-      {/* Question Text - Clean, no border */}
-      <div className="py-2">
-        <p className="text-base font-medium leading-relaxed text-foreground">
-          {question.question}
-        </p>
-      </div>
-
-      {/* Options */}
-      <div className="space-y-3">
+      {/* Options (A-E) - Same width as feedback banner */}
+      <div className="space-y-2.5">
         {question.options.map((option, i) => {
           const isSelected = selectedIndex === i;
           const isCorrectOption = i === question.correctIndex;
+          // When timeout happens and no answer selected, only highlight correct answer
           const isWrongAnswer = showResult && isSelected && !isCorrectOption;
-          const shouldDimHeavily = showResult && !isCorrectOption && !isSelected;
+          const shouldDim = showResult && !isCorrectOption;
 
-          let stateClass = "border-border/50 hover:border-primary/30 hover:bg-primary/5";
-          let badgeClass = "bg-border text-muted-foreground transition-all duration-300";
-          let textClass = "text-sm font-normal transition-all duration-300";
+          let stateClass = "border-border hover:border-primary/50 hover:bg-primary/5";
+          let badgeClass = "bg-secondary transition-all duration-300";
+          let textClass = "text-sm font-medium transition-all duration-300";
           let containerClass = "transition-all duration-300";
 
           if (showResult) {
             if (isCorrectOption) {
               // Correct answer: bright green, fully visible
-              stateClass = "border-green-500/80 bg-green-500/10";
+              stateClass = "border-green-500 bg-green-500/10";
               badgeClass = "bg-green-500 text-white transition-all duration-300";
-              textClass = "text-sm font-medium text-white transition-all duration-300";
+              textClass = "text-sm font-bold text-white transition-all duration-300";
             } else if (isSelected) {
-              // Wrong answer: red
-              stateClass = "border-red-500/80 bg-red-500/10";
+              // Wrong answer: red (only if user actually selected it)
+              stateClass = "border-red-500 bg-red-500/10";
               badgeClass = "bg-red-500 text-white transition-all duration-300";
-              textClass = "text-sm font-normal text-red-200 transition-all duration-300";
+              textClass = "text-sm font-medium text-red-200 transition-all duration-300";
             }
           }
 
           if (isWrongAnswer) {
-            // Wrong answer: dimmed but readable
-            containerClass += " opacity-35";
-          } else if (shouldDimHeavily) {
-            // Other options: heavily dimmed
-            containerClass += " opacity-20 grayscale";
+            // Wrong answer user selected: dimmed but readable (40% opacity, less blur)
+            containerClass += " opacity-40";
+          } else if (shouldDim) {
+            // Other options or timeout: dimmed (25% opacity, minimal grayscale, NO blur)
+            containerClass += " opacity-25 grayscale";
             stateClass = "border-border/30";
             badgeClass = "bg-border/50 text-muted-foreground/40 transition-all duration-300";
-            textClass = "text-sm font-normal text-muted-foreground/40 transition-all duration-300";
+            textClass = "text-sm font-medium text-muted-foreground/40 transition-all duration-300";
           }
 
           return (
@@ -166,9 +180,9 @@ export function QuestionView({
               type="button"
               disabled={selectedIndex !== null}
               onClick={() => onAnswer(i)}
-              className={`w-full text-left px-4 py-3 rounded-xl border bg-card/50 flex items-center gap-3 ${stateClass} ${containerClass}`}
+              className={`w-full text-left px-4 py-3 rounded-lg border bg-card flex items-center gap-3 ${stateClass} ${containerClass}`}
             >
-              <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center font-semibold text-xs ${badgeClass}`}>
+              <div className={`flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center font-semibold text-xs ${badgeClass}`}>
                 {optionLabels[i]}
               </div>
               <span className={`flex-1 ${textClass}`}>{option}</span>
@@ -181,10 +195,10 @@ export function QuestionView({
       {showResult && (
         <button
           onClick={onNext}
-          className={`w-full rounded-xl px-5 py-3 text-center transition-all ${
+          className={`w-full rounded-lg px-4 py-3 text-center transition-all ${
             isCorrect
-              ? "bg-green-500/10 border border-green-500/50 hover:bg-green-500/15"
-              : "bg-red-900/40 border border-red-500/50 hover:bg-red-900/50"
+              ? "bg-green-500/10 border border-green-500 hover:bg-green-500/20"
+              : "bg-red-900/30 border border-red-900 hover:bg-red-900/40"
           }`}
         >
           <p className={`font-semibold text-base ${isCorrect ? "text-green-500" : "text-red-500"}`}>
