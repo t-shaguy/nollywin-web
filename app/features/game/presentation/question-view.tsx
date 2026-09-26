@@ -140,20 +140,30 @@ export function QuestionView({
         {question.options.map((option, i) => {
           const isSelected = selectedIndex === i;
           const isCorrectOption = i === question.correctIndex;
+          const isRelevant = showResult && (isCorrectOption || isSelected);
+          const shouldDim = showResult && !isRelevant;
 
           let stateClass = "border-border hover:border-primary/50 hover:bg-primary/5";
-          let badgeClass = "bg-secondary";
-          let textClass = "text-sm font-medium";
+          let badgeClass = "bg-secondary transition-all duration-300";
+          let textClass = "text-sm font-medium transition-all duration-300";
+          let containerClass = "transition-all duration-300";
 
           if (showResult) {
             if (isCorrectOption) {
               stateClass = "border-green-500 bg-green-500/10";
-              badgeClass = "bg-green-500 text-white";
-              textClass = "text-sm font-bold text-white";
+              badgeClass = "bg-green-500 text-white transition-all duration-300";
+              textClass = "text-sm font-bold text-white transition-all duration-300";
             } else if (isSelected) {
               stateClass = "border-red-500 bg-red-500/10";
-              badgeClass = "bg-red-500 text-white";
+              badgeClass = "bg-red-500 text-white transition-all duration-300";
             }
+          }
+
+          if (shouldDim) {
+            containerClass += " opacity-50 blur-[0.5px] grayscale";
+            stateClass = "border-border/50 bg-card";
+            badgeClass = "bg-secondary/50 text-muted-foreground/50 transition-all duration-300";
+            textClass = "text-sm font-medium text-muted-foreground/50 transition-all duration-300";
           }
 
           return (
@@ -162,7 +172,7 @@ export function QuestionView({
               type="button"
               disabled={selectedIndex !== null}
               onClick={() => onAnswer(i)}
-              className={`w-full text-left px-4 py-3 rounded-lg border bg-card transition-all flex items-center gap-3 ${stateClass}`}
+              className={`w-full text-left px-4 py-3 rounded-lg border bg-card flex items-center gap-3 ${stateClass} ${containerClass}`}
             >
               <div className={`flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center font-semibold text-xs ${badgeClass}`}>
                 {optionLabels[i]}
