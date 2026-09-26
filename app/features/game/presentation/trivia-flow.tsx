@@ -62,6 +62,7 @@ export function TriviaFlow() {
   
   // API-driven state
   const [currentQuestion, setCurrentQuestion] = useState<GameQuestion | null>(null);
+  const [pendingQuestion, setPendingQuestion] = useState<GameQuestion | null>(null);
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [totalQuestions, setTotalQuestions] = useState<number>(0);
   const [currentSequence, setCurrentSequence] = useState<number>(0);
@@ -148,10 +149,11 @@ export function TriviaFlow() {
           setStep("cleared");
         }, 1500);
       } else {
-        // Prepare next question
-        setCurrentQuestion(response.nextQuestion);
-        setCurrentSequence(response.nextQuestion.sequenceNumber);
-        setTimeLeft(response.nextQuestion.secondsAllowed);
+        // Do NOT swap currentQuestion yet — just stash it.
+        // The user is still looking at feedback for the question they 
+        // just answered. currentQuestion must not change until they 
+        // click Continue.
+        setPendingQuestion(response.nextQuestion);
       }
     } catch (err) {
       const apiError = err as ApiError;
@@ -162,7 +164,14 @@ export function TriviaFlow() {
   };
 
   const handleNextAfterAnswer = () => {
-    // Reset for next question
+    // Promote pending question to current, if present
+    if (pendingQuestion) {
+      setCurrentQuestion(pendingQuestion);
+      setCurrentSequence(pendingQuestion.sequenceNumber);
+      setTimeLeft(pendingQuestion.secondsAllowed);
+      setPendingQuestion(null);
+    }
+    // Reset feedback state for the question that's now showing
     setSelectedIndex(null);
     setShowFeedback(false);
     setLastCorrectOption(null);
@@ -188,6 +197,7 @@ export function TriviaFlow() {
     setStep("details");
     setAttemptId(null);
     setCurrentQuestion(null);
+    setPendingQuestion(null);
     setCurrentSequence(0);
     setTotalQuestions(0);
     setStageName("");
