@@ -48,7 +48,7 @@ function adaptQuestion(apiQuestion: GameQuestion, correctOption?: "A" | "B" | "C
 
 export function TriviaFlow() {
   const router = useRouter();
-  const { tokens } = useWalletStore();
+  const { tokenBalance } = useWalletStore();
   
   // Token cost from dashboard API
   const [tokenCostPerPlay, setTokenCostPerPlay] = useState<number>(1); // fallback
@@ -225,7 +225,7 @@ export function TriviaFlow() {
   if (step === "details") {
     return (
       <GameDetails
-        currentTokens={tokens}
+        currentTokens={tokenBalance}
         tokenCostPerPlay={tokenCostPerPlay}
         onStartGame={startGame}
         onBack={backToDashboard}

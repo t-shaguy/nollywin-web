@@ -5,7 +5,7 @@ import { useWalletStore } from "@/store/wallet-store";
 
 export default function RafflesPage() {
   const { raffles } = useRaffleStore();
-  const tokens = useWalletStore((s) => s.tokens);
+  const tokenBalance = useWalletStore((s) => s.tokenBalance);
 
   const activeRaffles = raffles.filter((r) => r.status === "ACTIVE");
 

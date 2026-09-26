@@ -21,13 +21,13 @@ export function PurchaseTicketModal({ isOpen, onClose, raffle }: PurchaseTicketM
   const [errorMessage, setErrorMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   
-  const { tokens } = useWalletStore(); // Get tokens from wallet
+  const { tokenBalance } = useWalletStore(); // Get tokens from wallet
   const { user } = useAuthStore(); // Get totalPoints from user profile
   const { raffles } = useRaffleStore();
 
   // Get user ticket count from raffle data
   const userTickets = raffle.userTicketCount || 0;
-  const hasEnoughTokens = tokens >= raffle.ticketCostTokens;
+  const hasEnoughTokens = tokenBalance >= raffle.ticketCostTokens;
 
   const handleClose = () => {
     setStep("confirm");
@@ -37,7 +37,7 @@ export function PurchaseTicketModal({ isOpen, onClose, raffle }: PurchaseTicketM
 
   const handlePurchase = async () => {
     if (!hasEnoughTokens) {
-      setErrorMessage(`You need ${raffle.ticketCostTokens - tokens} more tokens to buy this ticket`);
+      setErrorMessage(`You need ${raffle.ticketCostTokens - tokenBalance} more tokens to buy this ticket`);
       setStep("error");
       return;
     }
@@ -93,7 +93,7 @@ export function PurchaseTicketModal({ isOpen, onClose, raffle }: PurchaseTicketM
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Your Tokens</span>
                 <span className={`font-semibold ${hasEnoughTokens ? "text-primary" : "text-destructive"}`}>
-                  {tokens.toLocaleString()} tokens
+                  {tokenBalance.toLocaleString()} tokens
                 </span>
               </div>
               <div className="flex justify-between text-sm">
@@ -104,7 +104,7 @@ export function PurchaseTicketModal({ isOpen, onClose, raffle }: PurchaseTicketM
               <div className="flex justify-between">
                 <span className="font-semibold">After Purchase</span>
                 <span className="font-bold text-primary">
-                  {(tokens - raffle.ticketCostTokens).toLocaleString()} tokens
+                  {(tokenBalance - raffle.ticketCostTokens).toLocaleString()} tokens
                 </span>
               </div>
             </div>

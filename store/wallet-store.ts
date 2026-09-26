@@ -10,8 +10,6 @@ interface WalletState {
   setBalance: (tokenBalance: number) => void;
   setLoading: (loading: boolean) => void;
   resetWallet: () => void;
-  // Legacy getter for backward compatibility during migration
-  get tokens(): number;
 }
 
 export const useWalletStore = create<WalletState>()(
@@ -20,11 +18,6 @@ export const useWalletStore = create<WalletState>()(
       // Initial balance - will be replaced by API call on mount/login
       tokenBalance: 0,
       isLoading: false,
-
-      // Legacy getter for backward compatibility
-      get tokens() {
-        return get().tokenBalance;
-      },
 
       setBalance: (tokenBalance) =>
         set({
@@ -67,6 +60,7 @@ export const useWalletStore = create<WalletState>()(
  */
 export async function fetchWalletBalance() {
   try {
+    console.log("[CANARY] fetchWalletBalance() invoked - about to import getBalance");
     const { getBalance } = await import("@/lib/api/wallet");
     useWalletStore.getState().setLoading(true);
     const balance = await getBalance();

@@ -8,7 +8,7 @@ import { ReferralStats } from "../../features/refer-earn/presentation/referral-s
 
 export default function ReferEarnPage() {
   const { referralCode, referralLink, totalReferred, verifiedReferred, isLoading } = useReferralStore();
-  const { tokens } = useWalletStore();
+  const { tokenBalance } = useWalletStore();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {

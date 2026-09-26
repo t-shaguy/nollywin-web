@@ -79,7 +79,7 @@ function formatTimestamp(iso: string): string {
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const { tokens } = useWalletStore();
+  const { tokenBalance } = useWalletStore();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   

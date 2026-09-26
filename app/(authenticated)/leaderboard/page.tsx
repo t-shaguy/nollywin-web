@@ -7,7 +7,7 @@ import { useWalletStore } from "@/store/wallet-store";
 
 export default function LeaderboardPage() {
   const { entries, periodEndsAt, isLoading } = useLeaderboardStore();
-  const tokens = useWalletStore((s) => s.tokens);
+  const tokenBalance = useWalletStore((s) => s.tokenBalance);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {

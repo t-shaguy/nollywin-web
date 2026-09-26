@@ -14,11 +14,11 @@ import { useNotificationsSync } from "@/hooks/use-notifications-sync";
  * After: AuthenticatedShell stays mounted during navigation → fetch once per session
  */
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
-  const { tokens } = useWalletStore();
+  const { tokenBalance } = useWalletStore();
   const { unreadCount } = useNotificationsSync();
   
   return (
-    <AuthenticatedShell tokenBalance={tokens} unreadCount={unreadCount}>
+    <AuthenticatedShell tokenBalance={tokenBalance} unreadCount={unreadCount}>
       {children}
     </AuthenticatedShell>
   );

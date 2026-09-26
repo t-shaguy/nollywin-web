@@ -11,6 +11,7 @@ export function useWalletSync() {
   const token = useAuthStore((s) => s.token);
 
   useEffect(() => {
+    console.log("[CANARY] useWalletSync effect ran, token:", token);
     // Only fetch if user is authenticated (has token)
     if (token && token !== "guest-session-token") {
       fetchWalletBalance().catch((error) => {

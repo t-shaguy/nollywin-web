@@ -6,7 +6,7 @@ import { TriviaFlow } from "../../features/game/presentation/trivia-flow";
 
 export default function GamePage() {
   const hasActivePlan = useSubscriptionStore((s) => s.hasActivePlan);
-  const tokens = useWalletStore((s) => s.tokens);
+  const tokenBalance = useWalletStore((s) => s.tokenBalance);
 
   return (
     <>

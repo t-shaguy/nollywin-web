@@ -13,7 +13,7 @@ import { getProfile, updateProfile } from "@/lib/api/profile";
 
 export default function ProfilePage() {
   const searchParams = useSearchParams();
-  const { tokens } = useWalletStore();
+  const { tokenBalance } = useWalletStore();
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
   const { hasActivePlan, planName } = useSubscriptionStore();

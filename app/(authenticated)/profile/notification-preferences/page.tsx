@@ -10,7 +10,7 @@ import { simulateRequest } from "@/lib/api/simulate";
 
 export default function NotificationPreferencesPage() {
   const router = useRouter();
-  const { tokens } = useWalletStore();
+  const { tokenBalance } = useWalletStore();
   const { preferences, updatePreference } = useNotificationPreferencesStore();
   
   const [isSaving, setIsSaving] = useState(false);

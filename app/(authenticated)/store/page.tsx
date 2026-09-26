@@ -30,7 +30,7 @@ export default function StorePage() {
   const { setSubscription } = useSubscriptionStore();
   const { packages, loading, error: packagesError } = usePackagesStore();
   const tokenPackages = useTokenPackagesStore((s) => s.packages);
-  const { tokens } = useWalletStore();
+  const { tokenBalance } = useWalletStore();
   
   const [selected, setSelected] = useState<SelectedItem>(null);
   const [view, setView] = useState<View>("browse");
