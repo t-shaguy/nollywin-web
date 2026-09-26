@@ -136,12 +136,12 @@ export function QuestionView({
       </div>
 
       {/* Options (A-E) */}
-      <div className="space-y-2.5">
+      <div className="space-y-2">
         {question.options.map((option, i) => {
           const isSelected = selectedIndex === i;
           const isCorrectOption = i === question.correctIndex;
-          const isRelevant = showResult && (isCorrectOption || isSelected);
-          const shouldDim = showResult && !isRelevant;
+          // Only the correct option should be fully visible
+          const shouldDim = showResult && !isCorrectOption;
 
           let stateClass = "border-border hover:border-primary/50 hover:bg-primary/5";
           let badgeClass = "bg-secondary transition-all duration-300";
@@ -150,16 +150,19 @@ export function QuestionView({
 
           if (showResult) {
             if (isCorrectOption) {
+              // Only correct answer stays fully visible with green
               stateClass = "border-green-500 bg-green-500/10";
               badgeClass = "bg-green-500 text-white transition-all duration-300";
               textClass = "text-sm font-bold text-white transition-all duration-300";
             } else if (isSelected) {
+              // Wrong answer gets red but will be dimmed below
               stateClass = "border-red-500 bg-red-500/10";
               badgeClass = "bg-red-500 text-white transition-all duration-300";
             }
           }
 
           if (shouldDim) {
+            // Dim ALL non-correct options including the wrong answer
             containerClass += " opacity-50 blur-[0.5px] grayscale";
             stateClass = "border-border/50 bg-card";
             badgeClass = "bg-secondary/50 text-muted-foreground/50 transition-all duration-300";
@@ -172,9 +175,9 @@ export function QuestionView({
               type="button"
               disabled={selectedIndex !== null}
               onClick={() => onAnswer(i)}
-              className={`w-full text-left px-4 py-3 rounded-lg border bg-card flex items-center gap-3 ${stateClass} ${containerClass}`}
+              className={`w-full text-left px-3 py-2 rounded-lg border bg-card flex items-center gap-3 ${stateClass} ${containerClass}`}
             >
-              <div className={`flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center font-semibold text-xs ${badgeClass}`}>
+              <div className={`flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center font-semibold text-xs ${badgeClass}`}>
                 {optionLabels[i]}
               </div>
               <span className={`flex-1 ${textClass}`}>{option}</span>
@@ -187,16 +190,16 @@ export function QuestionView({
       {showResult && (
         <button
           onClick={onNext}
-          className={`w-full rounded-lg p-4 text-center transition-all ${
+          className={`w-full rounded-lg px-4 py-2.5 text-center transition-all ${
             isCorrect
               ? "bg-green-500/10 border border-green-500 hover:bg-green-500/20"
               : "bg-red-900/30 border border-red-900 hover:bg-red-900/40"
           }`}
         >
-          <p className={`font-semibold text-base ${isCorrect ? "text-green-500" : "text-red-500"}`}>
+          <p className={`font-semibold text-sm ${isCorrect ? "text-green-500" : "text-red-500"}`}>
             {isCorrect ? "Correct! +50 pts" : isTimeout ? "Time's up." : "Wrong answer."}
           </p>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-0.5">
             {nextButtonText}
           </p>
         </button>

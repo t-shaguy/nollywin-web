@@ -66,7 +66,7 @@ export function StageCleared({
       {/* Play Again Button */}
       <Button 
         onClick={onNextStage}
-        className="w-full bg-gradient-to-r from-[#F40289] to-[#FC0D28] text-white hover:opacity-90 text-base py-6 justify-center font-medium"
+        className="w-full bg-gradient-to-r from-[#F40289] to-[#FC0D28] text-white hover:opacity-90 text-sm py-2.5 justify-center font-medium"
       >
         Play Again
       </Button>
