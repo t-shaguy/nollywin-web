@@ -15,12 +15,13 @@ interface TokenPackagesState {
 }
 
 // Static token packages - DO NOT call /admin/ endpoints from player-facing screens
-// Token estimates are approximations; actual tokens granted determined by backend
+// Exchange rate confirmed from live notification data: ₦100 = 1 token exactly
+// (verified: ₦500→5 tokens, ₦200→2 tokens, ₦900→9 tokens)
 const STATIC_PACKAGES: TokenPackage[] = [
-  { id: "starter", name: "Starter", price: 100, tokensEstimate: "~100 tokens" },
-  { id: "standard", name: "Standard", price: 200, popular: true, tokensEstimate: "~200 tokens" },
-  { id: "value", name: "Value", price: 500, tokensEstimate: "~500 tokens" },
-  { id: "pro", name: "Pro", price: 900, tokensEstimate: "~900 tokens" },
+  { id: "starter", name: "Starter", price: 100, tokensEstimate: "~1 token" },
+  { id: "standard", name: "Standard", price: 200, popular: true, tokensEstimate: "~2 tokens" },
+  { id: "value", name: "Value", price: 500, tokensEstimate: "~5 tokens" },
+  { id: "pro", name: "Pro", price: 900, tokensEstimate: "~9 tokens" },
 ];
 
 export const useTokenPackagesStore = create<TokenPackagesState>()(() => ({
