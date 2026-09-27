@@ -29,22 +29,28 @@ const NOTIFICATION_ICONS: Record<string, any> = {
 
 const NOTIFICATION_ICON_COLORS: Record<string, string> = {
   game: "bg-primary/20",
-  raffle: "bg-red-500/20",
-  subscription: "bg-yellow-500/20",
-  leaderboard: "bg-green-500/20",
-  feature: "bg-primary/20",
+  raffle: "bg-orange-500/20",
+  subscription: "bg-green-500/20",
+  leaderboard: "bg-blue-500/20",
+  feature: "bg-purple-500/20",
   wallet_topup: "bg-yellow-500/20",
-  subscription_activated: "bg-yellow-500/20",
+  subscription_activated: "bg-green-500/20",
+  game_session_result: "bg-primary/20",
+  raffle_draw_result: "bg-orange-500/20",
+  leaderboard_update: "bg-blue-500/20",
 };
 
 const NOTIFICATION_ICON_TEXT_COLORS: Record<string, string> = {
   game: "text-primary",
-  raffle: "text-red-500",
-  subscription: "text-yellow-500",
-  leaderboard: "text-green-500",
-  feature: "text-primary",
+  raffle: "text-orange-500",
+  subscription: "text-green-500",
+  leaderboard: "text-blue-500",
+  feature: "text-purple-500",
   wallet_topup: "text-yellow-500",
-  subscription_activated: "text-yellow-500",
+  subscription_activated: "text-green-500",
+  game_session_result: "text-primary",
+  raffle_draw_result: "text-orange-500",
+  leaderboard_update: "text-blue-500",
 };
 
 // Helper to get icon with fallback
