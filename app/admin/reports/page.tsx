@@ -175,11 +175,15 @@ export default function ReportsPage() {
               {/* By Package (when available) */}
               {summary.byPackage && summary.byPackage.length > 0 && (
                 <div className="bg-card border border-border rounded-2xl p-6 md:col-span-2">
-                  <h3 className="font-semibold mb-3">By Package</h3>
-                  <div className="space-y-2">
+                  <h3 className="font-semibold mb-4">By Package</h3>
+                  <div className="space-y-3">
                     {summary.byPackage.map((item: any, idx: number) => (
-                      <div key={idx} className="flex justify-between text-sm">
-                        <span>{JSON.stringify(item)}</span>
+                      <div key={idx} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium text-sm">{item.packageName}</span>
+                          <Badge className="bg-secondary text-muted-foreground text-xs">{item.count} subs</Badge>
+                        </div>
+                        <span className="font-semibold text-sm">₦{item.revenue.toLocaleString()}</span>
                       </div>
                     ))}
                   </div>
@@ -189,13 +193,22 @@ export default function ReportsPage() {
               {/* By Status (when available) */}
               {summary.byStatus && summary.byStatus.length > 0 && (
                 <div className="bg-card border border-border rounded-2xl p-6 md:col-span-2">
-                  <h3 className="font-semibold mb-3">By Status</h3>
-                  <div className="space-y-2">
-                    {summary.byStatus.map((item: any, idx: number) => (
-                      <div key={idx} className="flex justify-between text-sm">
-                        <span>{JSON.stringify(item)}</span>
-                      </div>
-                    ))}
+                  <h3 className="font-semibold mb-4">By Status</h3>
+                  <div className="flex flex-wrap gap-3">
+                    {summary.byStatus.map((item: any, idx: number) => {
+                      const statusColors: Record<string, string> = {
+                        ACTIVE: "bg-green-500/10 text-green-500 border-green-500/30",
+                        EXPIRED: "bg-muted text-muted-foreground border-border",
+                        PENDING_PAYMENT: "bg-yellow-500/10 text-yellow-500 border-yellow-500/30",
+                      };
+                      const colorClass = statusColors[item.status] || "bg-secondary text-muted-foreground border-border";
+                      return (
+                        <div key={idx} className={`rounded-lg border px-4 py-2.5 ${colorClass}`}>
+                          <p className="text-xs font-medium uppercase tracking-wide">{item.status.replace("_", " ")}</p>
+                          <p className="text-xl font-bold mt-0.5">{item.count}</p>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
