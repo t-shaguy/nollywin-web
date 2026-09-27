@@ -11,7 +11,7 @@ export interface Notification {
 }
 
 export interface UnreadCountResponse {
-  unreadCount: number;
+  unread: number;
 }
 
 export interface GetNotificationsParams {
@@ -53,7 +53,7 @@ export async function getUnreadCount(): Promise<number> {
   const response = await apiClient<UnreadCountResponse>('/api/v1/notifications/unread-count', {
     method: 'GET',
   });
-  return response.unreadCount;
+  return response.unread;
 }
 
 /**
