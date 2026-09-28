@@ -142,14 +142,34 @@ function PaymentCallbackContent() {
             )}
           </div>
 
-          {/* Action Button */}
+          {/* Action Buttons */}
           {status !== "verifying" && (
-            <Button 
-              onClick={handleContinue} 
-              className="w-full justify-center"
-            >
-              {status === "success" ? "Continue to Home" : "Back to Store"}
-            </Button>
+            <div className="space-y-3">
+              {status === "success" ? (
+                <Button 
+                  onClick={() => router.push("/home")} 
+                  className="w-full justify-center"
+                >
+                  Continue to Dashboard
+                </Button>
+              ) : (
+                <>
+                  <Button 
+                    onClick={() => router.push("/store")} 
+                    className="w-full justify-center"
+                  >
+                    Try Again
+                  </Button>
+                  <Button 
+                    onClick={() => router.push("/home")} 
+                    variant="outline"
+                    className="w-full justify-center"
+                  >
+                    Go to Dashboard
+                  </Button>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>
