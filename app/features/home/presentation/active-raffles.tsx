@@ -1,7 +1,7 @@
 "use client";
-import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Trophy } from "lucide-react";
-import { useRaffleStore, fetchActiveDraws } from "@/store/raffle-store";
+import { getActiveDraws } from "@/lib/api/leaderboard";
 
 // Scoped to what Home Dashboard needs (qualified / not yet qualified). The full raffle
 // status badge set (Won, Not Won, Pending Draw, Not Yet Drawn, Qualified, Entered) belongs
@@ -32,15 +32,12 @@ function RaffleSkeleton() {
 }
 
 export function ActiveRaffles() {
-  const { raffles, isLoading } = useRaffleStore();
-  const activeRaffles = raffles.filter((r) => r.status === "ACTIVE");
+  const { data: raffles, isLoading } = useQuery({
+    queryKey: ["raffles", "active"],
+    queryFn: getActiveDraws,
+  });
 
-  useEffect(() => {
-    // Fetch active draws on mount
-    fetchActiveDraws().catch((err) => {
-      console.error("Failed to fetch active draws:", err);
-    });
-  }, []);
+  const activeRaffles = raffles?.filter((r) => r.status === "ACTIVE") || [];
 
   if (isLoading) {
     return (

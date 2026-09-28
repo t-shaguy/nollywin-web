@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { GameDetails } from "./game-details";
 import { QuestionView } from "./question-view";
@@ -49,7 +50,8 @@ function adaptQuestion(apiQuestion: GameQuestion, correctOption?: "A" | "B" | "C
 
 export function TriviaFlow() {
   const router = useRouter();
-  const { tokenBalance } = useWalletStore();
+  const queryClient = useQueryClient();
+  const { tokenBalance, fetchWalletBalance } = useWalletStore();
   
   // Token cost from dashboard API
   const [tokenCostPerPlay, setTokenCostPerPlay] = useState<number>(1); // fallback
@@ -101,9 +103,9 @@ export function TriviaFlow() {
       setAnswersHistory([]);
       setStep("playing");
       
-      // Refresh wallet balance from server (token was debited)
-      const { fetchWalletBalance } = await import("@/store/wallet-store");
+      // Refresh wallet balance and invalidate dashboard query (token was debited)
       fetchWalletBalance().catch(console.error);
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     } catch (err) {
       const apiError = err as ApiError;
       setError(apiError.message || "Failed to start game");
@@ -137,9 +139,9 @@ export function TriviaFlow() {
       
       // If game is over or no next question, show results
       if (response.gameOver || !response.nextQuestion) {
-        // Refresh wallet balance (points were added)
-        const { fetchWalletBalance } = await import("@/store/wallet-store");
+        // Refresh wallet balance and invalidate dashboard query
         fetchWalletBalance().catch(console.error);
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
         
         // Log summary if present
         if (response.summary) {

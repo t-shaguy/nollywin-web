@@ -1,22 +1,17 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { PLACEHOLDER_PERFORMANCE } from "@/lib/placeholder-performance";
 import { DashboardHeader } from "../../features/home/presentation/dashboard-header";
 import { DashboardStats } from "../../features/home/presentation/dashboard-stats";
 import { PerformanceChart } from "../../features/home/presentation/performance-chart";
 import { ActiveSubscriptionCard } from "../../features/home/presentation/active-subscription-card";
-import { getPlayerDashboard, type PlayerDashboard } from "@/lib/api/auth";
+import { getPlayerDashboard } from "@/lib/api/auth";
 
 export default function HomePage() {
-  const [dashboard, setDashboard] = useState<PlayerDashboard | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getPlayerDashboard()
-      .then(setDashboard)
-      .catch((err) => console.error("Failed to load dashboard:", err))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: dashboard, isLoading } = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: getPlayerDashboard,
+  });
 
   const attemptsLeft = dashboard?.freeAttemptsLeft ?? 0;
   const tokenCost = dashboard?.tokenCostPerPlay ?? 0;
@@ -32,7 +27,7 @@ export default function HomePage() {
         monthlyRank={rank}
         totalPoints={totalPoints}
         tokensLeft={tokensLeft}
-        isLoading={loading}
+        isLoading={isLoading}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -10,6 +11,7 @@ type Status = "verifying" | "success" | "failed" | "abandoned";
 function PaymentCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const { showSuccessToast } = useToast();
   const [status, setStatus] = useState<Status>("verifying");
   const [message, setMessage] = useState("");
@@ -54,7 +56,7 @@ function PaymentCallbackContent() {
           // Show success toast
           showSuccessToast(`Payment successful! ₦${amountNaira} added to your wallet`);
           
-          // Refresh user data (subscription, wallet, etc.)
+          // Refresh user data (subscription, wallet, dashboard)
           const { fetchSubscriptionStatus } = await import("@/store/subscription-store");
           const { fetchWalletBalance } = await import("@/store/wallet-store");
           
@@ -62,6 +64,9 @@ function PaymentCallbackContent() {
             fetchSubscriptionStatus().catch(() => {}),
             fetchWalletBalance().catch(() => {}),
           ]);
+          
+          // Invalidate dashboard query
+          queryClient.invalidateQueries({ queryKey: ["dashboard"] });
         } else if (result.status === "pending") {
           setStatus("verifying");
           setMessage("Payment is being processed. Please check back in a few minutes.");
@@ -80,7 +85,7 @@ function PaymentCallbackContent() {
     };
 
     verifyPayment();
-  }, [searchParams, showSuccessToast]);
+  }, [searchParams, showSuccessToast, queryClient]);
 
   const handleContinue = () => {
     if (status === "success") {

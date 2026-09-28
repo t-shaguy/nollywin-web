@@ -1,26 +1,29 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Countdown } from "../../features/leaderboard/presentation/countdown";
 import { LeaderboardTable } from "../../features/leaderboard/presentation/leaderboard-table";
-import { useLeaderboardStore, fetchLeaderboard } from "@/store/leaderboard-store";
-import { useWalletStore } from "@/store/wallet-store";
+import { getLeaderboard } from "@/lib/api/leaderboard";
+import { useAuthStore } from "@/store/auth-store";
 
 export default function LeaderboardPage() {
-  const { entries, periodEndsAt, isLoading } = useLeaderboardStore();
-  const tokenBalance = useWalletStore((s) => s.tokenBalance);
-  const [error, setError] = useState<string | null>(null);
+  const currentUserId = useAuthStore((s) => s.user?.email) || null;
+  
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["leaderboard", "monthly"],
+    queryFn: () => getLeaderboard("monthly"),
+  });
 
-  useEffect(() => {
-    // Fetch leaderboard data on mount
-    fetchLeaderboard("monthly").catch((err) => {
-      console.error("Failed to fetch leaderboard:", err);
-      setError("Failed to load leaderboard data");
-    });
-  }, []);
+  // Map API entries to include isCurrentUser flag
+  const entries = data?.entries?.map((entry) => ({
+    rank: entry.rank,
+    playerId: entry.authUserId,
+    player: entry.displayName,
+    points: entry.points,
+    prizeAmount: entry.prizeAmount,
+    isCurrentUser: currentUserId ? entry.authUserId === currentUserId : false,
+  })) || [];
 
-  // Find current user entry (marked with isCurrentUser from store)
-  const currentUserEntry = entries.find((e) => e.isCurrentUser);
-  const currentUserId = currentUserEntry?.playerId || null;
+  const periodEndsAt = data?.periodEndsAt ? new Date(data.periodEndsAt) : null;
 
   return (
     <div className="space-y-6">
@@ -45,7 +48,7 @@ export default function LeaderboardPage() {
 
         {error && (
           <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-            <p className="text-destructive text-sm">{error}</p>
+            <p className="text-destructive text-sm">Failed to load leaderboard data</p>
           </div>
         )}
 
