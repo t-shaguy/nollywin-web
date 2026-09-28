@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { AuthenticatedShell } from "@/components/layout/authenticated-shell";
 import { useWalletStore } from "@/store/wallet-store";
 import { useNotificationsSync } from "@/hooks/use-notifications-sync";
+import { ToastProvider } from "@/components/ui/toast";
 
 /**
  * Shared layout for all authenticated routes.
@@ -18,8 +19,10 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
   const { unreadCount } = useNotificationsSync();
   
   return (
-    <AuthenticatedShell tokenBalance={tokenBalance} unreadCount={unreadCount}>
-      {children}
-    </AuthenticatedShell>
+    <ToastProvider>
+      <AuthenticatedShell tokenBalance={tokenBalance} unreadCount={unreadCount}>
+        {children}
+      </AuthenticatedShell>
+    </ToastProvider>
   );
 }
