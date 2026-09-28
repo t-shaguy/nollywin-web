@@ -3,12 +3,14 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 
 type Status = "verifying" | "success" | "failed" | "abandoned";
 
 function PaymentCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { showSuccessToast } = useToast();
   const [status, setStatus] = useState<Status>("verifying");
   const [message, setMessage] = useState("");
   const [amount, setAmount] = useState<string>("");
@@ -49,6 +51,9 @@ function PaymentCallbackContent() {
           setStatus("success");
           setMessage(`Payment of ${amountNaira} ${result.currency} completed successfully!`);
           
+          // Show success toast
+          showSuccessToast(`Payment successful! ₦${amountNaira} added to your wallet`);
+          
           // Refresh user data (subscription, wallet, etc.)
           const { fetchSubscriptionStatus } = await import("@/store/subscription-store");
           const { fetchWalletBalance } = await import("@/store/wallet-store");
@@ -75,7 +80,7 @@ function PaymentCallbackContent() {
     };
 
     verifyPayment();
-  }, [searchParams]);
+  }, [searchParams, showSuccessToast]);
 
   const handleContinue = () => {
     if (status === "success") {

@@ -8,15 +8,39 @@ interface ColoredStat {
   iconColor: string;
 }
 
+function StatSkeleton() {
+  return (
+    <div className="bg-card border border-border rounded-2xl p-5 flex items-center gap-4 animate-pulse">
+      <div className="h-12 w-12 rounded-xl bg-muted/50" />
+      <div className="flex-1 space-y-2">
+        <div className="h-4 w-24 bg-muted/50 rounded" />
+        <div className="h-6 w-16 bg-muted/50 rounded" />
+      </div>
+    </div>
+  );
+}
+
 export function DashboardStats({
   monthlyRank,
   totalPoints,
   tokensLeft,
+  isLoading,
 }: {
   monthlyRank: number | null;
   totalPoints: number;
   tokensLeft: number;
+  isLoading?: boolean;
 }) {
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatSkeleton />
+        <StatSkeleton />
+        <StatSkeleton />
+      </div>
+    );
+  }
+
   const stats: ColoredStat[] = [
     {
       icon: Trophy,

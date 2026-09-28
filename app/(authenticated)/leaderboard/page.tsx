@@ -40,9 +40,7 @@ export default function LeaderboardPage() {
         </div>
 
         {isLoading && (
-          <div className="bg-card border border-border rounded-2xl p-10 text-center">
-            <p className="text-sm text-muted-foreground">Loading leaderboard...</p>
-          </div>
+          <LeaderboardTable entries={[]} currentUserId={null} isLoading={true} />
         )}
 
         {error && (
@@ -52,7 +50,7 @@ export default function LeaderboardPage() {
         )}
 
         {!isLoading && !error && entries.length > 0 && (
-          <LeaderboardTable entries={entries} currentUserId={currentUserId} />
+          <LeaderboardTable entries={entries} currentUserId={currentUserId} isLoading={false} />
         )}
 
         {!isLoading && !error && entries.length === 0 && (

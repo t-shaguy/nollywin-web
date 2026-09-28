@@ -18,6 +18,19 @@ function QualificationBadge({ hasTickets }: { hasTickets: boolean }) {
   );
 }
 
+function RaffleSkeleton() {
+  return (
+    <div className="bg-card border border-border rounded-2xl p-4 flex items-center gap-4 animate-pulse">
+      <div className="h-11 w-11 rounded-xl bg-muted/50" />
+      <div className="flex-1 space-y-2">
+        <div className="h-4 w-32 bg-muted/50 rounded" />
+        <div className="h-3 w-48 bg-muted/50 rounded" />
+      </div>
+      <div className="h-6 w-20 bg-muted/50 rounded-full" />
+    </div>
+  );
+}
+
 export function ActiveRaffles() {
   const { raffles, isLoading } = useRaffleStore();
   const activeRaffles = raffles.filter((r) => r.status === "ACTIVE");
@@ -31,8 +44,10 @@ export function ActiveRaffles() {
 
   if (isLoading) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-6 text-center text-sm text-muted-foreground">
-        Loading raffles...
+      <div className="space-y-3">
+        <RaffleSkeleton />
+        <RaffleSkeleton />
+        <RaffleSkeleton />
       </div>
     );
   }

@@ -1,11 +1,14 @@
 "use client";
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
-import { X, AlertCircle } from "lucide-react";
+import { X, AlertCircle, CheckCircle } from "lucide-react";
 import { Button } from "./button";
+
+type ToastType = "error" | "success";
 
 interface Toast {
   id: string;
   message: string;
+  type: ToastType;
   action?: {
     label: string;
     onClick: () => void;
@@ -14,6 +17,7 @@ interface Toast {
 
 interface ToastContextValue {
   showToast: (message: string, action?: { label: string; onClick: () => void }) => void;
+  showSuccessToast: (message: string) => void;
   dismissToast: (id: string) => void;
 }
 
@@ -24,7 +28,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const showToast = useCallback((message: string, action?: { label: string; onClick: () => void }) => {
     const id = Date.now().toString();
-    setToast({ id, message, action });
+    setToast({ id, message, type: "error", action });
+  }, []);
+
+  const showSuccessToast = useCallback((message: string) => {
+    const id = Date.now().toString();
+    setToast({ id, message, type: "success" });
+    // Auto-dismiss success toasts after 4s
+    setTimeout(() => dismissToast(id), 4000);
   }, []);
 
   const dismissToast = useCallback((id: string) => {
@@ -32,12 +43,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ToastContext.Provider value={{ showToast, dismissToast }}>
+    <ToastContext.Provider value={{ showToast, showSuccessToast, dismissToast }}>
       {children}
       {toast && (
         <div className="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-96 z-50 animate-in slide-in-from-bottom-5 duration-300">
           <div className="bg-card border border-border rounded-xl shadow-lg p-4 flex items-start gap-3">
-            <AlertCircle size={20} className="text-destructive shrink-0 mt-0.5" />
+            {toast.type === "error" ? (
+              <AlertCircle size={20} className="text-destructive shrink-0 mt-0.5" />
+            ) : (
+              <CheckCircle size={20} className="text-green-500 shrink-0 mt-0.5" />
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">{toast.message}</p>
               {toast.action && (

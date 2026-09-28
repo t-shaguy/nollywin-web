@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { GameDetails } from "./game-details";
 import { QuestionView } from "./question-view";
 import { StageCleared } from "./stage-cleared";
@@ -272,20 +273,30 @@ export function TriviaFlow() {
   const adaptedQuestion = adaptQuestion(currentQuestion, showFeedback ? lastCorrectOption || undefined : undefined);
 
   return (
-    <QuestionView
-      question={adaptedQuestion}
-      currentStage={currentSequence}
-      totalStages={totalQuestions}
-      stageDifficulty={adaptedQuestion.difficulty}
-      score={totalScore}
-      timeLeft={Math.max(timeLeft, 0)}
-      selectedIndex={selectedIndex}
-      onAnswer={handleAnswer}
-      onNext={handleNextAfterAnswer}
-      isTimeout={timeLeft <= 0 && selectedIndex === null}
-      isLastQuestionInStage={true} // Each question is treated as a stage
-      answeredQuestionsPerStage={answersHistory.map(() => 1)}
-      currentQuestionInStage={0}
-    />
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={currentQuestion.gameAttemptId}
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -12 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+      >
+        <QuestionView
+          question={adaptedQuestion}
+          currentStage={currentSequence}
+          totalStages={totalQuestions}
+          stageDifficulty={adaptedQuestion.difficulty}
+          score={totalScore}
+          timeLeft={Math.max(timeLeft, 0)}
+          selectedIndex={selectedIndex}
+          onAnswer={handleAnswer}
+          onNext={handleNextAfterAnswer}
+          isTimeout={timeLeft <= 0 && selectedIndex === null}
+          isLastQuestionInStage={true} // Each question is treated as a stage
+          answeredQuestionsPerStage={answersHistory.map(() => 1)}
+          currentQuestionInStage={0}
+        />
+      </motion.div>
+    </AnimatePresence>
   );
 }

@@ -24,10 +24,6 @@ export default function HomePage() {
   const totalPoints = dashboard?.totalPoints ?? 0;
   const tokensLeft = dashboard?.tokensLeft ?? 0;
 
-  if (loading) {
-    return <div className="text-center py-12 text-muted-foreground">Loading your dashboard...</div>;
-  }
-
   return (
     <div className="space-y-6">
       <DashboardHeader attemptsLeft={attemptsLeft} tokenCost={tokenCost} />
@@ -36,6 +32,7 @@ export default function HomePage() {
         monthlyRank={rank}
         totalPoints={totalPoints}
         tokensLeft={tokensLeft}
+        isLoading={loading}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

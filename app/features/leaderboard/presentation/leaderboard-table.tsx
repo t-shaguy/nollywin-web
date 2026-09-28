@@ -39,13 +39,45 @@ function getInitials(displayName: string): string {
   return displayName.slice(0, 2).toUpperCase();
 }
 
+function LeaderboardSkeleton() {
+  return (
+    <div className="bg-card border border-border rounded-2xl overflow-hidden animate-pulse">
+      <div className="grid grid-cols-[80px_1fr_120px_120px] sm:grid-cols-[100px_1fr_150px_150px] gap-4 px-6 py-4 bg-secondary">
+        <div className="h-4 bg-muted/50 rounded" />
+        <div className="h-4 bg-muted/50 rounded" />
+        <div className="h-4 bg-muted/50 rounded" />
+        <div className="h-4 bg-muted/50 rounded" />
+      </div>
+      <div className="divide-y divide-border">
+        {[...Array(10)].map((_, i) => (
+          <div key={i} className="grid grid-cols-[80px_1fr_120px_120px] sm:grid-cols-[100px_1fr_150px_150px] gap-4 px-6 py-4">
+            <div className="h-8 w-8 rounded-full bg-muted/50" />
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-muted/50" />
+              <div className="h-4 w-32 bg-muted/50 rounded" />
+            </div>
+            <div className="h-4 w-16 bg-muted/50 rounded" />
+            <div className="h-4 w-16 bg-muted/50 rounded" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function LeaderboardTable({ 
   entries, 
-  currentUserId 
+  currentUserId,
+  isLoading,
 }: { 
   entries: LeaderboardEntry[];
   currentUserId: string | null;
+  isLoading?: boolean;
 }) {
+  if (isLoading) {
+    return <LeaderboardSkeleton />;
+  }
+
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
       <div className="grid grid-cols-[80px_1fr_120px_120px] sm:grid-cols-[100px_1fr_150px_150px] gap-4 px-6 py-4 bg-secondary text-sm text-muted-foreground font-medium">
