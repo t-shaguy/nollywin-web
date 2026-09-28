@@ -13,6 +13,7 @@ import {
   selectDrawWinners,
   getDrawWinners,
   setLeaderboardPrize,
+  getLeaderboardPrizes,
   type RewardDraw,
   type CreateRewardDrawRequest,
 } from "@/lib/api/admin";
@@ -39,6 +40,9 @@ export default function AdminRewardsPage() {
   const [selectedDrawId, setSelectedDrawId] = useState<string | null>(null);
   const [drawDetail, setDrawDetail] = useState<RewardDraw | null>(null);
   const [drawWinners, setDrawWinners] = useState<Record<string, unknown>[]>([]);
+  const [leaderboardPrizes, setLeaderboardPrizes] = useState<Array<{ rank: number; prizeAmount: number }>>([]);
+  const [prizesLoading, setPrizesLoading] = useState(false);
+  const [prizesError, setPrizesError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +62,22 @@ export default function AdminRewardsPage() {
 
   useEffect(() => {
     loadDraws();
+    loadLeaderboardPrizes();
   }, []);
+
+  async function loadLeaderboardPrizes() {
+    try {
+      setPrizesLoading(true);
+      setPrizesError(null);
+      const prizes = await getLeaderboardPrizes();
+      setLeaderboardPrizes(prizes.sort((a, b) => a.rank - b.rank));
+    } catch (err) {
+      console.error("Error loading leaderboard prizes:", err);
+      setPrizesError(err instanceof Error ? err.message : "Failed to load prizes");
+    } finally {
+      setPrizesLoading(false);
+    }
+  }
 
   async function loadDraws() {
     try {
@@ -179,6 +198,9 @@ export default function AdminRewardsPage() {
       const response = await setLeaderboardPrize(data.rank, data.prizeAmount);
       setSuccessMessage(response.message || "Leaderboard prize set and submitted for approval");
       resetPrize();
+      
+      // Reload prizes after setting
+      await loadLeaderboardPrizes();
     } catch (err) {
       console.error("Error setting leaderboard prize:", err);
       setError(err instanceof Error ? err.message : "Failed to set leaderboard prize");
@@ -357,6 +379,33 @@ export default function AdminRewardsPage() {
           <Trophy size={18} className="text-primary" />
           <h3 className="font-semibold">Configure Prizes</h3>
         </div>
+        
+        {/* Current Prizes Display */}
+        {prizesLoading ? (
+          <div className="mb-4 p-4 bg-secondary/30 rounded-lg text-center text-sm text-muted-foreground">
+            Loading current prizes...
+          </div>
+        ) : prizesError ? (
+          <div className="mb-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
+            {prizesError}
+          </div>
+        ) : leaderboardPrizes.length > 0 ? (
+          <div className="mb-4 p-4 bg-secondary/30 rounded-lg">
+            <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">Current Prizes</p>
+            <div className="space-y-2">
+              {leaderboardPrizes.map((prize) => (
+                <div key={prize.rank} className="flex items-center justify-between text-sm py-1">
+                  <span className="font-medium">#{prize.rank}</span>
+                  <span className="font-bold text-primary">₦{prize.prizeAmount.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="mb-4 p-4 bg-secondary/30 rounded-lg text-center text-sm text-muted-foreground">
+            No prizes configured yet
+          </div>
+        )}
         
         <p className="text-xs sm:text-sm text-muted-foreground mb-4">
           Configure prize amounts for specific leaderboard ranks.
