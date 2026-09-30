@@ -5,7 +5,7 @@ import { ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 import { useSubscriptionStore } from "@/store/subscription-store";
 import { getAvailablePackages, type SubscriptionPackage } from "@/lib/api/subscriptions";
 import { useTokenPackagesStore, type TokenPackage } from "@/store/token-packages-store";
-import { useWalletStore } from "@/store/wallet-store";
+import { useWalletStore, fetchWalletBalance } from "@/store/wallet-store";
 import { Button } from "@/components/ui/button";
 
 // Literal hex values matching the Figma — see earlier fix notes: the
@@ -30,7 +30,7 @@ export default function StorePage() {
   const queryClient = useQueryClient();
   const { setSubscription } = useSubscriptionStore();
   const tokenPackages = useTokenPackagesStore((s) => s.packages);
-  const { tokenBalance, fetchWalletBalance } = useWalletStore();
+  const { tokenBalance } = useWalletStore();
   
   const { data: packages = [], isLoading: loading, error: packagesError } = useQuery({
     queryKey: ["subscriptions", "packages"],

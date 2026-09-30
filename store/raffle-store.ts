@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { fetchWalletBalance } from "./wallet-store";
 
 // VERIFIED: Backend returns this exact shape for active draws
 export interface Raffle {
@@ -91,7 +92,6 @@ export async function purchaseRaffleTicket(raffleId: string, quantity: number = 
     }
     
     // Refresh wallet balance (tokens were deducted)
-    const { fetchWalletBalance } = await import("@/store/wallet-store");
     fetchWalletBalance().catch(console.error);
     
     return response;

@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GameDetails } from "./game-details";
 import { QuestionView } from "./question-view";
 import { StageCleared } from "./stage-cleared";
-import { useWalletStore } from "@/store/wallet-store";
+import { useWalletStore, fetchWalletBalance } from "@/store/wallet-store";
 import * as gameApi from "@/lib/api/game";
 import { getPlayerDashboard } from "@/lib/api/auth";
 import type { ApiError } from "@/lib/api/client";
@@ -51,7 +51,7 @@ function adaptQuestion(apiQuestion: GameQuestion, correctOption?: "A" | "B" | "C
 export function TriviaFlow() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { tokenBalance, fetchWalletBalance } = useWalletStore();
+  const { tokenBalance } = useWalletStore();
   
   // Token cost from dashboard API
   const [tokenCostPerPlay, setTokenCostPerPlay] = useState<number>(1); // fallback

@@ -5,6 +5,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { fetchWalletBalance } from "@/store/wallet-store";
+import { fetchSubscriptionStatus } from "@/store/subscription-store";
 
 type Status = "verifying" | "success" | "failed" | "abandoned";
 
@@ -57,9 +59,6 @@ function PaymentCallbackContent() {
           showSuccessToast(`Payment successful! ₦${amountNaira} added to your wallet`);
           
           // Refresh user data (subscription, wallet, dashboard)
-          const { fetchSubscriptionStatus } = await import("@/store/subscription-store");
-          const { fetchWalletBalance } = await import("@/store/wallet-store");
-          
           await Promise.all([
             fetchSubscriptionStatus().catch(() => {}),
             fetchWalletBalance().catch(() => {}),
