@@ -53,6 +53,12 @@ export interface GameSettings {
   leaderboardResetDay: number;
 }
 
+export interface PerformanceTrendPoint {
+  date: string; // ISO date string "YYYY-MM-DD"
+  gamesPlayed: number;
+  pointsEarned: number;
+}
+
 // ============================================================================
 // API Functions
 // ============================================================================
@@ -65,6 +71,20 @@ export async function getGameSettings(): Promise<GameSettings> {
   return apiClient<GameSettings>("/api/v1/game/settings", {
     method: "GET",
   });
+}
+
+/**
+ * Get performance trend over the last N days
+ * GET /api/v1/game/attempts/performance-trend?days={days}
+ * 
+ * Returns an array of daily stats, oldest first, zero-filled for days with no games.
+ * Each point includes the date (ISO string), games played count, and total points earned.
+ */
+export async function getPerformanceTrend(days = 7): Promise<PerformanceTrendPoint[]> {
+  return apiClient<PerformanceTrendPoint[]>(
+    `/api/v1/game/attempts/performance-trend?days=${days}`,
+    { method: "GET" }
+  );
 }
 
 /**

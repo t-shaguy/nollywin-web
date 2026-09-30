@@ -87,3 +87,29 @@ export async function markAllAsRead(): Promise<void> {
     throw error;
   }
 }
+
+/**
+ * Delete a notification (soft delete - removes from user's inbox only)
+ * DELETE /api/v1/notifications/{notificationId}
+ * 
+ * Returns 204 No Content on success.
+ * 404 if already deleted or doesn't belong to user - treated as success since
+ * the desired end state (notification gone from list) is achieved either way.
+ */
+export async function deleteNotification(notificationId: string): Promise<void> {
+  console.log(`[API] Calling DELETE /api/v1/notifications/${notificationId}`);
+  try {
+    await apiClient(`/api/v1/notifications/${notificationId}`, {
+      method: 'DELETE',
+    });
+    console.log(`[API] Delete notification successful for ID: ${notificationId}`);
+  } catch (error: any) {
+    // 404 means already gone - treat as success
+    if (error?.status === 404) {
+      console.log(`[API] Notification ${notificationId} already deleted (404) - treating as success`);
+      return;
+    }
+    console.error(`[API] Delete notification FAILED for ID: ${notificationId}`, error);
+    throw error;
+  }
+}

@@ -1,6 +1,6 @@
-// TODO: replace with GET /users/performance (7-day score history) once the backend is live.
-// Shared by Home Dashboard and My Stats so both show the exact same chart, not copies that
-// could drift apart.
+// Fallback data used when performance trend API fails to load.
+// Real data is fetched from GET /api/v1/game/attempts/performance-trend
+// via the usePerformanceTrend hook (shared by Home and Stats pages).
 export const PLACEHOLDER_PERFORMANCE = [
   { label: "Mon", value: 0 },
   { label: "Tue", value: 0 },

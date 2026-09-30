@@ -1,17 +1,19 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { PLACEHOLDER_PERFORMANCE } from "@/lib/placeholder-performance";
 import { DashboardHeader } from "../../features/home/presentation/dashboard-header";
 import { DashboardStats } from "../../features/home/presentation/dashboard-stats";
 import { PerformanceChart } from "../../features/home/presentation/performance-chart";
 import { ActiveSubscriptionCard } from "../../features/home/presentation/active-subscription-card";
 import { getPlayerDashboard } from "@/lib/api/auth";
+import { usePerformanceTrend } from "../../features/home/hooks/use-performance-trend";
 
 export default function HomePage() {
   const { data: dashboard, isLoading } = useQuery({
     queryKey: ["dashboard"],
     queryFn: getPlayerDashboard,
   });
+
+  const { data: performanceData, loading: performanceLoading } = usePerformanceTrend();
 
   const attemptsLeft = dashboard?.freeAttemptsLeft ?? 0;
   const tokenCost = dashboard?.tokenCostPerPlay ?? 0;
@@ -32,7 +34,7 @@ export default function HomePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <PerformanceChart data={PLACEHOLDER_PERFORMANCE} />
+          <PerformanceChart data={performanceData} />
         </div>
         <ActiveSubscriptionCard />
       </div>

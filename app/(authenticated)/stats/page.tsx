@@ -1,7 +1,10 @@
-import { PLACEHOLDER_PERFORMANCE } from "@/lib/placeholder-performance";
+"use client";
 import { PerformanceChart } from "../../features/home/presentation/performance-chart";
+import { usePerformanceTrend } from "../../features/home/hooks/use-performance-trend";
 
 export default function StatsPage() {
+  const { data: performanceData } = usePerformanceTrend();
+
   return (
     <div className="space-y-6">
         <div>
@@ -9,7 +12,7 @@ export default function StatsPage() {
           <p className="text-muted-foreground text-sm mt-1">Your performance over the last 7 days.</p>
         </div>
 
-        <PerformanceChart data={PLACEHOLDER_PERFORMANCE} />
+        <PerformanceChart data={performanceData} />
       </div>
   );
 }

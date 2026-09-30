@@ -1,10 +1,10 @@
 "use client";
-import { ArrowLeft, Play, Ticket, CreditCard, Trophy, Sparkles, Bell, Coins } from "lucide-react";
+import { ArrowLeft, Play, Ticket, CreditCard, Trophy, Sparkles, Bell, Coins, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { useWalletStore } from "@/store/wallet-store";
 import { useEffect, useState } from "react";
-import { getNotifications, markAsRead, markAllAsRead, type Notification } from "@/lib/api/notifications";
+import { getNotifications, markAsRead, markAllAsRead, deleteNotification, type Notification } from "@/lib/api/notifications";
 
 const NOTIFICATION_ICONS: Record<string, any> = {
   game: Play,
@@ -164,6 +164,31 @@ export default function NotificationsPage() {
       console.error('Error details:', error);
     }
   }
+
+  async function handleDelete(notificationId: string, e: React.MouseEvent) {
+    // Stop propagation to prevent triggering mark-as-read handler on the row
+    e.stopPropagation();
+
+    // Optimistically remove from UI immediately
+    const previousNotifications = [...notifications];
+    const wasUnread = notifications.find(n => n.id === notificationId)?.read === false;
+    setNotifications(prev => prev.filter(n => n.id !== notificationId));
+
+    try {
+      console.log('Deleting notification:', notificationId);
+      await deleteNotification(notificationId);
+      console.log('Delete notification API call completed successfully');
+      
+      // Trigger unread count refresh if deleted notification was unread
+      if (wasUnread && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('notifications-updated'));
+      }
+    } catch (error) {
+      console.error('Failed to delete notification:', error);
+      // Roll back on error by reloading from server
+      await loadNotifications();
+    }
+  }
   
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -243,6 +268,13 @@ export default function NotificationsPage() {
                     {!notification.read && (
                       <div className="h-2 w-2 rounded-full bg-primary" />
                     )}
+                    <button
+                      onClick={(e) => handleDelete(notification.id, e)}
+                      className="ml-1 h-6 w-6 rounded-full flex items-center justify-center hover:bg-secondary/50 transition-colors text-muted-foreground hover:text-foreground"
+                      aria-label="Delete notification"
+                    >
+                      <X size={14} />
+                    </button>
                   </div>
                 </div>
               );
