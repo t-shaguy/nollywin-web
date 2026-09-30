@@ -14,6 +14,7 @@ import { OtpInput } from "@/components/ui/otp-input";
 import { useCountdown } from "@/hooks/use-countdown";
 import * as authApi from "@/lib/api/auth";
 import type { ApiError } from "@/lib/api/client";
+import { toInternationalPhone } from "@/lib/utils/phone";
 
 type AuthMode = "login" | "signup";
 type AuthMethod = "phone" | "email";
@@ -32,6 +33,7 @@ const loginEmailSchema = z.object({
 
 const signupPhoneSchema = z.object({
   phone: z.string().min(10, "Enter a valid phone number"),
+  referralCode: z.string().optional(),
 });
 
 const signupEmailSchema = z.object({
@@ -55,14 +57,6 @@ type SignupEmailInput = z.infer<typeof signupEmailSchema>;
 
 type FormData = LoginPhoneInput | LoginEmailInput | SignupPhoneInput | SignupEmailInput;
 
-// Helper: Convert local Nigerian phone format to international format
-function toInternationalPhone(input: string): string {
-  const digits = input.trim().replace(/\D/g, ""); // strip anything non-numeric
-  if (digits.startsWith("234")) return `+${digits}`;      // already has country code
-  if (digits.startsWith("0")) return `+234${digits.slice(1)}`; // strip leading 0, add +234
-  return `+234${digits}`; // no leading 0, just prepend
-}
-
 export function UnifiedAuthForm() {
   const [mode, setMode] = useState<AuthMode>("login");
   const [method, setMethod] = useState<AuthMethod>("phone");
@@ -74,6 +68,8 @@ export function UnifiedAuthForm() {
   const [otpDigits, setOtpDigits] = useState<string[]>(Array(6).fill(""));
   const [otpError, setOtpError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  // Standalone referral code for Google/phone signup (not tied to email-only form)
+  const [referralCodeForGoogle, setReferralCodeForGoogle] = useState<string>("");
   const router = useRouter();
   const setSession = useAuthStore((s) => s.setSession);
   const { seconds, isActive, reset: resetCountdown } = useCountdown(60);
@@ -266,11 +262,9 @@ export function UnifiedAuthForm() {
         throw new Error("No ID token received from Google");
       }
       
-      // Get referral code from form if in signup mode
-      // NOTE: Backend Postman docs don't explicitly show referralCode field.
-      // Sending it anyway (harmless if ignored). If it causes errors in testing,
-      // we'll need to remove it from the request body.
-      const referralCode = mode === "signup" ? watch("referralCode") : undefined;
+      // Get referral code from standalone input (visible above Google button)
+      // OR from email form if that's what user was filling out
+      const referralCode = referralCodeForGoogle || (mode === "signup" && method === "email" ? watch("referralCode") : undefined);
       
       // Send ID token to backend (backend will verify with Google)
       // Backend behavior (confirmed from API docs):
@@ -543,21 +537,38 @@ export function UnifiedAuthForm() {
 
         {/* Phone field */}
         {method === "phone" && (
-          <div>
-            <label className="text-xs text-white mb-1.5 block font-medium">Phone Number</label>
-            <div className="flex gap-2">
-              <div className="flex items-center justify-center px-3 h-11 rounded-lg bg-white/5 border border-white/10 text-white/50 text-xs font-medium whitespace-nowrap">
-                NG +234
+          <>
+            <div>
+              <label className="text-xs text-white mb-1.5 block font-medium">Phone Number</label>
+              <div className="flex gap-2">
+                <div className="flex items-center justify-center px-3 h-11 rounded-lg bg-white/5 border border-white/10 text-white/50 text-xs font-medium whitespace-nowrap">
+                  NG +234
+                </div>
+                <Input 
+                  placeholder="080 1234 5678" 
+                  className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary text-sm h-11" 
+                  {...register("phone")} 
+                />
               </div>
-              <Input 
-                placeholder="080 1234 5678" 
-                className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary text-sm h-11" 
-                {...register("phone")} 
-              />
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {(errors as any).phone && <p className="text-destructive text-xs mt-1">{String((errors as any).phone.message)}</p>}
             </div>
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {(errors as any).phone && <p className="text-destructive text-xs mt-1">{String((errors as any).phone.message)}</p>}
-          </div>
+            
+            {/* Referral Code for Phone Signup */}
+            {mode === "signup" && (
+              <div>
+                <label className="text-xs text-white mb-1.5 block font-medium">Referral Code (Optional)</label>
+                <Input 
+                  placeholder="Enter referral code" 
+                  {...register("referralCode")} 
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary text-sm h-11 rounded-lg"
+                />
+                <p className="text-xs text-white/40 mt-1">
+                  Note: Phone signup referral codes are not yet supported by the backend. This field is stored but not sent.
+                </p>
+              </div>
+            )}
+          </>
         )}
 
         {/* Email field */}
@@ -668,6 +679,22 @@ export function UnifiedAuthForm() {
             <span className="px-2.5 bg-black text-white/40">or</span>
           </div>
         </div>
+
+        {/* Standalone Referral Code for Google Sign-In (Signup only) */}
+        {mode === "signup" && (
+          <div>
+            <label className="text-xs text-white mb-1.5 block font-medium">Referral Code (Optional)</label>
+            <Input 
+              placeholder="Enter referral code" 
+              value={referralCodeForGoogle}
+              onChange={(e) => setReferralCodeForGoogle(e.target.value)}
+              className="bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary text-sm h-11 rounded-lg"
+            />
+            <p className="text-xs text-white/40 mt-1">
+              Use this if signing up with Google or Phone
+            </p>
+          </div>
+        )}
 
         {/* Google Sign-In */}
         {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? (

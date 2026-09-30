@@ -10,6 +10,7 @@ import { useReferralStore, fetchReferralData } from "@/store/referral-store";
 import { AvatarUpload } from "@/app/features/profile/presentation/avatar-upload";
 import { Button } from "@/components/ui/button";
 import { getProfile, updateProfile } from "@/lib/api/profile";
+import { toInternationalPhone } from "@/lib/utils/phone";
 
 export default function ProfilePage() {
   const searchParams = useSearchParams();
@@ -87,13 +88,16 @@ export default function ProfilePage() {
     try {
       setSavingName(true);
       setNameError(null);
-      const response = await updateProfile({
+      // Send the update
+      await updateProfile({
         firstName: firstNameInput.trim(),
         lastName: lastNameInput.trim(),
         phoneNumber: user?.phoneNumber ?? "",
         alias: user?.alias ?? "",
       });
-      updateUser(response.user);
+      // Re-fetch fresh profile data to ensure UI matches backend state
+      const freshProfile = await getProfile();
+      updateUser(freshProfile);
       setEditingName(false);
     } catch (err) {
       setNameError(err instanceof Error ? err.message : "Failed to update name");
@@ -110,22 +114,28 @@ export default function ProfilePage() {
   };
 
   const handleSavePhone = async () => {
-    const trimmedPhone = phoneInput.trim();
-    if (!/^\+234\d{10}$/.test(trimmedPhone)) {
-      setPhoneError("Enter a valid Nigerian number starting with +234");
+    // Convert to international format using shared helper
+    const internationalPhone = toInternationalPhone(phoneInput);
+    
+    if (!/^\+234\d{10}$/.test(internationalPhone)) {
+      setPhoneError("Enter a valid 10-digit Nigerian number");
       return;
     }
     try {
       setSavingPhone(true);
       setPhoneError(null);
-      const response = await updateProfile({
+      // Send the update
+      await updateProfile({
         firstName: user?.firstName ?? "",
         lastName: user?.lastName ?? "",
-        phoneNumber: trimmedPhone,
+        phoneNumber: internationalPhone,
         alias: user?.alias ?? "",
       });
-      updateUser(response.user);
+      // Re-fetch fresh profile data to ensure UI matches backend state
+      const freshProfile = await getProfile();
+      updateUser(freshProfile);
       setEditingPhone(false);
+      setShowPhonePrompt(false); // Hide the "Complete Your Profile" banner
     } catch (err) {
       setPhoneError(err instanceof Error ? err.message : "Failed to update phone number");
     } finally {
@@ -318,34 +328,45 @@ export default function ProfilePage() {
           {/* Phone Number Row */}
           {editingPhone ? (
             <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col items-center gap-3">
                 <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
                   <Phone size={18} className="text-muted-foreground" />
                 </div>
-                <p className="text-xs text-muted-foreground font-semibold">EDIT PHONE NUMBER</p>
+                <p className="text-xs text-muted-foreground font-semibold text-center">EDIT PHONE NUMBER</p>
               </div>
               
-              <div>
-                <input
-                  type="tel"
-                  value={phoneInput}
-                  onChange={(e) => setPhoneInput(e.target.value)}
-                  placeholder="+2348012345678"
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
-                  disabled={savingPhone}
-                />
-                <p className="text-xs text-muted-foreground mt-1">Format: +234 followed by 10 digits</p>
+              <div className="flex flex-col items-center">
+                {/* Phone input with fixed NG +234 prefix */}
+                <div className="flex gap-2 w-full max-w-xs">
+                  <div className="px-3 py-2 rounded-lg border border-border bg-secondary text-sm font-medium text-muted-foreground shrink-0">
+                    NG +234
+                  </div>
+                  <input
+                    type="tel"
+                    value={phoneInput}
+                    onChange={(e) => {
+                      // Only allow digits, max 10 characters
+                      const digits = e.target.value.replace(/\D/g, "");
+                      setPhoneInput(digits.slice(0, 10));
+                    }}
+                    placeholder="8012345678"
+                    className="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-sm"
+                    disabled={savingPhone}
+                    maxLength={10}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-2 text-center">Enter your 10-digit number</p>
               </div>
 
               {phoneError && (
-                <p className="text-xs text-destructive">{phoneError}</p>
+                <p className="text-xs text-destructive text-center">{phoneError}</p>
               )}
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 justify-center">
                 <Button
                   onClick={handleSavePhone}
                   disabled={savingPhone}
-                  className="flex-1 bg-primary hover:bg-primary/90 text-white"
+                  className="py-2 text-sm bg-primary hover:bg-primary/90 text-white"
                 >
                   {savingPhone ? "Saving..." : "Save"}
                 </Button>
@@ -353,7 +374,7 @@ export default function ProfilePage() {
                   onClick={handleCancelPhone}
                   disabled={savingPhone}
                   variant="outline"
-                  className="flex-1"
+                  className="py-2 text-sm"
                 >
                   Cancel
                 </Button>

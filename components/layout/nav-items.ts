@@ -1,4 +1,4 @@
-import { BarChart3, Play, CreditCard, Trophy, Ticket, Settings, LucideIcon } from "lucide-react";
+import { BarChart3, Play, CreditCard, Trophy, Ticket, Users, Settings, LucideIcon } from "lucide-react";
 
 export interface NavItem {
   icon: LucideIcon;
@@ -6,14 +6,15 @@ export interface NavItem {
   href: string;
 }
 
-// Figma nav: Dashboard, Play Trivia, Store, Leaderboard, Raffles, Profile
-// My Stats and Refer & Earn removed from sidebar per revamp spec
+// Figma nav: Dashboard, Play Trivia, Store, Leaderboard, Raffles, Refer & Earn, Profile
+// My Stats removed from sidebar per revamp spec
 export const NAV_ITEMS: NavItem[] = [
   { icon: BarChart3, label: "Dashboard", href: "/home" },
   { icon: Play, label: "Play Trivia", href: "/game" },
   { icon: CreditCard, label: "Store", href: "/store" },
   { icon: Trophy, label: "Leaderboard", href: "/leaderboard" },
   { icon: Ticket, label: "Raffles", href: "/raffles" },
+  { icon: Users, label: "Refer & Earn", href: "/refer-earn" },
   { icon: Settings, label: "Profile", href: "/profile" },
 ];
 
