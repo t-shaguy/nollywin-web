@@ -25,6 +25,14 @@ export class AdminApiError extends Error {
     this.error = params.error;
     this.path = params.path;
     this.data = params.data;
+    
+    // Maintains proper stack trace for where our error was thrown (only available on V8)
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, AdminApiError);
+    }
+    
+    // Set the prototype explicitly to maintain instanceof checks
+    Object.setPrototypeOf(this, AdminApiError.prototype);
   }
 }
 
