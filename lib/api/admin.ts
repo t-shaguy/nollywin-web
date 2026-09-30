@@ -168,14 +168,14 @@ export interface UpdatePackageRequest {
 // ============================================================================
 
 export interface TriviaCategory {
-  id: number;
+  id: string;
   name: string;
   active: boolean;
   [key: string]: unknown;
 }
 
 export interface TriviaStage {
-  id: number;
+  id: string;
   name: string;
   sortOrder: number;
   active: boolean;
@@ -184,10 +184,10 @@ export interface TriviaStage {
 }
 
 export interface TriviaPrize {
-  id: number;
+  id: string;
   stageName: string;
-  prizeType: string; // "TOKENS", "CASH", etc.
-  prizeValue: number;
+  period: "WEEKLY" | "MONTHLY" | string;
+  description: string;
   [key: string]: unknown;
 }
 

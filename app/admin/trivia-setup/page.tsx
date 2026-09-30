@@ -382,7 +382,7 @@ export default function TriviaSetupPage() {
                 <div>
                   <p className="font-medium">{prize.stageName}</p>
                   <p className="text-sm text-muted-foreground">
-                    {prize.prizeType}: {prize.prizeValue?.toLocaleString() ?? "N/A"}
+                    {prize.period}: {prize.description}
                   </p>
                 </div>
               </div>
