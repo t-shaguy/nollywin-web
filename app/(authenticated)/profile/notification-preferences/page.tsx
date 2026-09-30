@@ -1,47 +1,15 @@
 "use client";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { useWalletStore } from "@/store/wallet-store";
 import { useNotificationPreferencesStore } from "@/store/notification-preferences-store";
-import { simulateRequest } from "@/lib/api/simulate";
 
 export default function NotificationPreferencesPage() {
   const router = useRouter();
-  const { tokenBalance } = useWalletStore();
   const { preferences, updatePreference } = useNotificationPreferencesStore();
-  
-  const [isSaving, setIsSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
   const handleToggle = (key: keyof typeof preferences) => {
     updatePreference(key, !preferences[key]);
-  };
-
-  const handleRequestPushPermission = async () => {
-    try {
-      await simulateRequest({ granted: true }, 800);
-      updatePreference("pushEnabled", true);
-    } catch {
-      // Permission denied or error
-    }
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    setSaved(false);
-    
-    try {
-      await simulateRequest({ success: true }, 1000);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch {
-      // Error handling
-    } finally {
-      setIsSaving(false);
-    }
   };
 
   return (
@@ -188,44 +156,6 @@ export default function NotificationPreferencesPage() {
             />
           </div>
         </div>
-
-        {/* Push Notifications */}
-        <div className="bg-card border-2 border-[#F40289] rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="h-10 w-10 rounded-full bg-[#F40289] flex items-center justify-center shrink-0">
-                <Bell size={18} className="text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Push Notifications</p>
-                <p className="text-xs text-muted-foreground">Enable device push for all alerts above</p>
-              </div>
-            </div>
-            {!preferences.pushEnabled && (
-              <Button
-                onClick={handleRequestPushPermission}
-                className="bg-gradient-to-r from-[#F40289] to-[#FC0D28] text-white hover:opacity-90 text-sm px-4 py-2 h-auto"
-              >
-                Allow
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Save Button */}
-        <Button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="w-full bg-gradient-to-r from-[#F40289] to-[#FC0D28] text-white hover:opacity-90 text-base py-6 justify-center"
-        >
-          {isSaving ? "Saving..." : "Save Preferences"}
-        </Button>
-        
-        {saved && (
-          <p className="text-[#F40289] text-sm text-center">
-            Preferences saved successfully
-          </p>
-        )}
       </div>
   );
 }

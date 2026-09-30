@@ -10,7 +10,6 @@ const PREFS = [
   { key: "subscriptionReminders" as const, label: "Subscription reminders" },
   { key: "newFeatures" as const, label: "New features" },
   { key: "weeklyDigest" as const, label: "Weekly digest" },
-  { key: "pushEnabled" as const, label: "Push notifications" },
 ] as const;
 
 export function NotificationPreferences() {

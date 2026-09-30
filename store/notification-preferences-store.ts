@@ -11,9 +11,6 @@ export interface NotificationPreferences {
   subscriptionReminders: boolean;
   newFeatures: boolean;
   weeklyDigest: boolean;
-  
-  // Push notifications - field name is "pushEnabled" not "pushNotificationsEnabled"
-  pushEnabled: boolean;
 }
 
 interface NotificationPreferencesState {
@@ -32,7 +29,6 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSta
     subscriptionReminders: true,
     newFeatures: true,
     weeklyDigest: false,
-    pushEnabled: false,
   },
   loading: false,
   error: null,
