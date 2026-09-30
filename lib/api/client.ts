@@ -272,6 +272,7 @@ export async function apiClient<T = any>(
 
     // Handle network errors
     if (error instanceof TypeError && error.message === "Failed to fetch") {
+      console.error("[apiClient] Raw fetch failure for", endpoint, error);
       throw new ApiError({
         status: 0,
         error: "Network Error",
@@ -387,6 +388,7 @@ export async function apiClientBinary(endpoint: string, isRetry: boolean = false
 
     // Handle network errors
     if (error instanceof TypeError && error.message === "Failed to fetch") {
+      console.error("[apiClient] Raw fetch failure for", endpoint, error);
       throw new ApiError({
         status: 0,
         error: "Network Error",
@@ -523,6 +525,7 @@ export async function apiClientMultipart<T = any>(
 
     // Handle network errors
     if (error instanceof TypeError && error.message === "Failed to fetch") {
+      console.error("[apiClient] Raw fetch failure for", endpoint, error);
       throw new ApiError({
         status: 0,
         error: "Network Error",
