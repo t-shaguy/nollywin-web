@@ -71,9 +71,8 @@ export function TriviaFlow() {
   const [currentSequence, setCurrentSequence] = useState<number>(0);
   const [stageName, setStageName] = useState<string>("");
   
-  // Score tracking
-  const [totalScore, setTotalScore] = useState<number>(0);
-  const [answersHistory, setAnswersHistory] = useState<boolean[]>([]); // true = correct, false = wrong
+  // Score tracking - track points per question, not just correct/wrong
+  const [questionScores, setQuestionScores] = useState<number[]>([]); // Points earned per question
   
   // UI state
   const [step, setStep] = useState<Step>("details");
@@ -99,13 +98,17 @@ export function TriviaFlow() {
       setStageName(question.stageName);
       setSelectedIndex(null);
       setTimeLeft(question.secondsAllowed);
-      setTotalScore(0);
-      setAnswersHistory([]);
+      setQuestionScores([]);
       setStep("playing");
       
-      // Refresh wallet balance and invalidate dashboard query (token was debited)
-      fetchWalletBalance().catch(console.error);
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      // Refresh wallet balance after token deduction - AWAIT to ensure sync
+      try {
+        await fetchWalletBalance();
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      } catch (err) {
+        console.error("Failed to refresh wallet balance after game start:", err);
+        // Continue anyway - game has already started and token was debited
+      }
     } catch (err) {
       const apiError = err as ApiError;
       setError(apiError.message || "Failed to start game");
@@ -134,8 +137,9 @@ export function TriviaFlow() {
       setLastAnswerCorrect(response.isCorrect);
       setLastCorrectOption(response.correctOption);
       setShowFeedback(true);
-      setTotalScore((prev) => prev + response.pointsEarned);
-      setAnswersHistory((prev) => [...prev, response.isCorrect]);
+      
+      // Record points for THIS question (the one currently displayed)
+      setQuestionScores((prev) => [...prev, response.pointsEarned]);
       
       // If game is over or no next question, show results
       if (response.gameOver || !response.nextQuestion) {
@@ -166,6 +170,50 @@ export function TriviaFlow() {
     }
   };
 
+  const handleTimeout = async () => {
+    if (selectedIndex !== null || !attemptId || !currentQuestion) return;
+    
+    // Mark as timeout by setting selectedIndex to -1 (sentinel value)
+    setSelectedIndex(-1);
+    setIsSubmitting(true);
+    
+    try {
+      // Submit timeout to server - use option A as placeholder (backend will mark as wrong/timeout)
+      const response = await gameApi.submitAnswer(attemptId, { selectedOption: "A" });
+      
+      // Timeout is always wrong
+      setLastAnswerCorrect(false);
+      setLastCorrectOption(response.correctOption);
+      setShowFeedback(true);
+      
+      // Record points for THIS question (should be 0 on timeout)
+      setQuestionScores((prev) => [...prev, response.pointsEarned]);
+      
+      // If game is over or no next question, show results
+      if (response.gameOver || !response.nextQuestion) {
+        // Refresh wallet balance and invalidate dashboard query
+        fetchWalletBalance().catch(console.error);
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        
+        // Log summary if present
+        if (response.summary) {
+          console.log("Game summary:", response.summary);
+        }
+        
+        setTimeout(() => {
+          setStep("cleared");
+        }, 1500);
+      } else {
+        setPendingQuestion(response.nextQuestion);
+      }
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError.message || "Failed to submit answer");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleNextAfterAnswer = () => {
     // Promote pending question to current, if present
     if (pendingQuestion) {
@@ -185,8 +233,8 @@ export function TriviaFlow() {
     if (step !== "playing" || selectedIndex !== null || !currentQuestion) return;
     
     if (timeLeft <= 0) {
-      // Timeout - auto-submit first option (will be marked wrong by backend)
-      handleAnswer(0);
+      // Timeout - handle as timeout (no answer selected)
+      handleTimeout();
       return;
     }
     
@@ -207,8 +255,7 @@ export function TriviaFlow() {
     setSelectedIndex(null);
     setTimeLeft(10);
     setShowFeedback(false);
-    setTotalScore(0);
-    setAnswersHistory([]);
+    setQuestionScores([]);
     setError(null);
   };
 
@@ -247,7 +294,8 @@ export function TriviaFlow() {
   }
 
   if (step === "cleared") {
-    const correctCount = answersHistory.filter((correct) => correct).length;
+    const correctCount = questionScores.filter((score) => score > 0).length;
+    const totalScore = questionScores.reduce((sum, score) => sum + score, 0);
     
     return (
       <StageCleared
@@ -257,7 +305,7 @@ export function TriviaFlow() {
         bonusTokens={0}
         onBackToStages={backToDashboard}
         onNextStage={restartGame}
-        questionResults={answersHistory}
+        questionScores={questionScores}
       />
     );
   }
@@ -288,14 +336,14 @@ export function TriviaFlow() {
           currentStage={currentSequence}
           totalStages={totalQuestions}
           stageDifficulty={adaptedQuestion.difficulty}
-          score={totalScore}
+          score={questionScores.reduce((sum, score) => sum + score, 0)}
           timeLeft={Math.max(timeLeft, 0)}
           selectedIndex={selectedIndex}
           onAnswer={handleAnswer}
           onNext={handleNextAfterAnswer}
-          isTimeout={timeLeft <= 0 && selectedIndex === null}
+          isTimeout={selectedIndex === -1}
           isLastQuestionInStage={true} // Each question is treated as a stage
-          answeredQuestionsPerStage={answersHistory.map(() => 1)}
+          answeredQuestionsPerStage={questionScores.map((score) => score > 0 ? 1 : 0)}
           currentQuestionInStage={0}
         />
       </motion.div>

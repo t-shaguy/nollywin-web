@@ -32,9 +32,11 @@ export function QuestionView({
   answeredQuestionsPerStage?: number[];
   currentQuestionInStage?: number;
 }) {
-  const isCorrect = selectedIndex !== null && selectedIndex >= 0 && selectedIndex === question.correctIndex;
-  const isWrong = selectedIndex !== null && (selectedIndex < 0 || selectedIndex !== question.correctIndex);
-  const showResult = selectedIndex !== null;
+  // isTimeout means selectedIndex === -1 (timeout sentinel value)
+  const userSelectedAnswer = selectedIndex !== null && selectedIndex >= 0;
+  const isCorrect = userSelectedAnswer && selectedIndex === question.correctIndex;
+  const isWrong = userSelectedAnswer && selectedIndex !== question.correctIndex;
+  const showResult = selectedIndex !== null; // Includes timeout (-1) and actual selections
   
   const nextButtonText = isCorrect 
     ? "Next stage →"
@@ -140,9 +142,9 @@ export function QuestionView({
         {question.options.map((option, i) => {
           const isSelected = selectedIndex === i;
           const isCorrectOption = i === question.correctIndex;
-          // When timeout happens and no answer selected, only highlight correct answer
-          const isWrongAnswer = showResult && isSelected && !isCorrectOption;
-          const shouldDim = showResult && !isCorrectOption;
+          // On timeout, no option should appear "selected" by user, only correct answer highlighted
+          const isWrongAnswer = userSelectedAnswer && isSelected && !isCorrectOption;
+          const shouldDim = showResult && !isCorrectOption && !isWrongAnswer;
 
           let stateClass = "border-border hover:border-primary/50 hover:bg-primary/5";
           let badgeClass = "bg-secondary transition-all duration-300";
@@ -155,8 +157,8 @@ export function QuestionView({
               stateClass = "border-green-500 bg-green-500/10";
               badgeClass = "bg-green-500 text-white transition-all duration-300";
               textClass = "text-sm font-bold text-white transition-all duration-300";
-            } else if (isSelected) {
-              // Wrong answer: red (only if user actually selected it)
+            } else if (isSelected && userSelectedAnswer) {
+              // Wrong answer selected by user (NOT on timeout)
               stateClass = "border-red-500 bg-red-500/10";
               badgeClass = "bg-red-500 text-white transition-all duration-300";
               textClass = "text-sm font-medium text-red-200 transition-all duration-300";
@@ -198,15 +200,25 @@ export function QuestionView({
           className={`w-full rounded-lg px-4 py-3 text-center transition-all ${
             isCorrect
               ? "bg-green-500/10 border border-green-500 hover:bg-green-500/20"
-              : "bg-red-900/30 border border-red-900 hover:bg-red-900/40"
+              : "bg-muted/50 border border-border hover:bg-muted/70"
           }`}
         >
-          <p className={`font-semibold text-base ${isCorrect ? "text-green-500" : "text-red-500"}`}>
-            {isCorrect ? "Correct! +50 pts" : isTimeout ? "Time's up." : "Wrong answer."}
+          <p className={`font-semibold text-base ${
+            isCorrect 
+              ? "text-green-500" 
+              : isTimeout 
+                ? "text-muted-foreground" 
+                : "text-red-500"
+          }`}>
+            {isCorrect ? "Correct! +50 pts" : isTimeout ? "⏰ Time's up! +0 pts" : "Wrong answer. +0 pts"}
           </p>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {isTimeout ? "See results" : nextButtonText}
-          </p>
+          {!isTimeout && (
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {isCorrect
+                ? nextButtonText
+                : `The correct answer was ${optionLabels[question.correctIndex]}`}
+            </p>
+          )}
         </button>
       )}
     </div>

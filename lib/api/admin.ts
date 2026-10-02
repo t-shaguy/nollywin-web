@@ -11,7 +11,7 @@
  * 5. Response typing: Use AdminJson = Record<string, unknown> for unconfirmed shapes
  */
 
-import { adminApiClient } from "./admin-client";
+import { adminApiClient, adminApiClientMultipart } from "./admin-client";
 
 // Flexible JSON type for unconfirmed API response shapes
 type AdminJson = Record<string, unknown>;
@@ -514,38 +514,59 @@ export async function createTriviaQuestion(data: CreateQuestionRequest): Promise
  * GET /api/v1/admin/trivia/questions/csv-template
  * Returns raw CSV text, not JSON
  */
+/**
+ * Download CSV template for bulk question upload
+ * GET /api/v1/admin/trivia/questions/csv-template
+ * 
+ * Returns raw CSV text, not JSON
+ */
 export async function downloadTriviaQuestionsCsvTemplate(): Promise<void> {
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://3.211.19.155/nollywin/core";
-  const adminToken = typeof window !== "undefined" ? localStorage.getItem("admin_accessToken") : null;
-  
-  // Get client token
-  const clientTokenRes = await fetch("/api/client-token");
-  const { clientToken } = await clientTokenRes.json();
-  
-  const headers: HeadersInit = {
-    "X-Client-Token": clientToken,
-  };
-  
-  if (adminToken) {
-    headers["Authorization"] = `Bearer ${adminToken}`;
+  try {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://3.211.19.155/nollywin/core";
+    
+    // Get admin token the CORRECT way (not from localStorage which doesn't exist)
+    const { useAdminAuthStore } = await import("@/store/admin-auth-store");
+    const adminToken = useAdminAuthStore.getState().session?.token ?? null;
+    
+    // Get client token
+    const clientTokenRes = await fetch("/api/client-token");
+    if (!clientTokenRes.ok) {
+      throw new Error("Failed to get client token");
+    }
+    const { accessToken: clientToken } = await clientTokenRes.json();
+    
+    const headers: HeadersInit = {
+      "X-Client-Token": clientToken,
+    };
+    
+    if (adminToken) {
+      headers["Authorization"] = `Bearer ${adminToken}`;
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/api/v1/admin/trivia/questions/csv-template`, {
+      headers,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "Unknown error");
+      console.error("[downloadTriviaQuestionsCsvTemplate] Failed:", response.status, errorText);
+      throw new Error(`Failed to download CSV template (${response.status}): ${response.statusText}`);
+    }
+    
+    const csvText = await response.text();
+    const blob = new Blob([csvText], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "trivia-questions-template.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("[downloadTriviaQuestionsCsvTemplate] Error:", error);
+    throw error; // Re-throw so UI can display user-friendly message
   }
-  
-  const response = await fetch(`${API_BASE_URL}/api/v1/admin/trivia/questions/csv-template`, {
-    headers,
-  });
-  
-  if (!response.ok) {
-    throw new Error("Failed to download CSV template");
-  }
-  
-  const csvText = await response.text();
-  const blob = new Blob([csvText], { type: "text/csv" });
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "trivia-questions-template.csv";
-  link.click();
-  window.URL.revokeObjectURL(url);
 }
 
 /**
@@ -554,36 +575,14 @@ export async function downloadTriviaQuestionsCsvTemplate(): Promise<void> {
  * Content-Type: multipart/form-data
  */
 export async function bulkUploadTriviaQuestions(file: File): Promise<MakerCheckerWriteResponse> {
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://3.211.19.155/nollywin/core";
-  const adminToken = typeof window !== "undefined" ? localStorage.getItem("admin_accessToken") : null;
-  
-  // Get client token
-  const clientTokenRes = await fetch("/api/client-token");
-  const { clientToken } = await clientTokenRes.json();
-  
-  const headers: HeadersInit = {
-    "X-Client-Token": clientToken,
-  };
-  
-  if (adminToken) {
-    headers["Authorization"] = `Bearer ${adminToken}`;
-  }
-  
   const formData = new FormData();
   formData.append("file", file);
   
-  const response = await fetch(`${API_BASE_URL}/api/v1/admin/trivia/questions/bulk-upload`, {
-    method: "POST",
-    headers,
-    body: formData,
-  });
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Bulk upload failed: ${errorText}`);
-  }
-  
-  return response.json();
+  // Use adminApiClientMultipart which already handles auth correctly
+  return adminApiClientMultipart<MakerCheckerWriteResponse>(
+    "/api/v1/admin/trivia/questions/bulk-upload",
+    formData
+  );
 }
 
 // ============================================================================

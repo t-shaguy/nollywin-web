@@ -26,17 +26,43 @@ export default function AdminOverviewPage() {
       try {
         setLoading(true);
         setError(null);
-        const [overviewData, trendData, activityData] = await Promise.all([
+        
+        // Load endpoints individually with error handling
+        // This allows partial dashboard load even if some endpoints fail
+        const [overviewResult, trendResult, activityResult] = await Promise.allSettled([
           getDashboardOverview(),
           getRevenueTrend(),
           getRecentActivity(),
         ]);
-        setOverview(overviewData);
-        setRevenueTrend(trendData);
-        setRecentActivity(activityData);
+        
+        // Process overview data
+        if (overviewResult.status === "fulfilled") {
+          setOverview(overviewResult.value);
+        } else {
+          console.error("Failed to load overview:", overviewResult.reason);
+        }
+        
+        // Process trend data
+        if (trendResult.status === "fulfilled") {
+          setRevenueTrend(trendResult.value);
+        } else {
+          console.error("Failed to load revenue trend:", trendResult.reason);
+        }
+        
+        // Process activity data
+        if (activityResult.status === "fulfilled") {
+          setRecentActivity(activityResult.value);
+        } else {
+          console.error("Failed to load recent activity:", activityResult.reason);
+        }
+        
+        // Only show error if ALL requests failed
+        if (overviewResult.status === "rejected" && trendResult.status === "rejected" && activityResult.status === "rejected") {
+          setError("Failed to load dashboard data. Please try again later.");
+        }
       } catch (err) {
         console.error("Error loading dashboard:", err);
-        setError(err instanceof Error ? err.message : "Failed to load dashboard data");
+        setError("Failed to load dashboard data");
       } finally {
         setLoading(false);
       }

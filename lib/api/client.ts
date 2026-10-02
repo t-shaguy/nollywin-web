@@ -209,6 +209,7 @@ export async function apiClient<T = any>(
       ...options,
       headers,
       signal: controller.signal,
+      cache: "no-store", // Prevent HTTP caching - always fetch fresh data
     });
 
     clearTimeout(timeoutId);
@@ -335,6 +336,7 @@ export async function apiClientBinary(endpoint: string, isRetry: boolean = false
     const res = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers,
       signal: controller.signal,
+      cache: "no-store", // Prevent HTTP caching - always fetch fresh data
     });
 
     clearTimeout(timeoutId);

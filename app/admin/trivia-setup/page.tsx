@@ -5,6 +5,8 @@ import { Plus, CheckCircle, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { AdminCard } from "@/components/admin/admin-card";
 import {
   getTriviaCategories,
   getTriviaStages,
@@ -243,63 +245,64 @@ export default function TriviaSetupPage() {
 
   if (loading) {
     return (
-      <div className="space-y-8">
-        <h1 className="text-3xl font-extrabold">Trivia Setup</h1>
-        <div className="bg-card border border-border rounded-2xl p-12 flex items-center justify-center">
-          <div className="text-muted-foreground">Loading trivia configuration...</div>
-        </div>
+      <div className="space-y-4 sm:space-y-5">
+        <AdminPageHeader title="Trivia Setup" />
+        <AdminCard>
+          <div className="py-8 flex items-center justify-center">
+            <div className="text-muted-foreground text-xs">Loading trivia configuration...</div>
+          </div>
+        </AdminCard>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-extrabold">Trivia Setup</h1>
-      </div>
+    <div className="space-y-4 sm:space-y-5">
+      <AdminPageHeader title="Trivia Setup" />
 
       {/* Success Message */}
       {successMessage && (
-        <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-green-600 flex items-start gap-3">
-          <CheckCircle size={20} className="shrink-0 mt-0.5" />
+        <div className="bg-muted/50 border border-border rounded-xl p-3 sm:p-4 flex items-start gap-2 sm:gap-3">
+          <CheckCircle size={16} className="sm:w-[18px] sm:h-[18px] shrink-0 mt-0.5 text-muted-foreground" />
           <div>
-            <p className="font-medium">{successMessage}</p>
-            <p className="text-sm mt-1 opacity-80">Changes will take effect after approval by a checker.</p>
+            <p className="text-xs sm:text-sm text-foreground">{successMessage}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Changes will take effect after approval by a checker.</p>
           </div>
         </div>
       )}
 
       {/* Error Message */}
       {error && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 text-destructive">
+        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3 sm:p-4 text-destructive text-xs sm:text-sm">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         {/* Categories Section */}
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold">Trivia Categories</h2>
+        <AdminCard
+          title="Trivia Categories"
+          action={
             <Button 
               variant="outline" 
+              size="sm"
               onClick={() => {
                 resetCat({ name: "", active: true });
                 setShowCategoryModal(true);
               }}
-              className="gap-2"
+              className="gap-1.5 text-xs h-8 px-2.5"
             >
-              <Plus size={16} />
-              Add
+              <Plus size={14} />
+              <span>Add</span>
             </Button>
-          </div>
-          
+          }
+        >
           <div className="space-y-2">
             {categories.length > 0 ? (
               categories.map((cat) => (
-                <div key={cat.id} className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl">
+                <div key={cat.id} className="flex items-center justify-between p-2.5 bg-secondary/30 rounded-lg">
                   <div>
-                    <p className="font-medium">{cat.name}</p>
+                    <p className="font-medium text-xs">{cat.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {cat.active ? "Active" : "Inactive"}
                     </p>
@@ -307,36 +310,37 @@ export default function TriviaSetupPage() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-6">No categories yet</p>
+              <p className="text-xs text-muted-foreground text-center py-4">No categories yet</p>
             )}
           </div>
-        </div>
+        </AdminCard>
 
         {/* Stages Section */}
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold">Trivia Stages</h2>
+        <AdminCard
+          title="Trivia Stages"
+          action={
             <Button 
               variant="outline" 
+              size="sm"
               onClick={() => {
                 resetStage({ name: "", sortOrder: stages.length + 1, active: true, difficultyLabel: "" });
                 setShowStageModal(true);
               }}
-              className="gap-2"
+              className="gap-1.5 text-xs h-8 px-2.5"
             >
-              <Plus size={16} />
-              Add
+              <Plus size={14} />
+              <span>Add</span>
             </Button>
-          </div>
-          
+          }
+        >
           <div className="space-y-2">
             {stages.length > 0 ? (
               stages
                 .sort((a, b) => a.sortOrder - b.sortOrder)
                 .map((stage) => (
-                  <div key={stage.id} className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl">
+                  <div key={stage.id} className="flex items-center justify-between p-2.5 bg-secondary/30 rounded-lg">
                     <div>
-                      <p className="font-medium">{stage.name}</p>
+                      <p className="font-medium text-xs">{stage.name}</p>
                       <p className="text-xs text-muted-foreground">
                         Order: {stage.sortOrder} • {stage.difficultyLabel || "No label"} • {stage.active ? "Active" : "Inactive"}
                       </p>
@@ -344,107 +348,106 @@ export default function TriviaSetupPage() {
                   </div>
                 ))
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-6">No stages yet</p>
+              <p className="text-xs text-muted-foreground text-center py-4">No stages yet</p>
             )}
           </div>
-        </div>
+        </AdminCard>
       </div>
 
       {/* Prizes Section (Read-only) */}
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold">Trivia Prizes</h2>
+      <AdminCard
+        title="Trivia Prizes"
+        action={
           <Button 
             variant="outline" 
+            size="sm"
             onClick={() => {
               resetPrize({ stageName: "", period: "WEEKLY", description: "" });
               setShowPrizeModal(true);
             }}
-            className="gap-2"
+            className="gap-1.5 text-xs h-8 px-2.5"
           >
-            <Plus size={16} />
-            Add Prize
+            <Plus size={14} />
+            <span>Add Prize</span>
           </Button>
-        </div>
-        
+        }
+      >
         {/* Prizes Error Banner */}
         {prizesError && (
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 text-yellow-600 mb-4">
-            <p className="font-medium">Note: {prizesError}</p>
-            <p className="text-sm mt-1 opacity-80">This is a known server-side issue. You can still create new prizes above.</p>
+          <div className="bg-muted/50 border border-border rounded-xl p-3 mb-3 text-xs">
+            <p className="font-medium text-muted-foreground">Note: {prizesError}</p>
+            <p className="text-muted-foreground mt-0.5">This is a known server-side issue. You can still create new prizes above.</p>
           </div>
         )}
         
         <div className="space-y-2">
           {prizes.length > 0 ? (
             prizes.map((prize) => (
-              <div key={prize.id} className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl">
+              <div key={prize.id} className="flex items-center justify-between p-2.5 bg-secondary/30 rounded-lg">
                 <div>
-                  <p className="font-medium">{prize.stageName}</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="font-medium text-xs">{prize.stageName}</p>
+                  <p className="text-xs text-muted-foreground">
                     {prize.period}: {prize.description}
                   </p>
                 </div>
               </div>
             ))
           ) : prizesError ? (
-            <p className="text-sm text-muted-foreground text-center py-6">Unable to load prizes due to error above</p>
+            <p className="text-xs text-muted-foreground text-center py-4">Unable to load prizes due to error above</p>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-6">No prizes configured</p>
+            <p className="text-xs text-muted-foreground text-center py-4">No prizes configured</p>
           )}
         </div>
-      </div>
+      </AdminCard>
 
       {/* Questions Section */}
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold">Trivia Questions</h2>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={downloadCSVTemplate} className="gap-2">
-              <Download size={16} />
-              CSV Template
+      <AdminCard title="Trivia Questions">
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
+          <Button variant="outline" size="sm" onClick={downloadCSVTemplate} className="gap-1.5 text-xs h-8 px-2.5">
+            <Download size={14} />
+            CSV Template
+          </Button>
+          <label className="cursor-pointer flex-1 sm:flex-initial">
+            <Button variant="outline" size="sm" disabled={uploadingCSV} className="gap-1.5 text-xs h-8 px-2.5 w-full">
+              <Plus size={14} />
+              {uploadingCSV ? "Uploading..." : "Bulk Upload CSV"}
             </Button>
-            <label className="cursor-pointer">
-              <Button variant="outline" disabled={uploadingCSV} className="gap-2">
-                <Plus size={16} />
-                {uploadingCSV ? "Uploading..." : "Bulk Upload CSV"}
-              </Button>
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleBulkUpload}
-                className="hidden"
-                disabled={uploadingCSV}
-              />
-            </label>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                resetQuestion({ 
-                  questionText: "", 
-                  optionA: "", 
-                  optionB: "", 
-                  optionC: "", 
-                  optionD: "", 
-                  correctOption: "A", 
-                  stageName: "", 
-                  categoryName: "" 
-                });
-                setShowQuestionModal(true);
-              }}
-              className="gap-2"
-            >
-              <Plus size={16} />
-              Add Question
-            </Button>
-          </div>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleBulkUpload}
+              className="hidden"
+              disabled={uploadingCSV}
+            />
+          </label>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              resetQuestion({ 
+                questionText: "", 
+                optionA: "", 
+                optionB: "", 
+                optionC: "", 
+                optionD: "", 
+                correctOption: "A", 
+                stageName: "", 
+                categoryName: "" 
+              });
+              setShowQuestionModal(true);
+            }}
+            className="gap-1.5 text-xs h-8 px-2.5"
+          >
+            <Plus size={14} />
+            Add Question
+          </Button>
         </div>
         
-        <div className="bg-secondary/20 rounded-xl p-4 text-sm text-muted-foreground text-center">
+        <div className="bg-secondary/20 rounded-xl p-3 text-xs text-muted-foreground text-center">
           <p>Use the form above to add questions individually, or download the CSV template for bulk uploads.</p>
           <p className="mt-1 text-xs">All questions are submitted for maker-checker approval before going live.</p>
         </div>
-      </div>
+      </AdminCard>
 
       {/* Category Modal */}
       <Modal
@@ -455,24 +458,24 @@ export default function TriviaSetupPage() {
         }}
         title="Add Category"
       >
-        <form onSubmit={handleSubmitCat(onSubmitCategory)} className="space-y-4">
+        <form onSubmit={handleSubmitCat(onSubmitCategory)} className="space-y-3">
           <div>
-            <label className="text-sm font-medium mb-2 block">Category Name</label>
-            <Input {...registerCat("name", { required: "Name is required" })} placeholder="Actors & Actresses" />
-            {errorsCat.name && <p className="text-destructive text-sm mt-1">{errorsCat.name.message}</p>}
+            <label className="text-xs font-medium mb-1.5 block">Category Name</label>
+            <Input {...registerCat("name", { required: "Name is required" })} placeholder="Actors & Actresses" className="h-9 text-sm" />
+            {errorsCat.name && <p className="text-destructive text-xs mt-1">{errorsCat.name.message}</p>}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <input
               type="checkbox"
               id="category-active"
               {...registerCat("active")}
-              className="h-4 w-4 rounded border-border"
+              className="h-3.5 w-3.5 rounded border-border"
             />
-            <label htmlFor="category-active" className="text-sm font-medium cursor-pointer">
+            <label htmlFor="category-active" className="text-xs font-medium cursor-pointer">
               Active (visible to users)
             </label>
           </div>
-          <Button type="submit" variant="gradient" className="w-full justify-center" disabled={submitting}>
+          <Button type="submit" variant="gradient" className="w-full justify-center h-9 text-sm" disabled={submitting}>
             {submitting ? "Submitting..." : "Submit for Approval"}
           </Button>
         </form>
@@ -487,37 +490,38 @@ export default function TriviaSetupPage() {
         }}
         title="Add Stage"
       >
-        <form onSubmit={handleSubmitStage(onSubmitStage)} className="space-y-4">
+        <form onSubmit={handleSubmitStage(onSubmitStage)} className="space-y-3">
           <div>
-            <label className="text-sm font-medium mb-2 block">Stage Name</label>
-            <Input {...registerStage("name", { required: "Name is required" })} placeholder="Beginner" />
-            {errorsStage.name && <p className="text-destructive text-sm mt-1">{errorsStage.name.message}</p>}
+            <label className="text-xs font-medium mb-1.5 block">Stage Name</label>
+            <Input {...registerStage("name", { required: "Name is required" })} placeholder="Beginner" className="h-9 text-sm" />
+            {errorsStage.name && <p className="text-destructive text-xs mt-1">{errorsStage.name.message}</p>}
           </div>
           <div>
-            <label className="text-sm font-medium mb-2 block">Sort Order</label>
+            <label className="text-xs font-medium mb-1.5 block">Sort Order</label>
             <Input 
               type="number" 
               {...registerStage("sortOrder", { required: "Order is required", valueAsNumber: true, min: 1 })} 
               placeholder="1"
+              className="h-9 text-sm"
             />
-            {errorsStage.sortOrder && <p className="text-destructive text-sm mt-1">{errorsStage.sortOrder.message}</p>}
+            {errorsStage.sortOrder && <p className="text-destructive text-xs mt-1">{errorsStage.sortOrder.message}</p>}
           </div>
           <div>
-            <label className="text-sm font-medium mb-2 block">Difficulty Label (Optional)</label>
-            <Input {...registerStage("difficultyLabel")} placeholder="Easy" />
+            <label className="text-xs font-medium mb-1.5 block">Difficulty Label (Optional)</label>
+            <Input {...registerStage("difficultyLabel")} placeholder="Easy" className="h-9 text-sm" />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <input
               type="checkbox"
               id="stage-active"
               {...registerStage("active")}
-              className="h-4 w-4 rounded border-border"
+              className="h-3.5 w-3.5 rounded border-border"
             />
-            <label htmlFor="stage-active" className="text-sm font-medium cursor-pointer">
+            <label htmlFor="stage-active" className="text-xs font-medium cursor-pointer">
               Active (visible to users)
             </label>
           </div>
-          <Button type="submit" variant="gradient" className="w-full justify-center" disabled={submitting}>
+          <Button type="submit" variant="gradient" className="w-full justify-center h-9 text-sm" disabled={submitting}>
             {submitting ? "Submitting..." : "Submit for Approval"}
           </Button>
         </form>
@@ -532,37 +536,37 @@ export default function TriviaSetupPage() {
         }}
         title="Add Prize"
       >
-        <form onSubmit={handleSubmitPrize(onSubmitPrize)} className="space-y-4">
+        <form onSubmit={handleSubmitPrize(onSubmitPrize)} className="space-y-3">
           <div>
-            <label className="text-sm font-medium mb-2 block">Stage Name</label>
+            <label className="text-xs font-medium mb-1.5 block">Stage Name</label>
             <select 
               {...registerPrize("stageName", { required: "Stage is required" })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-xl"
+              className="w-full px-3 py-2 bg-background border border-border rounded-xl h-9 text-sm"
             >
               <option value="">Select a stage</option>
               {stages.filter(s => s.active).map(stage => (
                 <option key={stage.id} value={stage.name}>{stage.name}</option>
               ))}
             </select>
-            {errorsPrize.stageName && <p className="text-destructive text-sm mt-1">{errorsPrize.stageName.message}</p>}
+            {errorsPrize.stageName && <p className="text-destructive text-xs mt-1">{errorsPrize.stageName.message}</p>}
           </div>
           <div>
-            <label className="text-sm font-medium mb-2 block">Period</label>
+            <label className="text-xs font-medium mb-1.5 block">Period</label>
             <select 
               {...registerPrize("period", { required: "Period is required" })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-xl"
+              className="w-full px-3 py-2 bg-background border border-border rounded-xl h-9 text-sm"
             >
               <option value="WEEKLY">Weekly</option>
               <option value="MONTHLY">Monthly</option>
             </select>
-            {errorsPrize.period && <p className="text-destructive text-sm mt-1">{errorsPrize.period.message}</p>}
+            {errorsPrize.period && <p className="text-destructive text-xs mt-1">{errorsPrize.period.message}</p>}
           </div>
           <div>
-            <label className="text-sm font-medium mb-2 block">Description</label>
-            <Input {...registerPrize("description", { required: "Description is required" })} placeholder="Top performer prize for this stage" />
-            {errorsPrize.description && <p className="text-destructive text-sm mt-1">{errorsPrize.description.message}</p>}
+            <label className="text-xs font-medium mb-1.5 block">Description</label>
+            <Input {...registerPrize("description", { required: "Description is required" })} placeholder="Top performer prize for this stage" className="h-9 text-sm" />
+            {errorsPrize.description && <p className="text-destructive text-xs mt-1">{errorsPrize.description.message}</p>}
           </div>
-          <Button type="submit" variant="gradient" className="w-full justify-center" disabled={submitting}>
+          <Button type="submit" variant="gradient" className="w-full justify-center h-9 text-sm" disabled={submitting}>
             {submitting ? "Submitting..." : "Submit for Approval"}
           </Button>
         </form>
@@ -577,78 +581,78 @@ export default function TriviaSetupPage() {
         }}
         title="Add Question"
       >
-        <form onSubmit={handleSubmitQuestion(onSubmitQuestion)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+        <form onSubmit={handleSubmitQuestion(onSubmitQuestion)} className="space-y-3 max-h-[70vh] overflow-y-auto pr-2">
           <div>
-            <label className="text-sm font-medium mb-2 block">Question Text</label>
+            <label className="text-xs font-medium mb-1.5 block">Question Text</label>
             <textarea 
               {...registerQuestion("questionText", { required: "Question is required" })}
               placeholder="Who directed The Dark Knight?"
-              className="w-full px-3 py-2 bg-background border border-border rounded-xl min-h-[80px]"
+              className="w-full px-3 py-2 bg-background border border-border rounded-xl min-h-[70px] text-sm"
             />
-            {errorsQuestion.questionText && <p className="text-destructive text-sm mt-1">{errorsQuestion.questionText.message}</p>}
+            {errorsQuestion.questionText && <p className="text-destructive text-xs mt-1">{errorsQuestion.questionText.message}</p>}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-sm font-medium mb-2 block">Option A</label>
-              <Input {...registerQuestion("optionA", { required: "Required" })} placeholder="First option" />
-              {errorsQuestion.optionA && <p className="text-destructive text-sm mt-1">{errorsQuestion.optionA.message}</p>}
+              <label className="text-xs font-medium mb-1.5 block">Option A</label>
+              <Input {...registerQuestion("optionA", { required: "Required" })} placeholder="First option" className="h-9 text-sm" />
+              {errorsQuestion.optionA && <p className="text-destructive text-xs mt-1">{errorsQuestion.optionA.message}</p>}
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">Option B</label>
-              <Input {...registerQuestion("optionB", { required: "Required" })} placeholder="Second option" />
-              {errorsQuestion.optionB && <p className="text-destructive text-sm mt-1">{errorsQuestion.optionB.message}</p>}
+              <label className="text-xs font-medium mb-1.5 block">Option B</label>
+              <Input {...registerQuestion("optionB", { required: "Required" })} placeholder="Second option" className="h-9 text-sm" />
+              {errorsQuestion.optionB && <p className="text-destructive text-xs mt-1">{errorsQuestion.optionB.message}</p>}
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">Option C</label>
-              <Input {...registerQuestion("optionC", { required: "Required" })} placeholder="Third option" />
-              {errorsQuestion.optionC && <p className="text-destructive text-sm mt-1">{errorsQuestion.optionC.message}</p>}
+              <label className="text-xs font-medium mb-1.5 block">Option C</label>
+              <Input {...registerQuestion("optionC", { required: "Required" })} placeholder="Third option" className="h-9 text-sm" />
+              {errorsQuestion.optionC && <p className="text-destructive text-xs mt-1">{errorsQuestion.optionC.message}</p>}
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">Option D</label>
-              <Input {...registerQuestion("optionD", { required: "Required" })} placeholder="Fourth option" />
-              {errorsQuestion.optionD && <p className="text-destructive text-sm mt-1">{errorsQuestion.optionD.message}</p>}
+              <label className="text-xs font-medium mb-1.5 block">Option D</label>
+              <Input {...registerQuestion("optionD", { required: "Required" })} placeholder="Fourth option" className="h-9 text-sm" />
+              {errorsQuestion.optionD && <p className="text-destructive text-xs mt-1">{errorsQuestion.optionD.message}</p>}
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium mb-2 block">Correct Option</label>
+            <label className="text-xs font-medium mb-1.5 block">Correct Option</label>
             <select 
               {...registerQuestion("correctOption", { required: "Correct option is required" })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-xl"
+              className="w-full px-3 py-2 bg-background border border-border rounded-xl h-9 text-sm"
             >
               <option value="A">A</option>
               <option value="B">B</option>
               <option value="C">C</option>
               <option value="D">D</option>
             </select>
-            {errorsQuestion.correctOption && <p className="text-destructive text-sm mt-1">{errorsQuestion.correctOption.message}</p>}
+            {errorsQuestion.correctOption && <p className="text-destructive text-xs mt-1">{errorsQuestion.correctOption.message}</p>}
           </div>
           <div>
-            <label className="text-sm font-medium mb-2 block">Stage</label>
+            <label className="text-xs font-medium mb-1.5 block">Stage</label>
             <select 
               {...registerQuestion("stageName", { required: "Stage is required" })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-xl"
+              className="w-full px-3 py-2 bg-background border border-border rounded-xl h-9 text-sm"
             >
               <option value="">Select a stage</option>
               {stages.filter(s => s.active).map(stage => (
                 <option key={stage.id} value={stage.name}>{stage.name}</option>
               ))}
             </select>
-            {errorsQuestion.stageName && <p className="text-destructive text-sm mt-1">{errorsQuestion.stageName.message}</p>}
+            {errorsQuestion.stageName && <p className="text-destructive text-xs mt-1">{errorsQuestion.stageName.message}</p>}
           </div>
           <div>
-            <label className="text-sm font-medium mb-2 block">Category</label>
+            <label className="text-xs font-medium mb-1.5 block">Category</label>
             <select 
               {...registerQuestion("categoryName", { required: "Category is required" })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-xl"
+              className="w-full px-3 py-2 bg-background border border-border rounded-xl h-9 text-sm"
             >
               <option value="">Select a category</option>
               {categories.filter(c => c.active).map(category => (
                 <option key={category.id} value={category.name}>{category.name}</option>
               ))}
             </select>
-            {errorsQuestion.categoryName && <p className="text-destructive text-sm mt-1">{errorsQuestion.categoryName.message}</p>}
+            {errorsQuestion.categoryName && <p className="text-destructive text-xs mt-1">{errorsQuestion.categoryName.message}</p>}
           </div>
-          <Button type="submit" variant="gradient" className="w-full justify-center" disabled={submitting}>
+          <Button type="submit" variant="gradient" className="w-full justify-center h-9 text-sm" disabled={submitting}>
             {submitting ? "Submitting..." : "Submit for Approval"}
           </Button>
         </form>

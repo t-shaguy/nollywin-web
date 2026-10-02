@@ -60,15 +60,20 @@ export const useWalletStore = create<WalletState>()(
  */
 export async function fetchWalletBalance() {
   try {
-    console.log("[CANARY] fetchWalletBalance() invoked - about to import getBalance");
+    console.log("[WALLET FETCH] Starting balance fetch...");
     const { getBalance } = await import("@/lib/api/wallet");
     useWalletStore.getState().setLoading(true);
+    
     const balance = await getBalance();
+    console.log("[WALLET FETCH] API returned tokenBalance:", balance.tokenBalance);
+    
     useWalletStore.getState().setBalance(balance.tokenBalance);
+    console.log("[WALLET FETCH] Zustand store updated with balance:", balance.tokenBalance);
+    
     return balance;
   } catch (error) {
     useWalletStore.getState().setLoading(false);
-    console.error("Failed to fetch wallet balance:", error);
+    console.error("[WALLET FETCH] Failed to fetch wallet balance:", error);
     throw error;
   }
 }

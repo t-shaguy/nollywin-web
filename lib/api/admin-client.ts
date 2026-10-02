@@ -12,40 +12,73 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://3.211.19.155/nollywin/core";
 const REQUEST_TIMEOUT = 15000; // 15 seconds
 
-export class AdminApiError extends Error {
+export interface AdminApiErrorData {
   status: number;
   error: string;
+  message: string;
   path?: string;
   data?: unknown;
+}
 
-  constructor(params: { status: number; error: string; message: string; path?: string; data?: unknown }) {
-    super(params.message);
-    this.name = "AdminApiError";
-    this.status = params.status;
-    this.error = params.error;
-    this.path = params.path;
-    this.data = params.data;
-    
-    // Maintains proper stack trace for where our error was thrown (only available on V8)
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, AdminApiError);
+/**
+ * Create an admin API error object
+ * Note: Returns a plain object instead of Error to avoid Next.js/Turbopack issues
+ */
+export function createAdminApiError(params: AdminApiErrorData) {
+  return {
+    name: "AdminApiError",
+    message: params.message,
+    status: params.status,
+    error: params.error,
+    path: params.path,
+    data: params.data,
+    toString() {
+      return `AdminApiError: ${params.message} (Status: ${params.status})`;
     }
+  };
+}
+
+// In-memory cache for client token with expiry tracking
+let clientTokenCache: string | null = null;
+let clientTokenExpiry: number | null = null; // Unix timestamp in seconds
+let clientTokenPromise: Promise<string> | null = null;
+
+/**
+ * Decode JWT and extract expiry timestamp (exp claim)
+ */
+function decodeJwtExpiry(token: string): number | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
     
-    // Set the prototype explicitly to maintain instanceof checks
-    Object.setPrototypeOf(this, AdminApiError.prototype);
+    const payload = JSON.parse(atob(parts[1]));
+    return payload.exp || null; // exp is in seconds since epoch
+  } catch (error) {
+    console.error("Failed to decode JWT expiry:", error);
+    return null;
   }
 }
 
-// In-memory cache for client token (shared with player client)
-let clientTokenCache: string | null = null;
-let clientTokenPromise: Promise<string> | null = null;
+/**
+ * Check if cached token is still valid (not expired or within 60s of expiry)
+ */
+function isCachedTokenValid(): boolean {
+  if (!clientTokenCache || !clientTokenExpiry) {
+    return false;
+  }
+  
+  const nowInSeconds = Math.floor(Date.now() / 1000);
+  const bufferSeconds = 60; // Refresh token if it expires within 60 seconds
+  
+  return clientTokenExpiry > (nowInSeconds + bufferSeconds);
+}
 
 /**
  * Fetch the client token from our server route (keeps secrets server-side)
  */
 async function getClientToken(): Promise<string> {
-  // Return cached token if available
-  if (clientTokenCache) {
+  // Return cached token if still valid
+  if (isCachedTokenValid() && clientTokenCache) {
     return clientTokenCache;
   }
 
@@ -62,8 +95,17 @@ async function getClientToken(): Promise<string> {
         throw new Error("Failed to fetch client token");
       }
       const data = await res.json();
-      clientTokenCache = data.accessToken;
-      return data.accessToken;
+      const token = data.accessToken;
+      
+      // Cache token and its expiry
+      clientTokenCache = token;
+      clientTokenExpiry = decodeJwtExpiry(token);
+      
+      if (!clientTokenExpiry) {
+        console.warn("Client token has no expiry claim - will not proactively refresh");
+      }
+      
+      return token;
     } catch (error) {
       console.error("Error fetching client token:", error);
       throw error;
@@ -80,6 +122,55 @@ async function getClientToken(): Promise<string> {
  */
 export function clearAdminClientToken() {
   clientTokenCache = null;
+  clientTokenExpiry = null;
+}
+
+/**
+ * Check if an error indicates a client token problem
+ */
+function isClientTokenError(error: any): boolean {
+  // 500 with "Error invoking subclass method" message
+  if (error.status === 500 && error.message?.includes("Error invoking subclass method")) {
+    return true;
+  }
+  
+  // 401/403 when we actually have a valid admin token (means client token is the issue)
+  if ((error.status === 401 || error.status === 403)) {
+    // Only treat as client token error if we have an admin token
+    // (if no admin token, it's a normal auth error)
+    if (typeof window !== "undefined") {
+      try {
+        const authStore = require("@/store/admin-auth-store").useAdminAuthStore;
+        const adminToken = authStore.getState().session?.token;
+        if (adminToken) {
+          return true;
+        }
+      } catch {
+        // Can't check admin token, assume not a client token issue
+      }
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Handle client token refresh on error
+ * Returns true if should retry, false otherwise
+ */
+async function handleClientTokenError(error: any, isRetry: boolean): Promise<boolean> {
+  if (isRetry) {
+    // Already retried once, don't retry again
+    return false;
+  }
+  
+  if (isClientTokenError(error)) {
+    console.warn("Client token error detected, refreshing token and retrying...");
+    clearAdminClientToken();
+    return true;
+  }
+  
+  return false;
 }
 
 /**
@@ -87,10 +178,12 @@ export function clearAdminClientToken() {
  * - X-Client-Token (always)
  * - Authorization: Bearer <adminToken> (on /api/v1/admin/* routes, NOT on /api/v1/admin/auth/*)
  * - Timeout and typed error handling
+ * - Automatic retry once on client token errors
  */
 export async function adminApiClient<T = unknown>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  isRetry: boolean = false
 ): Promise<T> {
   // Get client token (cached after first fetch)
   const clientToken = await getClientToken();
@@ -168,7 +261,7 @@ export async function adminApiClient<T = unknown>(
         errorMessage = `Access denied: ${typedError.message || "You don't have permission to perform this action. This is a backend role/permission issue, not a CORS error. Contact your system administrator to verify your admin account has the required role permissions."}`;
       }
       
-      throw new AdminApiError({
+      throw createAdminApiError({
         status: res.status,
         error: typedError.error || res.statusText,
         message: errorMessage,
@@ -189,7 +282,7 @@ export async function adminApiClient<T = unknown>(
 
     // Handle timeout
     if (error instanceof Error && error.name === "AbortError") {
-      throw new AdminApiError({
+      throw createAdminApiError({
         status: 408,
         error: "Request Timeout",
         message: "Request timed out after 15 seconds",
@@ -198,20 +291,26 @@ export async function adminApiClient<T = unknown>(
 
     // Handle network errors
     if (error instanceof TypeError && error.message === "Failed to fetch") {
-      throw new AdminApiError({
+      throw createAdminApiError({
         status: 0,
         error: "Network Error",
         message: "Network error - please check your connection",
       });
     }
 
-    // Re-throw AdminApiError as-is
+    // Check if this is a client token error and retry if needed
+    const shouldRetry = await handleClientTokenError(error, isRetry);
+    if (shouldRetry) {
+      return adminApiClient<T>(endpoint, options, true);
+    }
+
+    // Re-throw admin API errors as-is
     if (error && typeof error === "object" && "status" in error && "message" in error) {
       throw error;
     }
 
     // Unknown error
-    throw new AdminApiError({
+    throw createAdminApiError({
       status: 500,
       error: "Unknown Error",
       message: error instanceof Error ? error.message : "An unknown error occurred",
@@ -231,7 +330,8 @@ export async function adminApiClient<T = unknown>(
 export async function adminApiClientMultipart<T = unknown>(
   endpoint: string,
   formData: FormData,
-  options: Omit<RequestInit, "body" | "headers"> = {}
+  options: Omit<RequestInit, "body" | "headers"> = {},
+  isRetry: boolean = false
 ): Promise<T> {
   // Get client token
   const clientToken = await getClientToken();
@@ -302,7 +402,7 @@ export async function adminApiClientMultipart<T = unknown>(
         errorMessage = `Access denied: ${typedError.message || "You don't have permission to perform this action. This is a backend role/permission issue. Contact your system administrator."}`;
       }
       
-      throw new AdminApiError({
+      throw createAdminApiError({
         status: res.status,
         error: typedError.error || res.statusText,
         message: errorMessage,
@@ -323,7 +423,7 @@ export async function adminApiClientMultipart<T = unknown>(
 
     // Handle timeout
     if (error instanceof Error && error.name === "AbortError") {
-      throw new AdminApiError({
+      throw createAdminApiError({
         status: 408,
         error: "Request Timeout",
         message: "Upload timed out after 15 seconds",
@@ -332,20 +432,26 @@ export async function adminApiClientMultipart<T = unknown>(
 
     // Handle network errors
     if (error instanceof TypeError && error.message === "Failed to fetch") {
-      throw new AdminApiError({
+      throw createAdminApiError({
         status: 0,
         error: "Network Error",
         message: "Network error - please check your connection",
       });
     }
 
-    // Re-throw AdminApiError as-is
+    // Check if this is a client token error and retry if needed
+    const shouldRetry = await handleClientTokenError(error, isRetry);
+    if (shouldRetry) {
+      return adminApiClientMultipart<T>(endpoint, formData, options, true);
+    }
+
+    // Re-throw admin API errors as-is
     if (error && typeof error === "object" && "status" in error && "message" in error) {
       throw error;
     }
 
     // Unknown error
-    throw new AdminApiError({
+    throw createAdminApiError({
       status: 500,
       error: "Unknown Error",
       message: error instanceof Error ? error.message : "Upload failed",
