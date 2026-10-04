@@ -74,15 +74,12 @@ export function Navbar() {
             </>
           ) : (
             <>
-              {/* Not logged in - show login and admin links */}
+              {/* Not logged in - show login button only (admin login removed from public view) */}
               <Link 
                 href="/auth" 
                 className="bg-primary/10 hover:bg-primary/20 text-primary px-5 py-2.5 rounded-xl font-medium transition-colors border border-primary/30"
               >
                 Login / Sign Up
-              </Link>
-              <Link href="/admin/login" className="hover:text-primary transition-colors">
-                Admin Login
               </Link>
             </>
           )}
@@ -164,19 +161,13 @@ export function Navbar() {
             </>
           ) : (
             <>
+              {/* Not logged in - show login button only (admin login removed from public view) */}
               <Link 
                 href="/auth"
                 onClick={closeMobileMenu}
                 className="bg-primary/10 hover:bg-primary/20 text-primary px-5 py-3 rounded-xl font-medium transition-colors border border-primary/30 text-center"
               >
                 Login / Sign Up
-              </Link>
-              <Link 
-                href="/admin/login"
-                onClick={closeMobileMenu}
-                className="p-3 hover:bg-secondary/50 rounded-lg transition-colors text-center"
-              >
-                Admin Login
               </Link>
             </>
           )}

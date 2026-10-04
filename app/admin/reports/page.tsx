@@ -1,16 +1,18 @@
 "use client";
 import { useState, useEffect } from "react";
-import { FileBarChart2, Calendar, Filter, Gift } from "lucide-react";
+import { FileBarChart2, Calendar, Filter, Gift, DollarSign, CreditCard, Smartphone, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   getSubscriptionReportSummary,
   getSubscriptionReportList,
   getRaffleReport,
+  getIncomeReport,
   type SubscriptionReportSummary,
+  type IncomeReportResponse,
 } from "@/lib/api/admin";
 
-type ReportTab = "subscriptions" | "raffles";
+type ReportTab = "subscriptions" | "raffles" | "income";
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<ReportTab>("subscriptions");
@@ -33,6 +35,15 @@ export default function ReportsPage() {
     raffleId: "",
     email: "",
     phone: "",
+  });
+
+  // Income report state
+  const [incomeData, setIncomeData] = useState<IncomeReportResponse | null>(null);
+  const [incomeLoading, setIncomeLoading] = useState(false);
+  const [incomeError, setIncomeError] = useState<string | null>(null);
+  const [incomeFilters, setIncomeFilters] = useState({
+    from: "",
+    to: "",
   });
 
   useEffect(() => {
@@ -82,9 +93,27 @@ export default function ReportsPage() {
     }
   };
 
+  // Load income report
+  const loadIncomeReport = async () => {
+    try {
+      setIncomeLoading(true);
+      setIncomeError(null);
+      const data = await getIncomeReport(incomeFilters);
+      setIncomeData(data);
+    } catch (err) {
+      console.error("Error loading income report:", err);
+      setIncomeError(err instanceof Error ? err.message : "Failed to load income report");
+    } finally {
+      setIncomeLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === "raffles") {
       loadRaffleReport();
+    }
+    if (activeTab === "income") {
+      loadIncomeReport();
     }
   }, [activeTab]);
 
@@ -130,6 +159,16 @@ export default function ReportsPage() {
           }`}
         >
           Raffles
+        </button>
+        <button
+          onClick={() => setActiveTab("income")}
+          className={`px-4 py-2 font-medium transition-colors ${
+            activeTab === "income"
+              ? "border-b-2 border-primary text-primary"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Income
         </button>
       </div>
 
@@ -405,6 +444,245 @@ export default function ReportsPage() {
             <div className="bg-card border border-border rounded-2xl p-12 text-center">
               <Gift size={48} className="mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">No raffle draws found matching your filters.</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Income Tab */}
+      {activeTab === "income" && (
+        <>
+          {/* Date Range Filters */}
+          <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Filter size={20} className="text-muted-foreground" />
+              <h3 className="font-semibold">Date Range</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">From Date</label>
+                <input
+                  type="date"
+                  value={incomeFilters.from}
+                  onChange={(e) => setIncomeFilters({ ...incomeFilters, from: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">To Date</label>
+                <input
+                  type="date"
+                  value={incomeFilters.to}
+                  onChange={(e) => setIncomeFilters({ ...incomeFilters, to: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background"
+                />
+              </div>
+            </div>
+            
+            <Button onClick={loadIncomeReport} className="w-full md:w-auto">
+              Apply Filters
+            </Button>
+          </div>
+
+          {/* Error Message */}
+          {incomeError && (
+            <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 text-destructive">
+              {incomeError}
+            </div>
+          )}
+
+          {/* Loading State */}
+          {incomeLoading && (
+            <div className="bg-card border border-border rounded-2xl p-12 text-center text-muted-foreground">
+              Loading income report...
+            </div>
+          )}
+
+          {/* Income Report Data */}
+          {!incomeLoading && incomeData && (
+            <>
+              {/* Top-Level Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Total Income Card */}
+                <div className="bg-card border border-border rounded-2xl p-6">
+                  <div className="h-12 w-12 rounded-xl bg-green-500/20 flex items-center justify-center mb-4">
+                    <DollarSign size={24} className="text-green-500" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">Total Income</p>
+                  <p className="text-2xl font-extrabold mt-1">₦{incomeData.totalIncome.toLocaleString()}</p>
+                </div>
+
+                {/* Payment Count Card */}
+                <div className="bg-card border border-border rounded-2xl p-6">
+                  <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-4">
+                    <CreditCard size={24} className="text-blue-500" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">Payment Count</p>
+                  <p className="text-2xl font-extrabold mt-1">{incomeData.paymentCount.toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* By Source Section */}
+              <div className="bg-card border border-border rounded-2xl p-6">
+                <h3 className="font-semibold mb-4">Income by Source</h3>
+                <div className="space-y-6">
+                  {/* WEB */}
+                  {incomeData.bySource.WEB && (
+                    <div className="border-b border-border pb-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                            <Users size={20} className="text-purple-500" />
+                          </div>
+                          <div>
+                            <p className="font-medium">WEB</p>
+                            <p className="text-xs text-muted-foreground">{incomeData.bySource.WEB.count} payments</p>
+                          </div>
+                        </div>
+                        <p className="font-bold text-lg">₦{incomeData.bySource.WEB.total.toLocaleString()}</p>
+                      </div>
+                      {/* By Origin breakdown */}
+                      {Object.keys(incomeData.bySource.WEB.byOrigin).length > 0 && (
+                        <div className="ml-12 space-y-2">
+                          {Object.entries(incomeData.bySource.WEB.byOrigin).map(([origin, data]) => (
+                            <div key={origin} className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">{origin}</span>
+                              <div className="flex items-center gap-3">
+                                <Badge className="bg-secondary text-muted-foreground text-xs">{data.count}</Badge>
+                                <span className="font-medium">₦{data.total.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* AIRTIME */}
+                  {incomeData.bySource.AIRTIME && (
+                    <div className="border-b border-border pb-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                            <Smartphone size={20} className="text-orange-500" />
+                          </div>
+                          <div>
+                            <p className="font-medium">AIRTIME</p>
+                            <p className="text-xs text-muted-foreground">{incomeData.bySource.AIRTIME.count} payments</p>
+                          </div>
+                        </div>
+                        <p className="font-bold text-lg">₦{incomeData.bySource.AIRTIME.total.toLocaleString()}</p>
+                      </div>
+                      {/* By Origin breakdown */}
+                      {Object.keys(incomeData.bySource.AIRTIME.byOrigin).length > 0 && (
+                        <div className="ml-12 space-y-2">
+                          {Object.entries(incomeData.bySource.AIRTIME.byOrigin).map(([origin, data]) => (
+                            <div key={origin} className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">{origin}</span>
+                              <div className="flex items-center gap-3">
+                                <Badge className="bg-secondary text-muted-foreground text-xs">{data.count}</Badge>
+                                <span className="font-medium">₦{data.total.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* USSD */}
+                  {incomeData.bySource.USSD && (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-teal-500/20 flex items-center justify-center">
+                            <Smartphone size={20} className="text-teal-500" />
+                          </div>
+                          <div>
+                            <p className="font-medium">USSD</p>
+                            <p className="text-xs text-muted-foreground">{incomeData.bySource.USSD.count} payments</p>
+                          </div>
+                        </div>
+                        <p className="font-bold text-lg">₦{incomeData.bySource.USSD.total.toLocaleString()}</p>
+                      </div>
+                      {/* By Origin breakdown */}
+                      {Object.keys(incomeData.bySource.USSD.byOrigin).length > 0 && (
+                        <div className="ml-12 space-y-2">
+                          {Object.entries(incomeData.bySource.USSD.byOrigin).map(([origin, data]) => (
+                            <div key={origin} className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">{origin}</span>
+                              <div className="flex items-center gap-3">
+                                <Badge className="bg-secondary text-muted-foreground text-xs">{data.count}</Badge>
+                                <span className="font-medium">₦{data.total.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Telco Total Section */}
+              <div className="bg-card border border-border rounded-2xl p-6">
+                <h3 className="font-semibold mb-4">Telco Total (AIRTIME + USSD)</h3>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                      <Smartphone size={24} className="text-indigo-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Combined Telco Revenue</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{incomeData.telcoTotal.count} payments</p>
+                    </div>
+                  </div>
+                  <p className="text-2xl font-extrabold">₦{incomeData.telcoTotal.total.toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* By Product Section */}
+              <div className="bg-card border border-border rounded-2xl p-6">
+                <h3 className="font-semibold mb-4">Income by Product</h3>
+                <div className="space-y-4">
+                  {/* Subscriptions */}
+                  <div className="flex items-center justify-between py-3 border-b border-border">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                        <FileBarChart2 size={20} className="text-blue-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Subscriptions</p>
+                        <p className="text-xs text-muted-foreground">{incomeData.byProduct.subscriptions.count} payments</p>
+                      </div>
+                    </div>
+                    <p className="font-bold text-lg">₦{incomeData.byProduct.subscriptions.total.toLocaleString()}</p>
+                  </div>
+
+                  {/* Token Top-ups */}
+                  <div className="flex items-center justify-between py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+                        <CreditCard size={20} className="text-yellow-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Token Top-ups</p>
+                        <p className="text-xs text-muted-foreground">{incomeData.byProduct.tokenTopups.count} payments</p>
+                      </div>
+                    </div>
+                    <p className="font-bold text-lg">₦{incomeData.byProduct.tokenTopups.total.toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Empty State */}
+          {!incomeLoading && !incomeData && !incomeError && (
+            <div className="bg-card border border-border rounded-2xl p-12 text-center">
+              <DollarSign size={48} className="mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Select a date range and click Apply Filters to view income data.</p>
             </div>
           )}
         </>

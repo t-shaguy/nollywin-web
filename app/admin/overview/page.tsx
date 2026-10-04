@@ -160,7 +160,7 @@ export default function AdminOverviewPage() {
         <AdminStatCard
           icon={Upload}
           label="Questions"
-          value={overview ? `${overview.totalQuestions.toLocaleString()}+` : "—"}
+          value={overview ? `${overview.totalQuestions.toLocaleString()}` : "—"}
           iconColor="text-purple-500"
           iconBg="bg-purple-500/10"
         />
@@ -189,6 +189,8 @@ export default function AdminOverviewPage() {
                   fontSize={11}
                   tick={{ fill: 'rgba(255,255,255,0.7)' }}
                   tickFormatter={(value) => `₦${value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}`}
+                  domain={[0, 'auto']}
+                  allowDataOverflow={false}
                 />
                 <Tooltip
                   contentStyle={{

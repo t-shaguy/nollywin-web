@@ -50,8 +50,12 @@ function PaymentCallbackContent() {
         const amountNaira = (result.amountKobo / 100).toLocaleString();
         setAmount(`₦${amountNaira}`);
 
+        // Normalize status to uppercase for consistent comparison
+        // Backend returns uppercase status values: SUCCESS, PENDING, ABANDONED, FAILED
+        const normalizedStatus = result.status.toUpperCase();
+
         // Handle different status values
-        if (result.status === "success") {
+        if (normalizedStatus === "SUCCESS") {
           setStatus("success");
           setMessage(`Payment of ${amountNaira} ${result.currency} completed successfully!`);
           
@@ -66,14 +70,14 @@ function PaymentCallbackContent() {
           
           // Invalidate dashboard query
           queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-        } else if (result.status === "pending") {
+        } else if (normalizedStatus === "PENDING") {
           setStatus("verifying");
           setMessage("Payment is being processed. Please check back in a few minutes.");
-        } else if (result.status === "ABANDONED") {
+        } else if (normalizedStatus === "ABANDONED") {
           setStatus("abandoned");
           setMessage("You didn't complete the payment — no charge was made");
         } else {
-          // Treat all other statuses as failed
+          // Treat all other statuses as failed (e.g., FAILED, etc.)
           setStatus("failed");
           setMessage(`Payment verification failed (status: ${result.status})`);
         }

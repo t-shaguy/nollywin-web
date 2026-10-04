@@ -256,6 +256,39 @@ export interface SubscriptionReportSummary {
   byStatus: Array<Record<string, unknown>>;
 }
 
+// Income report response shape
+export interface IncomeReportResponse {
+  from: string;
+  to: string;
+  totalIncome: number; // in Naira
+  paymentCount: number;
+  bySource: {
+    WEB?: {
+      count: number;
+      total: number;
+      byOrigin: Record<string, { count: number; total: number }>;
+    };
+    AIRTIME?: {
+      count: number;
+      total: number;
+      byOrigin: Record<string, { count: number; total: number }>;
+    };
+    USSD?: {
+      count: number;
+      total: number;
+      byOrigin: Record<string, { count: number; total: number }>;
+    };
+  };
+  telcoTotal: {
+    count: number;
+    total: number;
+  };
+  byProduct: {
+    subscriptions: { count: number; total: number };
+    tokenTopups: { count: number; total: number };
+  };
+}
+
 // ============================================================================
 // Helper: Extract paginated list from response
 // ============================================================================
@@ -763,6 +796,20 @@ export async function getRaffleReport(params: {
   return adminApiClient<AdminJson>(`/api/v1/admin/reports/raffles?${q.toString()}`);
 }
 
+/**
+ * Get income report
+ * GET /api/v1/admin/reports/income?from=&to=
+ */
+export async function getIncomeReport(params: {
+  from?: string;
+  to?: string;
+}): Promise<IncomeReportResponse> {
+  const q = new URLSearchParams();
+  if (params.from) q.append("from", params.from);
+  if (params.to) q.append("to", params.to);
+  return adminApiClient<IncomeReportResponse>(`/api/v1/admin/reports/income?${q.toString()}`);
+}
+
 // ============================================================================
 // Admin Notifications API Functions
 // ============================================================================
@@ -913,5 +960,79 @@ export async function rejectChangeRequest(id: string, rejectionReason: string): 
   return adminApiClient<ChangeRequest>(`/api/v1/admin/change-requests/${id}/reject`, {
     method: "POST",
     body: JSON.stringify({ reason: rejectionReason }),
+  });
+}
+
+// ============================================================================
+// Client Sync Management Types (CONFIRMED from live backend testing)
+// ============================================================================
+
+export interface SyncedClient {
+  id: string; // UUID
+  email: string;
+  displayName: string; // e.g., "NollyWin Web App"
+  channel: "WEB" | "MOBILE" | "ADMIN" | string;
+  status: "ACTIVE" | "DISABLED" | string;
+  locallyDisabled: boolean; // Can be disabled locally even if status is ACTIVE
+  accessAllowed: boolean; // Derived from status and locallyDisabled
+  partnerCode: string;
+  lastSyncedAt: string | null; // ISO timestamp, can be null
+}
+
+export type SyncedClientListResponse = SyncedClient[];
+
+// ============================================================================
+// Client Sync API Functions
+// ============================================================================
+
+/**
+ * Refresh synced clients from auth service
+ * POST /api/v1/admin/clients-sync/refresh
+ * 
+ * Returns maker-checker response
+ */
+export async function refreshSyncedClients(): Promise<MakerCheckerWriteResponse> {
+  return adminApiClient<MakerCheckerWriteResponse>("/api/v1/admin/clients-sync/refresh", {
+    method: "POST",
+  });
+}
+
+/**
+ * Get list of all synced clients
+ * GET /api/v1/admin/clients-sync
+ */
+export async function getSyncedClients(): Promise<SyncedClientListResponse> {
+  return adminApiClient<SyncedClientListResponse>("/api/v1/admin/clients-sync");
+}
+
+/**
+ * Get synced client by email
+ * GET /api/v1/admin/clients-sync/{email}
+ */
+export async function getSyncedClientByEmail(email: string): Promise<SyncedClient> {
+  return adminApiClient<SyncedClient>(`/api/v1/admin/clients-sync/${encodeURIComponent(email)}`);
+}
+
+/**
+ * Disable a synced client
+ * POST /api/v1/admin/clients-sync/{email}/disable
+ * 
+ * Returns maker-checker response
+ */
+export async function disableSyncedClient(email: string): Promise<MakerCheckerWriteResponse> {
+  return adminApiClient<MakerCheckerWriteResponse>(`/api/v1/admin/clients-sync/${encodeURIComponent(email)}/disable`, {
+    method: "POST",
+  });
+}
+
+/**
+ * Enable a synced client
+ * POST /api/v1/admin/clients-sync/{email}/enable
+ * 
+ * Returns maker-checker response
+ */
+export async function enableSyncedClient(email: string): Promise<MakerCheckerWriteResponse> {
+  return adminApiClient<MakerCheckerWriteResponse>(`/api/v1/admin/clients-sync/${encodeURIComponent(email)}/enable`, {
+    method: "POST",
   });
 }

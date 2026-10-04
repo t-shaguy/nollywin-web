@@ -25,6 +25,21 @@ export default function LeaderboardPage() {
 
   const periodEndsAt = data?.periodEndsAt ? new Date(data.periodEndsAt) : null;
 
+  // DIAGNOSTIC: Log leaderboard data to investigate points/rank mismatch
+  if (data) {
+    console.log("[LEADERBOARD DEBUG] Raw response:", data);
+    console.log("[LEADERBOARD DEBUG] periodEndsAt:", data.periodEndsAt);
+    console.log("[LEADERBOARD DEBUG] Total entries:", data.entries.length);
+    
+    const currentUserEntry = entries.find(e => e.isCurrentUser);
+    if (currentUserEntry) {
+      console.log("[LEADERBOARD DEBUG] Current user entry:", currentUserEntry);
+    } else {
+      console.log("[LEADERBOARD DEBUG] Current user NOT found in leaderboard");
+      console.log("[LEADERBOARD DEBUG] Looking for authUserId:", currentUserId);
+    }
+  }
+
   return (
     <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">

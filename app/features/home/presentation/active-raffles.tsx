@@ -3,9 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Trophy } from "lucide-react";
 import { getActiveDraws } from "@/lib/api/leaderboard";
 
-// Scoped to what Home Dashboard needs (qualified / not yet qualified). The full raffle
+// Scoped to what Home Dashboard needs (qualified / not yet qualified). The full draw
 // status badge set (Won, Not Won, Pending Draw, Not Yet Drawn, Qualified, Entered) belongs
-// to the Raffles Module task and will likely replace/extend this when that's built.
+// to the Draws Module task and will likely replace/extend this when that's built.
 function QualificationBadge({ hasTickets }: { hasTickets: boolean }) {
   return (
     <span
@@ -18,7 +18,7 @@ function QualificationBadge({ hasTickets }: { hasTickets: boolean }) {
   );
 }
 
-function RaffleSkeleton() {
+function DrawSkeleton() {
   return (
     <div className="bg-card border border-border rounded-2xl p-4 flex items-center gap-4 animate-pulse">
       <div className="h-11 w-11 rounded-xl bg-muted/50" />
@@ -42,9 +42,9 @@ export function ActiveRaffles() {
   if (isLoading) {
     return (
       <div className="space-y-3">
-        <RaffleSkeleton />
-        <RaffleSkeleton />
-        <RaffleSkeleton />
+        <DrawSkeleton />
+        <DrawSkeleton />
+        <DrawSkeleton />
       </div>
     );
   }
@@ -52,7 +52,7 @@ export function ActiveRaffles() {
   if (activeRaffles.length === 0) {
     return (
       <div className="bg-card border border-border rounded-2xl p-6 text-center text-sm text-muted-foreground">
-        No active raffles right now — check back soon.
+        No active draws right now — check back soon.
       </div>
     );
   }

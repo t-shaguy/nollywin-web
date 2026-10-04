@@ -1,14 +1,31 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-// VERIFIED: Backend returns { referralCode, referralLink } and { totalReferred, verifiedReferred }
+// VERIFIED: Backend returns reward fields in stats endpoint
 interface ReferralState {
   referralCode: string | null;
   referralLink: string | null;
   totalReferred: number;
   verifiedReferred: number;
+  rewardedReferrals: number;
+  tokensEarned: number;
+  rewardTokensPerReferral: number;
+  maxRewardsPerReferrer: number;
+  rewardsActive: boolean;
   isLoading: boolean;
-  setReferral: (code: string, link: string, totalReferred: number, verifiedReferred: number) => void;
+  setReferral: (
+    code: string, 
+    link: string, 
+    stats: {
+      totalReferred: number;
+      verifiedReferred: number;
+      rewardedReferrals: number;
+      tokensEarned: number;
+      rewardTokensPerReferral: number;
+      maxRewardsPerReferrer: number;
+      rewardsActive: boolean;
+    }
+  ) => void;
   setLoading: (loading: boolean) => void;
   // Legacy getter for backward compatibility during migration
   get code(): string | null;
@@ -21,6 +38,11 @@ export const useReferralStore = create<ReferralState>()(
       referralLink: null,
       totalReferred: 0,
       verifiedReferred: 0,
+      rewardedReferrals: 0,
+      tokensEarned: 0,
+      rewardTokensPerReferral: 0,
+      maxRewardsPerReferrer: 0,
+      rewardsActive: false,
       isLoading: false,
       
       // Legacy getter for backward compatibility
@@ -28,12 +50,17 @@ export const useReferralStore = create<ReferralState>()(
         return get().referralCode;
       },
       
-      setReferral: (code, link, totalReferred, verifiedReferred) => 
+      setReferral: (code, link, stats) => 
         set({ 
           referralCode: code, 
           referralLink: link, 
-          totalReferred, 
-          verifiedReferred, 
+          totalReferred: stats.totalReferred,
+          verifiedReferred: stats.verifiedReferred,
+          rewardedReferrals: stats.rewardedReferrals,
+          tokensEarned: stats.tokensEarned,
+          rewardTokensPerReferral: stats.rewardTokensPerReferral,
+          maxRewardsPerReferrer: stats.maxRewardsPerReferrer,
+          rewardsActive: stats.rewardsActive,
           isLoading: false 
         }),
       setLoading: (loading) => set({ isLoading: loading }),
@@ -47,7 +74,7 @@ export const useReferralStore = create<ReferralState>()(
  * Call this when the referral page is loaded or when data needs to be refreshed
  * 
  * VERIFIED: GET /api/v1/referrals/link returns { referralCode, referralLink }
- * VERIFIED: GET /api/v1/referrals/stats returns { totalReferred, verifiedReferred }
+ * VERIFIED: GET /api/v1/referrals/stats returns full stats including reward fields
  */
 export async function fetchReferralData() {
   try {
@@ -63,8 +90,15 @@ export async function fetchReferralData() {
     useReferralStore.getState().setReferral(
       linkData.referralCode,
       linkData.referralLink,
-      statsData.totalReferred,
-      statsData.verifiedReferred
+      {
+        totalReferred: statsData.totalReferred,
+        verifiedReferred: statsData.verifiedReferred,
+        rewardedReferrals: statsData.rewardedReferrals,
+        tokensEarned: statsData.tokensEarned,
+        rewardTokensPerReferral: statsData.rewardTokensPerReferral,
+        maxRewardsPerReferrer: statsData.maxRewardsPerReferrer,
+        rewardsActive: statsData.rewardsActive,
+      }
     );
     
     return { link: linkData, stats: statsData };

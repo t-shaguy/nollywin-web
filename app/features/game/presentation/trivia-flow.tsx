@@ -86,6 +86,17 @@ export function TriviaFlow() {
 
   const startGame = async () => {
     setError(null);
+    
+    // OPTIMISTIC UPDATE: Deduct token immediately for instant UI feedback
+    const { deductTokens } = useWalletStore.getState();
+    const deducted = deductTokens(1);
+    
+    if (!deducted) {
+      setError("Insufficient tokens");
+      setTimeout(() => router.push("/store"), 2000);
+      return;
+    }
+    
     try {
       // Start a new attempt - this debits 1 token on the backend
       // Returns first question directly (not wrapped)
@@ -101,17 +112,20 @@ export function TriviaFlow() {
       setQuestionScores([]);
       setStep("playing");
       
-      // Refresh wallet balance after token deduction - AWAIT to ensure sync
+      // Refresh wallet balance from API to confirm real balance
       try {
         await fetchWalletBalance();
         queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       } catch (err) {
         console.error("Failed to refresh wallet balance after game start:", err);
-        // Continue anyway - game has already started and token was debited
+        // Optimistic update already applied, continue with game
       }
     } catch (err) {
       const apiError = err as ApiError;
       setError(apiError.message || "Failed to start game");
+      
+      // ROLLBACK: Game start failed, add the token back
+      useWalletStore.getState().addTokens(1);
       
       // If insufficient tokens, redirect to store
       if (apiError.status === 400 || apiError.message?.toLowerCase().includes("insufficient")) {
@@ -143,13 +157,17 @@ export function TriviaFlow() {
       
       // If game is over or no next question, show results
       if (response.gameOver || !response.nextQuestion) {
-        // Refresh wallet balance and invalidate dashboard query
-        fetchWalletBalance().catch(console.error);
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-        
         // Log summary if present
         if (response.summary) {
           console.log("Game summary:", response.summary);
+        }
+        
+        // Refresh wallet balance - AWAIT to ensure it completes before showing results
+        try {
+          await fetchWalletBalance();
+          queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        } catch (err) {
+          console.error("[TRIVIA] Failed to refresh wallet balance after game end:", err);
         }
         
         setTimeout(() => {
@@ -191,13 +209,17 @@ export function TriviaFlow() {
       
       // If game is over or no next question, show results
       if (response.gameOver || !response.nextQuestion) {
-        // Refresh wallet balance and invalidate dashboard query
-        fetchWalletBalance().catch(console.error);
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-        
         // Log summary if present
         if (response.summary) {
           console.log("Game summary:", response.summary);
+        }
+        
+        // Refresh wallet balance - AWAIT to ensure it completes before showing results
+        try {
+          await fetchWalletBalance();
+          queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        } catch (err) {
+          console.error("[TRIVIA] Failed to refresh wallet balance after timeout:", err);
         }
         
         setTimeout(() => {

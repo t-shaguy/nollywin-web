@@ -278,8 +278,17 @@ export interface PlayerDashboard {
     topPercent: number | null;
     periodEndsAt: string;
   } | null;
-  subscription: Record<string, unknown> | null;
-  freeAttemptsLeft: number | null;
+  hasActiveSubscription: boolean; // Use this instead of null-checking subscription object
+  subscriptionPaymentPending: boolean; // True for 30min after checkout starts, before confirmation
+  subscription: {
+    packageName: string;
+    expiresAt: string; // ISO date
+    attemptsPeriod: "DAY" | "MONTH"; // Admin-configurable period
+    attemptsResetAt: string | null; // Next reset time (only when attemptsPeriod is "DAY", null for "MONTH")
+    attemptsIncluded: number | null; // null for pure time-based packages with no free attempts
+    attemptsUsed: number | null;
+    attemptsRemaining: number | null;
+  } | null;
   activeRaffles: { id: string; prizeName: string; ticketCostTokens: number; entered: boolean; myTickets: number }[];
   unreadNotifications: number;
 }

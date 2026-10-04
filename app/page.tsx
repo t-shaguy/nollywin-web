@@ -19,7 +19,7 @@ export default function Home() {
         </h1>
         <p className="text-muted-foreground text-lg max-w-2xl mt-6">
           Join thousands of players in the premium Nollywood trivia app. Answer fast,
-          climb the leaderboards, enter exclusive raffles, and win BIG!!!
+          climb the leaderboards, enter exclusive draws, and win BIG!!!
         </p>
         <Button className="mt-10" onClick={() => router.push("/auth")}>
           Play Now →

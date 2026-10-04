@@ -12,8 +12,6 @@ const HEIGHT = 260;
 const PADDING_LEFT = 40;
 const PADDING_BOTTOM = 24;
 const PADDING_TOP = 10;
-const Y_MAX = 800;
-const Y_TICKS = [0, 200, 400, 600, 800];
 
 export function PerformanceChart({ data }: { data: DataPoint[] }) {
   const [view, setView] = useState<"line" | "bar">("line");
@@ -21,6 +19,13 @@ export function PerformanceChart({ data }: { data: DataPoint[] }) {
 
   // Check if all values are zero (no data yet)
   const hasData = data.some((d) => d.value > 0);
+
+  // Calculate dynamic Y-axis max based on actual data
+  const maxDataValue = Math.max(...data.map((d) => d.value), 0);
+  const Y_MAX = maxDataValue > 0 ? Math.ceil((maxDataValue * 1.2) / 100) * 100 : 800;
+  
+  // Generate 5 evenly-spaced Y-axis ticks
+  const Y_TICKS = Array.from({ length: 5 }, (_, i) => Math.round((Y_MAX / 4) * i));
 
   const plotWidth = WIDTH - PADDING_LEFT;
   const plotHeight = HEIGHT - PADDING_BOTTOM - PADDING_TOP;

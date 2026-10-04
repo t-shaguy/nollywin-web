@@ -7,7 +7,18 @@ import { ShareRow } from "../../features/refer-earn/presentation/share-row";
 import { ReferralStats } from "../../features/refer-earn/presentation/referral-stats";
 
 export default function ReferEarnPage() {
-  const { referralCode, referralLink, totalReferred, verifiedReferred, isLoading } = useReferralStore();
+  const { 
+    referralCode, 
+    referralLink, 
+    totalReferred, 
+    verifiedReferred,
+    rewardedReferrals,
+    tokensEarned,
+    rewardTokensPerReferral,
+    maxRewardsPerReferrer,
+    rewardsActive,
+    isLoading 
+  } = useReferralStore();
   const { tokenBalance } = useWalletStore();
   const [error, setError] = useState<string | null>(null);
 
@@ -46,7 +57,15 @@ export default function ReferEarnPage() {
           <>
             <InviteLinkCard code={referralCode} link={referralLink} />
             <ShareRow code={referralCode} link={referralLink} />
-            <ReferralStats totalReferred={totalReferred} verifiedReferred={verifiedReferred} />
+            <ReferralStats 
+              totalReferred={totalReferred} 
+              verifiedReferred={verifiedReferred}
+              rewardedReferrals={rewardedReferrals}
+              tokensEarned={tokensEarned}
+              rewardTokensPerReferral={rewardTokensPerReferral}
+              maxRewardsPerReferrer={maxRewardsPerReferrer}
+              rewardsActive={rewardsActive}
+            />
           </>
         )}
       </div>

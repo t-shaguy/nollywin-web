@@ -26,11 +26,7 @@ export function ActiveDrawCard({
         }}
       >
         <div className="min-w-0">
-          <span className="bg-primary text-white text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full inline-flex items-center gap-1.5">
-            <Ticket size={12} />
-            Active Draw
-          </span>
-          <h2 className="text-2xl font-extrabold mt-4 break-words">{draw.prizeName}</h2>
+          <h2 className="text-2xl font-extrabold break-words">{draw.prizeName}</h2>
           {/* No description field in verified backend response */}
           
           <div className="mt-4 space-y-2">

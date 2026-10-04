@@ -4,7 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { useNotificationPreferencesStore } from "@/store/notification-preferences-store";
 
 const PREFS = [
-  { key: "raffleDrawResults" as const, label: "Raffle draw results" },
+  { key: "raffleDrawResults" as const, label: "Draw results" },
   { key: "gameSessionResults" as const, label: "Game session results" },
   { key: "leaderboardChanges" as const, label: "Leaderboard changes" },
   { key: "subscriptionReminders" as const, label: "Subscription reminders" },

@@ -234,7 +234,10 @@ export default function ProfilePage() {
             <p className="text-xs text-muted-foreground mt-1">Games</p>
           </div>
           <div className="bg-card border border-border rounded-lg p-4 text-center">
-            <p className="text-3xl font-bold" style={{ color: "#FFB800" }}>{bestScore}</p>
+            <div className="flex items-center justify-center gap-1.5">
+              <Star size={20} className="text-amber-500 fill-amber-500" />
+              <p className="text-3xl font-bold" style={{ color: "#FFB800" }}>{bestScore}</p>
+            </div>
             <p className="text-xs text-muted-foreground mt-1">Best Score</p>
           </div>
         </div>

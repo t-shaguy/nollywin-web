@@ -271,13 +271,12 @@ export async function apiClient<T = any>(
       });
     }
 
-    // Handle network errors
+    // Handle network errors (transient - don't spam console)
     if (error instanceof TypeError && error.message === "Failed to fetch") {
-      console.error("[apiClient] Raw fetch failure for", endpoint, error);
       throw new ApiError({
         status: 0,
         error: "Network Error",
-        message: "Network error - please check your connection",
+        message: "Cannot reach server - please check your connection or try again",
       });
     }
 
@@ -388,13 +387,12 @@ export async function apiClientBinary(endpoint: string, isRetry: boolean = false
       });
     }
 
-    // Handle network errors
+    // Handle network errors (transient - don't spam console)
     if (error instanceof TypeError && error.message === "Failed to fetch") {
-      console.error("[apiClient] Raw fetch failure for", endpoint, error);
       throw new ApiError({
         status: 0,
         error: "Network Error",
-        message: "Network error - please check your connection",
+        message: "Cannot reach server - please check your connection or try again",
       });
     }
 

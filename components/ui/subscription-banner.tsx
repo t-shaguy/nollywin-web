@@ -1,8 +1,30 @@
 import Link from "next/link";
-import { Star } from "lucide-react";
+import { Star, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function SubscriptionRequiredBanner({ showCta = false }: { showCta?: boolean }) {
+export function SubscriptionRequiredBanner({ 
+  showCta = false,
+  paymentPending = false 
+}: { 
+  showCta?: boolean;
+  paymentPending?: boolean;
+}) {
+  if (paymentPending) {
+    return (
+      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-5 flex items-start gap-4">
+        <div className="h-11 w-11 rounded-full bg-yellow-500/15 flex items-center justify-center shrink-0">
+          <Clock size={20} className="text-yellow-600" />
+        </div>
+        <div className="flex-1">
+          <p className="font-bold text-yellow-700">Payment Pending</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Your subscription payment is being processed. This usually takes a few minutes. Refresh to check status.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-destructive/10 border border-destructive/30 rounded-2xl p-5 flex items-start gap-4">
       <div className="h-11 w-11 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">

@@ -3,6 +3,7 @@ import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { GoogleAuthProvider } from "@/components/providers/google-auth-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { ToastProvider } from "@/components/ui/toast";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -25,7 +26,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`dark ${inter.variable} ${geistMono.variable}`}>
       <body>
         <QueryProvider>
-          <GoogleAuthProvider>{children}</GoogleAuthProvider>
+          <ToastProvider>
+            <GoogleAuthProvider>{children}</GoogleAuthProvider>
+          </ToastProvider>
         </QueryProvider>
       </body>
     </html>

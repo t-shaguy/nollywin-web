@@ -1,22 +1,34 @@
 "use client";
+import { useEffect } from "react";
 import { ActiveDrawCard } from "../../features/raffles/presentation/active-draw-card";
-import { useRaffleStore } from "@/store/raffle-store";
+import { useRaffleStore, fetchActiveDraws } from "@/store/raffle-store";
 import { useWalletStore } from "@/store/wallet-store";
 
 export default function RafflesPage() {
-  const { raffles } = useRaffleStore();
+  const { raffles, isLoading } = useRaffleStore();
   const tokenBalance = useWalletStore((s) => s.tokenBalance);
+
+  // Fetch active draws on page load
+  useEffect(() => {
+    fetchActiveDraws().catch((err) => {
+      console.error("Failed to fetch active draws:", err);
+    });
+  }, []);
 
   const activeRaffles = raffles.filter((r) => r.status === "ACTIVE");
 
   return (
     <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Raffles & Rewards</h1>
-          <p className="text-muted-foreground text-sm mt-1">Exchange your points for raffle tickets to win big.</p>
+          <h1 className="text-2xl font-bold">Draws & Rewards</h1>
+          <p className="text-muted-foreground text-sm mt-1">Exchange your tokens for draw tickets to win big prizes.</p>
         </div>
 
-        {activeRaffles.length > 0 ? (
+        {isLoading ? (
+          <div className="bg-card border border-border rounded-2xl p-10 text-center text-sm text-muted-foreground">
+            Loading draws...
+          </div>
+        ) : activeRaffles.length > 0 ? (
           <div className="space-y-6">
             {activeRaffles.map((raffle) => (
               <ActiveDrawCard
@@ -28,7 +40,7 @@ export default function RafflesPage() {
           </div>
         ) : (
           <div className="bg-card border border-border rounded-2xl p-10 text-center text-sm text-muted-foreground">
-            No active raffle draws right now — check back soon.
+            No active draws right now — check back soon.
           </div>
         )}
       </div>

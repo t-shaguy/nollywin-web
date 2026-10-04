@@ -16,10 +16,15 @@ export interface ReferralLinkResponse {
   referralLink: string;
 }
 
-// VERIFIED: GET /api/v1/referrals/stats returns this exact shape
+// VERIFIED: GET /api/v1/referrals/stats returns this exact shape (updated with reward fields)
 export interface ReferralStatsResponse {
-  totalReferred: number;
-  verifiedReferred: number;
+  totalReferred: number;        // Total users who signed up with your code
+  verifiedReferred: number;     // Total users who completed verification
+  rewardedReferrals: number;    // Total referrals that actually triggered a reward payout
+  tokensEarned: number;         // Total tokens actually paid out so far
+  rewardTokensPerReferral: number;  // Current reward amount per referral (when active)
+  maxRewardsPerReferrer: number;    // Max rewards cap (0 = uncapped)
+  rewardsActive: boolean;           // Whether reward program is currently active
 }
 
 // ============================================================================
@@ -42,7 +47,8 @@ export async function getReferralLink(): Promise<ReferralLinkResponse> {
  * Get user's referral stats
  * GET /api/v1/referrals/stats
  * 
- * VERIFIED: Returns { totalReferred, verifiedReferred }
+ * VERIFIED: Returns { totalReferred, verifiedReferred, rewardedReferrals, tokensEarned, 
+ *                     rewardTokensPerReferral, maxRewardsPerReferrer, rewardsActive }
  */
 export async function getReferralStats(): Promise<ReferralStatsResponse> {
   return apiClient<ReferralStatsResponse>("/api/v1/referrals/stats", {

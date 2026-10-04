@@ -28,6 +28,9 @@ export interface InitiatePaymentResponse {
 
 /**
  * VERIFIED: Real API response from GET /api/v1/payments/verify/{reference}
+ * Backend returns uppercase status values
+ * 
+ * Example response:
  * {
  *   "reference": "nw_RXrSEXYJ01VcTf5wEDpKy64C",
  *   "status": "ABANDONED",
@@ -37,7 +40,7 @@ export interface InitiatePaymentResponse {
  */
 export interface VerifyPaymentResponse {
   reference: string;
-  status: string; // Can be "success", "pending", "ABANDONED", or other values
+  status: "SUCCESS" | "PENDING" | "ABANDONED" | "FAILED" | string; // Backend returns UPPERCASE
   amountKobo: number; // Amount in kobo (divide by 100 for Naira)
   currency: string; // e.g., "NGN"
 }

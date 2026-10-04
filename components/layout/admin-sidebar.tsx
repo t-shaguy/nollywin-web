@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Monitor, BarChart3, Upload, CreditCard, Users, FileBarChart2, Trophy, ShieldCheck, Settings, Coins, Bell, FileText, X } from "lucide-react";
+import { LogOut, Monitor, BarChart3, Upload, CreditCard, Users, FileBarChart2, Trophy, ShieldCheck, Settings, Coins, Bell, FileText, X, RefreshCw } from "lucide-react";
 import { useAdminAuthStore } from "@/store/admin-auth-store";
 
 const NAV_ITEMS = [
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { icon: Users, label: "Users", href: "/admin/users" },
   { icon: FileBarChart2, label: "Reports", href: "/admin/reports" },
   { icon: Trophy, label: "Rewards", href: "/admin/rewards" },
+  { icon: RefreshCw, label: "Client Sync", href: "/admin/client-sync" },
   { icon: ShieldCheck, label: "Verifications", href: "/admin/change-requests" },
   { icon: Bell, label: "Notifications", href: "/admin/notifications" },
   { icon: CreditCard, label: "Payments", href: "/admin/payment-settings" },
