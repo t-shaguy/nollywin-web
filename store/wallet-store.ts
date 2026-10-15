@@ -73,7 +73,7 @@ export async function fetchWalletBalance() {
     return balance;
   } catch (error) {
     useWalletStore.getState().setLoading(false);
-    console.error("[WALLET FETCH] Failed to fetch wallet balance:", error);
+    console.warn("[WALLET FETCH] Failed to fetch wallet balance:", error);
     throw error;
   }
 }

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { Plus, CheckCircle, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -70,6 +70,8 @@ export default function TriviaSetupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [uploadingCSV, setUploadingCSV] = useState(false);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { register: registerCat, handleSubmit: handleSubmitCat, reset: resetCat, formState: { errors: errorsCat } } = useForm<CategoryFormData>();
   const { register: registerStage, handleSubmit: handleSubmitStage, reset: resetStage, formState: { errors: errorsStage } } = useForm<StageFormData>();
@@ -407,19 +409,28 @@ export default function TriviaSetupPage() {
             <Download size={14} />
             CSV Template
           </Button>
-          <label className="cursor-pointer flex-1 sm:flex-initial">
-            <Button variant="outline" size="sm" disabled={uploadingCSV} className="gap-1.5 text-xs h-8 px-2.5 w-full">
-              <Plus size={14} />
-              {uploadingCSV ? "Uploading..." : "Bulk Upload CSV"}
-            </Button>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleBulkUpload}
-              className="hidden"
-              disabled={uploadingCSV}
-            />
-          </label>
+          <Button 
+            type="button"
+            variant="outline" 
+            size="sm" 
+            disabled={uploadingCSV}
+            onClick={() => {
+              console.log("Bulk upload button clicked");
+              fileInputRef.current?.click();
+            }}
+            className="gap-1.5 text-xs h-8 px-2.5 flex-1 sm:flex-initial"
+          >
+            <Plus size={14} />
+            {uploadingCSV ? "Uploading..." : "Bulk Upload CSV"}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleBulkUpload}
+            className="hidden"
+            disabled={uploadingCSV}
+          />
           <Button 
             variant="outline" 
             size="sm"

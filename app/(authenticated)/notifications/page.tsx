@@ -25,6 +25,9 @@ const NOTIFICATION_ICONS: Record<string, any> = {
   // Real confirmed types from backend
   WALLET_TOPUP: Coins,
   SUBSCRIPTION_ACTIVATED: CreditCard,
+  RAFFLE_WON: Trophy,
+  SUBSCRIPTION_PAYMENT_FAILED: CreditCard,
+  BROADCAST: Bell,
 };
 
 const NOTIFICATION_ICON_COLORS: Record<string, string> = {
@@ -38,6 +41,9 @@ const NOTIFICATION_ICON_COLORS: Record<string, string> = {
   game_session_result: "bg-primary/20",
   raffle_draw_result: "bg-orange-500/20",
   leaderboard_update: "bg-blue-500/20",
+  raffle_won: "bg-amber-500/20",
+  subscription_payment_failed: "bg-red-500/20",
+  broadcast: "bg-blue-500/20",
 };
 
 const NOTIFICATION_ICON_TEXT_COLORS: Record<string, string> = {
@@ -51,6 +57,9 @@ const NOTIFICATION_ICON_TEXT_COLORS: Record<string, string> = {
   game_session_result: "text-primary",
   raffle_draw_result: "text-orange-500",
   leaderboard_update: "text-blue-500",
+  raffle_won: "text-amber-500",
+  subscription_payment_failed: "text-red-500",
+  broadcast: "text-blue-500",
 };
 
 // Helper to get icon with fallback
@@ -121,7 +130,7 @@ export default function NotificationsPage() {
       
       setNotifications(data);
     } catch (error) {
-      console.error('Failed to load notifications:', error);
+      console.warn('Failed to load notifications:', error);
     } finally {
       setLoading(false);
     }
@@ -259,7 +268,13 @@ export default function NotificationsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-sm mb-0.5">{notification.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{notification.body}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {notification.body
+                        .replace(/We'll be in touch about your prize\.?/gi, '')
+                        .replace(/We will be in touch about your prize\.?/gi, '')
+                        .trim()
+                      }
+                    </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-xs text-muted-foreground whitespace-nowrap">

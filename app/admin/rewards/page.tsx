@@ -50,6 +50,8 @@ export default function AdminRewardsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [closingDrawId, setClosingDrawId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showCloseDrawModal, setShowCloseDrawModal] = useState(false);
+  const [drawToClose, setDrawToClose] = useState<string | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateDrawForm>({
     defaultValues: {
@@ -122,10 +124,6 @@ export default function AdminRewardsPage() {
   };
 
   const handleCloseDraw = async (drawId: string) => {
-    if (!confirm("Are you sure you want to close this draw and select winners?")) {
-      return;
-    }
-
     try {
       setClosingDrawId(drawId);
       setError(null);
@@ -135,12 +133,19 @@ export default function AdminRewardsPage() {
       setSuccessMessage(response.message || "Draw close submitted for approval");
       // Do NOT assume the draw is actually closed yet - maker-checker pattern.
       await loadDraws();
+      setShowCloseDrawModal(false);
+      setDrawToClose(null);
     } catch (err) {
       console.error("Error closing draw:", err);
       setError(err instanceof Error ? err.message : "Failed to close draw");
     } finally {
       setClosingDrawId(null);
     }
+  };
+
+  const handleCloseDrawClick = (drawId: string) => {
+    setDrawToClose(drawId);
+    setShowCloseDrawModal(true);
   };
 
   const handleViewDraw = async (drawId: string) => {
@@ -496,7 +501,7 @@ export default function AdminRewardsPage() {
                 <AdminActionButton
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleCloseDraw(draw.id);
+                    handleCloseDrawClick(draw.id);
                   }}
                   disabled={closingDrawId === draw.id}
                   variant="danger"
@@ -588,6 +593,43 @@ export default function AdminRewardsPage() {
             {submitting ? "Submitting..." : "Submit for Approval"}
           </Button>
         </form>
+      </Modal>
+
+      {/* Close Draw Confirmation Modal */}
+      <Modal
+        open={showCloseDrawModal}
+        onClose={() => {
+          setShowCloseDrawModal(false);
+          setDrawToClose(null);
+        }}
+        title="Close Draw & Select Winners"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to close this draw and select winners? This action will be submitted for approval.
+          </p>
+          
+          <div className="flex gap-3 mt-6">
+            <Button
+              onClick={() => {
+                setShowCloseDrawModal(false);
+                setDrawToClose(null);
+              }}
+              variant="outline"
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => drawToClose && handleCloseDraw(drawToClose)}
+              variant="destructive"
+              className="flex-1"
+              disabled={closingDrawId !== null}
+            >
+              {closingDrawId ? "Closing..." : "Yes, Close Draw"}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

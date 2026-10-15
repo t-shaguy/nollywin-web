@@ -26,7 +26,7 @@ export default function ReferEarnPage() {
     // Fetch referral data on mount if not already loaded
     if (!referralCode) {
       fetchReferralData().catch((err) => {
-        console.error("Failed to fetch referral data:", err);
+        console.warn("Failed to fetch referral data:", err);
         setError("Failed to load referral data. Please try again.");
       });
     }

@@ -39,21 +39,21 @@ export default function AdminOverviewPage() {
         if (overviewResult.status === "fulfilled") {
           setOverview(overviewResult.value);
         } else {
-          console.error("Failed to load overview:", overviewResult.reason);
+          console.warn("Failed to load overview:", overviewResult.reason);
         }
         
         // Process trend data
         if (trendResult.status === "fulfilled") {
           setRevenueTrend(trendResult.value);
         } else {
-          console.error("Failed to load revenue trend:", trendResult.reason);
+          console.warn("Failed to load revenue trend:", trendResult.reason);
         }
         
         // Process activity data
         if (activityResult.status === "fulfilled") {
           setRecentActivity(activityResult.value);
         } else {
-          console.error("Failed to load recent activity:", activityResult.reason);
+          console.warn("Failed to load recent activity:", overviewResult.reason);
         }
         
         // Only show error if ALL requests failed
@@ -71,15 +71,52 @@ export default function AdminOverviewPage() {
     loadDashboard();
   }, []);
 
-  // Format naira (already in Naira from backend)
+  // Format naira with intelligent scaling for large numbers
   const formatNaira = (naira: number) => {
     if (naira >= 1_000_000) {
       return `₦${(naira / 1_000_000).toFixed(1)}M`;
     }
     if (naira >= 1_000) {
-      return `₦${(naira / 1_000).toFixed(1)}K`;
+      return `₦${Math.round(naira / 1_000)}k`;
     }
     return `₦${naira.toLocaleString()}`;
+  };
+
+  // Format naira for chart axis (shorter format)
+  const formatNairaChart = (naira: number) => {
+    if (naira >= 1_000_000) {
+      return `₦${(naira / 1_000_000).toFixed(1)}M`;
+    }
+    if (naira >= 1_000) {
+      return `₦${Math.round(naira / 1_000)}k`;
+    }
+    return `₦${naira}`;
+  };
+
+  // Calculate Y-axis max with 30% headroom
+  const calculateYMax = (data: RevenueTrendEntry[]) => {
+    if (data.length === 0) return 1000;
+    
+    const maxRevenue = Math.max(...data.map(d => d.revenue));
+    if (maxRevenue === 0) return 1000;
+    
+    // Add 30% headroom
+    const withHeadroom = maxRevenue * 1.3;
+    
+    // Round up to clean number based on magnitude
+    if (withHeadroom < 100) {
+      return Math.ceil(withHeadroom / 10) * 10; // Round to nearest 10
+    } else if (withHeadroom < 1_000) {
+      return Math.ceil(withHeadroom / 100) * 100; // Round to nearest 100
+    } else if (withHeadroom < 10_000) {
+      return Math.ceil(withHeadroom / 1_000) * 1_000; // Round to nearest 1,000
+    } else if (withHeadroom < 100_000) {
+      return Math.ceil(withHeadroom / 10_000) * 10_000; // Round to nearest 10,000
+    } else if (withHeadroom < 1_000_000) {
+      return Math.ceil(withHeadroom / 100_000) * 100_000; // Round to nearest 100,000
+    } else {
+      return Math.ceil(withHeadroom / 1_000_000) * 1_000_000; // Round to nearest 1,000,000
+    }
   };
 
   // Format date for chart (YYYY-MM-DD -> short day name)
@@ -188,8 +225,8 @@ export default function AdminOverviewPage() {
                   stroke="rgba(255,255,255,0.5)"
                   fontSize={11}
                   tick={{ fill: 'rgba(255,255,255,0.7)' }}
-                  tickFormatter={(value) => `₦${value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}`}
-                  domain={[0, 'auto']}
+                  tickFormatter={formatNairaChart}
+                  domain={[0, calculateYMax(revenueTrend)]}
                   allowDataOverflow={false}
                 />
                 <Tooltip
@@ -200,7 +237,7 @@ export default function AdminOverviewPage() {
                     color: "#fff",
                     fontSize: "12px",
                   }}
-                  formatter={(value) => [`₦${Number(value).toLocaleString()}`, "Revenue"]}
+                  formatter={(value) => [formatNaira(Number(value)), "Revenue"]}
                   labelFormatter={(label, payload) => payload?.[0]?.payload?.fullDate || label}
                 />
                 <Bar dataKey="revenue" fill="#ef4444" radius={[6, 6, 0, 0]} />

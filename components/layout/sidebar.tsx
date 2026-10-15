@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Monitor } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
 import { useSubscriptionStore } from "@/store/subscription-store";
 import { NAV_ITEMS, resolveNavHref } from "./nav-items";
@@ -20,10 +21,8 @@ export function Sidebar() {
   return (
     <aside className="hidden md:flex md:flex-col w-72 shrink-0 h-screen min-h-0 border-r border-border px-6 py-8">
       <Link href="/home" className="flex items-center gap-3 px-2 mb-16 shrink-0">
-        <div className="bg-brand-gradient h-10 w-10 rounded-lg flex items-center justify-center">
-          <Monitor size={20} className="text-white" strokeWidth={2.5} />
-        </div>
-        <span className="text-brand-gradient font-bold text-2xl">NollyWin</span>
+        <Image src="/logo-icon.png" alt="NollyWin" width={48} height={48} className="h-12 w-12 object-contain" />
+        <span className="text-brand-gradient font-bold text-3xl">NollyWin</span>
       </Link>
 
       <nav className="flex-1 min-h-0 overflow-y-auto space-y-2">

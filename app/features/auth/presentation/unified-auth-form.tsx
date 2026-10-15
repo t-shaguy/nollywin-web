@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
@@ -338,14 +339,8 @@ export function UnifiedAuthForm() {
 
         {/* Logo + Brand */}
         <div className="flex items-center justify-center gap-2.5 py-2">
-          <div className="bg-brand-gradient h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-white">
-              <rect x="3" y="3" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="2"/>
-              <path d="M8 21h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M12 17v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <h1 className="text-xl font-bold text-brand-gradient">NollyWin</h1>
+          <Image src="/logo-icon.png" alt="NollyWin" width={40} height={40} className="h-10 w-10 object-contain" />
+          <h1 className="text-2xl font-bold text-brand-gradient">NollyWin</h1>
         </div>
 
         <div className="text-center space-y-2 pt-2">
@@ -400,14 +395,8 @@ export function UnifiedAuthForm() {
 
       {/* Logo + Brand */}
       <div className="flex items-center justify-center gap-2.5 py-1">
-        <div className="bg-brand-gradient h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-white">
-            <rect x="3" y="3" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="2"/>
-            <path d="M8 21h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            <path d="M12 17v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        </div>
-        <h1 className="text-xl font-bold text-brand-gradient">NollyWin</h1>
+        <Image src="/logo-icon.png" alt="NollyWin" width={40} height={40} className="h-10 w-10 object-contain" />
+        <h1 className="text-2xl font-bold text-brand-gradient">NollyWin</h1>
       </div>
 
       {/* Mode Toggle (Login / Sign Up) - Segmented control like a switch */}

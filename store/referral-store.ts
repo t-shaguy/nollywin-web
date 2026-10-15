@@ -104,7 +104,7 @@ export async function fetchReferralData() {
     return { link: linkData, stats: statsData };
   } catch (error) {
     useReferralStore.getState().setLoading(false);
-    console.error("Failed to fetch referral data:", error);
+    console.warn("Failed to fetch referral data:", error);
     throw error;
   }
 }

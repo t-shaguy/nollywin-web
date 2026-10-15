@@ -60,7 +60,7 @@ export function TriviaFlow() {
   useEffect(() => {
     getPlayerDashboard()
       .then((dashboard) => setTokenCostPerPlay(dashboard.tokenCostPerPlay))
-      .catch((err) => console.error("Failed to load dashboard:", err));
+      .catch((err) => console.warn("Failed to load dashboard:", err));
   }, []);
   
   // API-driven state

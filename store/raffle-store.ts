@@ -65,6 +65,7 @@ export async function fetchActiveDraws() {
     return draws;
   } catch (error) {
     useRaffleStore.getState().setLoading(false);
+    console.warn("Failed to fetch active draws:", error);
     throw error;
   }
 }

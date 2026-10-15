@@ -51,7 +51,9 @@ export default function UsersPage() {
       (user.phoneNumber && user.phoneNumber.includes(searchTerm)) ||
       user.authUserId.includes(searchTerm);
     
-    const matchesPlan = planFilter === "all" || user.plan === planFilter;
+    // Match against the same value displayed in the Plan column
+    const displayPlan = user.packageName || user.plan;
+    const matchesPlan = planFilter === "all" || displayPlan === planFilter;
     return matchesSearch && matchesPlan;
   });
 
@@ -124,9 +126,10 @@ export default function UsersPage() {
           className="px-3 sm:px-4 py-2 sm:py-3 rounded-xl border border-border bg-input text-foreground text-sm"
         >
           <option value="all">All Plans</option>
-          <option value="FREE">Free</option>
-          <option value="Pro">Pro</option>
-          <option value="Premium">Premium</option>
+          <option value="FREE">None</option>
+          <option value="Daily">Daily</option>
+          <option value="Weekly">Weekly</option>
+          <option value="Monthly">Monthly</option>
         </select>
       </div>
 
@@ -153,11 +156,11 @@ export default function UsersPage() {
                 </td>
                 <td className="px-4 sm:px-6 py-3 sm:py-4">
                   <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                    user.plan !== "FREE" 
+                    user.packageName
                       ? "bg-primary/10 border border-primary/30 text-primary" 
                       : "bg-secondary border border-border text-muted-foreground"
                   }`}>
-                    {user.packageName || user.plan}
+                    {user.packageName || "None"}
                   </span>
                 </td>
                 <td className="px-4 sm:px-6 py-3 sm:py-4 font-medium text-sm">{user.tokenBalance.toLocaleString()}</td>
@@ -171,7 +174,7 @@ export default function UsersPage() {
                         ? "bg-yellow-500"
                         : "bg-gray-500"
                     }`} />
-                    <span className="text-xs sm:text-sm">{user.subscriptionStatus || "Free"}</span>
+                    <span className="text-xs sm:text-sm">{user.subscriptionStatus || "Inactive"}</span>
                   </div>
                 </td>
                 <td className="px-4 sm:px-6 py-3 sm:py-4">

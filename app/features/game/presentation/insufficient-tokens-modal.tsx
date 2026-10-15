@@ -1,4 +1,6 @@
 "use client";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,12 +19,17 @@ export function InsufficientTokensModal({
   currentTokens,
 }: InsufficientTokensModalProps) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   const shortfall = requiredTokens - currentTokens;
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-card rounded-2xl p-6 w-full max-w-sm text-center">
@@ -61,4 +68,6 @@ export function InsufficientTokensModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

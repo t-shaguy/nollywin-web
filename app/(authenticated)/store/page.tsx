@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 import { useSubscriptionStore } from "@/store/subscription-store";
 import { getAvailablePackages, type SubscriptionPackage } from "@/lib/api/subscriptions";
-import { useTokenPackagesStore, type TokenPackage } from "@/store/token-packages-store";
+import { useTokenPackagesStore, fetchTokenPackages, type TokenPackage } from "@/store/token-packages-store";
 import { useWalletStore, fetchWalletBalance } from "@/store/wallet-store";
 import { Button } from "@/components/ui/button";
 
@@ -52,10 +52,15 @@ export default function StorePage() {
           setCurrentSubscription(subs[0].packageName);
         }
       } catch (err) {
-        console.error("Failed to load current subscription:", err);
+        console.warn("Failed to load current subscription:", err);
       }
     }
     loadCurrentSubscription();
+    
+    // Fetch token packages with exchange rate
+    fetchTokenPackages().catch((err) => {
+      console.warn("Failed to load token packages:", err);
+    });
   }, []);
 
   const activePackages = packages.filter((p) => p.active);
@@ -307,12 +312,7 @@ export default function StorePage() {
                   </span>
                 )}
                 <p className="text-sm text-muted-foreground mb-1">{pkg.name}</p>
-                {pkg.tokensEstimate && (
-                  <>
-                    <p className="text-2xl font-extrabold leading-none mb-1">{pkg.tokensEstimate}</p>
-                    <p className="text-xs text-muted-foreground mb-2">Approximate tokens</p>
-                  </>
-                )}
+                <p className="text-2xl font-extrabold leading-none mb-2">{pkg.tokens}</p>
                 <p className="font-bold text-sm" style={{ color: PINK }}>₦{pkg.price.toLocaleString()}</p>
               </button>
             ))}

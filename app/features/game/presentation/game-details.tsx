@@ -20,7 +20,7 @@ export function GameDetails({ currentTokens, tokenCostPerPlay, onStartGame, onBa
     // If it works with player tokens, great; if it 401s, we need a player-accessible version.
     getGameSettings()
       .then(setSettings)
-      .catch((err) => console.error("Failed to load game settings:", err));
+      .catch((err) => console.warn("Failed to load game settings:", err));
   }, []);
 
   const secondsPerQuestion = settings?.secondsPerQuestion ?? 10; // fallback while loading

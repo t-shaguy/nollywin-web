@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, CheckCircle2, AlertCircle, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWalletStore } from "@/store/wallet-store";
@@ -20,10 +21,15 @@ export function PurchaseTicketModal({ isOpen, onClose, raffle }: PurchaseTicketM
   const [step, setStep] = useState<Step>("confirm");
   const [errorMessage, setErrorMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [mounted, setMounted] = useState(false);
   
   const { tokenBalance } = useWalletStore(); // Get tokens from wallet
   const { user } = useAuthStore(); // Get totalPoints from user profile
   const { raffles } = useRaffleStore();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Get user ticket count from raffle data
   const userTickets = raffle.userTicketCount || 0;
@@ -60,9 +66,9 @@ export function PurchaseTicketModal({ isOpen, onClose, raffle }: PurchaseTicketM
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={handleClose} />
       <div className="relative bg-card rounded-2xl p-6 w-full max-w-md">
@@ -175,4 +181,6 @@ export function PurchaseTicketModal({ isOpen, onClose, raffle }: PurchaseTicketM
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

@@ -416,7 +416,17 @@ export default function ReportsPage() {
                         <td className="py-3 px-4">{entry.maxWinners || 0}</td>
                         <td className="py-3 px-4">{entry.scheduleLabel || "—"}</td>
                         <td className="py-3 px-4">
-                          <Badge className={entry.status === "ACTIVE" ? "bg-green-500/20 border-green-500/30 text-green-700" : ""}>
+                          <Badge className={
+                            entry.status === "ACTIVE" 
+                              ? "bg-green-500/20 border-green-500/30 text-green-700"
+                              : entry.status === "CLOSED"
+                              ? "bg-amber-500/20 border-amber-500/30 text-amber-700"
+                              : entry.status === "CANCELLED"
+                              ? "bg-red-500/20 border-red-500/30 text-red-700"
+                              : entry.status === "UPCOMING"
+                              ? "bg-blue-500/20 border-blue-500/30 text-blue-700"
+                              : ""
+                          }>
                             {entry.status || "—"}
                           </Badge>
                         </td>
@@ -510,7 +520,7 @@ export default function ReportsPage() {
                     <DollarSign size={24} className="text-green-500" />
                   </div>
                   <p className="text-sm text-muted-foreground">Total Income</p>
-                  <p className="text-2xl font-extrabold mt-1">₦{incomeData.totalIncome.toLocaleString()}</p>
+                  <p className="text-2xl font-extrabold mt-1">₦{incomeData?.totalIncome?.toLocaleString() ?? "0"}</p>
                 </div>
 
                 {/* Payment Count Card */}
@@ -519,7 +529,7 @@ export default function ReportsPage() {
                     <CreditCard size={24} className="text-blue-500" />
                   </div>
                   <p className="text-sm text-muted-foreground">Payment Count</p>
-                  <p className="text-2xl font-extrabold mt-1">{incomeData.paymentCount.toLocaleString()}</p>
+                  <p className="text-2xl font-extrabold mt-1">{incomeData?.paymentCount?.toLocaleString() ?? "0"}</p>
                 </div>
               </div>
 
@@ -528,100 +538,109 @@ export default function ReportsPage() {
                 <h3 className="font-semibold mb-4">Income by Source</h3>
                 <div className="space-y-6">
                   {/* WEB */}
-                  {incomeData.bySource.WEB && (
-                    <div className="border-b border-border pb-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                            <Users size={20} className="text-purple-500" />
-                          </div>
-                          <div>
-                            <p className="font-medium">WEB</p>
-                            <p className="text-xs text-muted-foreground">{incomeData.bySource.WEB.count} payments</p>
-                          </div>
-                        </div>
-                        <p className="font-bold text-lg">₦{incomeData.bySource.WEB.total.toLocaleString()}</p>
-                      </div>
-                      {/* By Origin breakdown */}
-                      {Object.keys(incomeData.bySource.WEB.byOrigin).length > 0 && (
-                        <div className="ml-12 space-y-2">
-                          {Object.entries(incomeData.bySource.WEB.byOrigin).map(([origin, data]) => (
-                            <div key={origin} className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">{origin}</span>
-                              <div className="flex items-center gap-3">
-                                <Badge className="bg-secondary text-muted-foreground text-xs">{data.count}</Badge>
-                                <span className="font-medium">₦{data.total.toLocaleString()}</span>
-                              </div>
+                  {(() => {
+                    const webSource = incomeData?.bySource?.find(s => s.key === "WEB");
+                    return webSource && (
+                      <div className="border-b border-border pb-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                              <Users size={20} className="text-purple-500" />
                             </div>
-                          ))}
+                            <div>
+                              <p className="font-medium">WEB</p>
+                              <p className="text-xs text-muted-foreground">{webSource?.count ?? 0} payments</p>
+                            </div>
+                          </div>
+                          <p className="font-bold text-lg">₦{webSource?.amount?.toLocaleString() ?? "0"}</p>
                         </div>
-                      )}
-                    </div>
-                  )}
+                        {/* By Origin breakdown */}
+                        {(webSource?.byOrigin?.length ?? 0) > 0 && (
+                          <div className="ml-12 space-y-2">
+                            {(webSource?.byOrigin ?? []).map((origin) => (
+                              <div key={origin.key} className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">{origin.key}</span>
+                                <div className="flex items-center gap-3">
+                                  <Badge className="bg-secondary text-muted-foreground text-xs">{origin.count}</Badge>
+                                  <span className="font-medium">₦{origin.amount.toLocaleString()}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* AIRTIME */}
-                  {incomeData.bySource.AIRTIME && (
-                    <div className="border-b border-border pb-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
-                            <Smartphone size={20} className="text-orange-500" />
-                          </div>
-                          <div>
-                            <p className="font-medium">AIRTIME</p>
-                            <p className="text-xs text-muted-foreground">{incomeData.bySource.AIRTIME.count} payments</p>
-                          </div>
-                        </div>
-                        <p className="font-bold text-lg">₦{incomeData.bySource.AIRTIME.total.toLocaleString()}</p>
-                      </div>
-                      {/* By Origin breakdown */}
-                      {Object.keys(incomeData.bySource.AIRTIME.byOrigin).length > 0 && (
-                        <div className="ml-12 space-y-2">
-                          {Object.entries(incomeData.bySource.AIRTIME.byOrigin).map(([origin, data]) => (
-                            <div key={origin} className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">{origin}</span>
-                              <div className="flex items-center gap-3">
-                                <Badge className="bg-secondary text-muted-foreground text-xs">{data.count}</Badge>
-                                <span className="font-medium">₦{data.total.toLocaleString()}</span>
-                              </div>
+                  {(() => {
+                    const airtimeSource = incomeData?.bySource?.find(s => s.key === "AIRTIME");
+                    return airtimeSource && (
+                      <div className="border-b border-border pb-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                              <Smartphone size={20} className="text-orange-500" />
                             </div>
-                          ))}
+                            <div>
+                              <p className="font-medium">AIRTIME</p>
+                              <p className="text-xs text-muted-foreground">{airtimeSource?.count ?? 0} payments</p>
+                            </div>
+                          </div>
+                          <p className="font-bold text-lg">₦{airtimeSource?.amount?.toLocaleString() ?? "0"}</p>
                         </div>
-                      )}
-                    </div>
-                  )}
+                        {/* By Origin breakdown */}
+                        {(airtimeSource?.byOrigin?.length ?? 0) > 0 && (
+                          <div className="ml-12 space-y-2">
+                            {(airtimeSource?.byOrigin ?? []).map((origin) => (
+                              <div key={origin.key} className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">{origin.key}</span>
+                                <div className="flex items-center gap-3">
+                                  <Badge className="bg-secondary text-muted-foreground text-xs">{origin.count}</Badge>
+                                  <span className="font-medium">₦{origin.amount.toLocaleString()}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* USSD */}
-                  {incomeData.bySource.USSD && (
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-lg bg-teal-500/20 flex items-center justify-center">
-                            <Smartphone size={20} className="text-teal-500" />
-                          </div>
-                          <div>
-                            <p className="font-medium">USSD</p>
-                            <p className="text-xs text-muted-foreground">{incomeData.bySource.USSD.count} payments</p>
-                          </div>
-                        </div>
-                        <p className="font-bold text-lg">₦{incomeData.bySource.USSD.total.toLocaleString()}</p>
-                      </div>
-                      {/* By Origin breakdown */}
-                      {Object.keys(incomeData.bySource.USSD.byOrigin).length > 0 && (
-                        <div className="ml-12 space-y-2">
-                          {Object.entries(incomeData.bySource.USSD.byOrigin).map(([origin, data]) => (
-                            <div key={origin} className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">{origin}</span>
-                              <div className="flex items-center gap-3">
-                                <Badge className="bg-secondary text-muted-foreground text-xs">{data.count}</Badge>
-                                <span className="font-medium">₦{data.total.toLocaleString()}</span>
-                              </div>
+                  {(() => {
+                    const ussdSource = incomeData?.bySource?.find(s => s.key === "USSD");
+                    return ussdSource && (
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-lg bg-teal-500/20 flex items-center justify-center">
+                              <Smartphone size={20} className="text-teal-500" />
                             </div>
-                          ))}
+                            <div>
+                              <p className="font-medium">USSD</p>
+                              <p className="text-xs text-muted-foreground">{ussdSource?.count ?? 0} payments</p>
+                            </div>
+                          </div>
+                          <p className="font-bold text-lg">₦{ussdSource?.amount?.toLocaleString() ?? "0"}</p>
                         </div>
-                      )}
-                    </div>
-                  )}
+                        {/* By Origin breakdown */}
+                        {(ussdSource?.byOrigin?.length ?? 0) > 0 && (
+                          <div className="ml-12 space-y-2">
+                            {(ussdSource?.byOrigin ?? []).map((origin) => (
+                              <div key={origin.key} className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">{origin.key}</span>
+                                <div className="flex items-center gap-3">
+                                  <Badge className="bg-secondary text-muted-foreground text-xs">{origin.count}</Badge>
+                                  <span className="font-medium">₦{origin.amount.toLocaleString()}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -635,10 +654,10 @@ export default function ReportsPage() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Combined Telco Revenue</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{incomeData.telcoTotal.count} payments</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{incomeData?.telcoTotal?.count ?? 0} payments</p>
                     </div>
                   </div>
-                  <p className="text-2xl font-extrabold">₦{incomeData.telcoTotal.total.toLocaleString()}</p>
+                  <p className="text-2xl font-extrabold">₦{incomeData?.telcoTotal?.amount?.toLocaleString() ?? "0"}</p>
                 </div>
               </div>
 
@@ -647,32 +666,42 @@ export default function ReportsPage() {
                 <h3 className="font-semibold mb-4">Income by Product</h3>
                 <div className="space-y-4">
                   {/* Subscriptions */}
-                  <div className="flex items-center justify-between py-3 border-b border-border">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                        <FileBarChart2 size={20} className="text-blue-500" />
+                  {(() => {
+                    const subscriptions = incomeData?.byProduct?.find(p => p.key === "SUBSCRIPTIONS");
+                    return subscriptions && (
+                      <div className="flex items-center justify-between py-3 border-b border-border">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                            <FileBarChart2 size={20} className="text-blue-500" />
+                          </div>
+                          <div>
+                            <p className="font-medium">Subscriptions</p>
+                            <p className="text-xs text-muted-foreground">{subscriptions?.count ?? 0} payments</p>
+                          </div>
+                        </div>
+                        <p className="font-bold text-lg">₦{subscriptions?.amount?.toLocaleString() ?? "0"}</p>
                       </div>
-                      <div>
-                        <p className="font-medium">Subscriptions</p>
-                        <p className="text-xs text-muted-foreground">{incomeData.byProduct.subscriptions.count} payments</p>
-                      </div>
-                    </div>
-                    <p className="font-bold text-lg">₦{incomeData.byProduct.subscriptions.total.toLocaleString()}</p>
-                  </div>
+                    );
+                  })()}
 
                   {/* Token Top-ups */}
-                  <div className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
-                        <CreditCard size={20} className="text-yellow-500" />
+                  {(() => {
+                    const tokenTopups = incomeData?.byProduct?.find(p => p.key === "TOKEN_TOPUPS");
+                    return tokenTopups && (
+                      <div className="flex items-center justify-between py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+                            <CreditCard size={20} className="text-yellow-500" />
+                          </div>
+                          <div>
+                            <p className="font-medium">Token Top-ups</p>
+                            <p className="text-xs text-muted-foreground">{tokenTopups?.count ?? 0} payments</p>
+                          </div>
+                        </div>
+                        <p className="font-bold text-lg">₦{tokenTopups?.amount?.toLocaleString() ?? "0"}</p>
                       </div>
-                      <div>
-                        <p className="font-medium">Token Top-ups</p>
-                        <p className="text-xs text-muted-foreground">{incomeData.byProduct.tokenTopups.count} payments</p>
-                      </div>
-                    </div>
-                    <p className="font-bold text-lg">₦{incomeData.byProduct.tokenTopups.total.toLocaleString()}</p>
-                  </div>
+                    );
+                  })()}
                 </div>
               </div>
             </>

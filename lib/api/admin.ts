@@ -256,37 +256,32 @@ export interface SubscriptionReportSummary {
   byStatus: Array<Record<string, unknown>>;
 }
 
-// Income report response shape
+// Income report response shape (VERIFIED against live backend)
+export interface IncomeReportEntry {
+  key: string;
+  amount: number; // in Naira
+  count: number;
+  byOrigin?: Array<{
+    key: string;
+    amount: number;
+    count: number;
+  }>;
+}
+
 export interface IncomeReportResponse {
   from: string;
   to: string;
+  currency: string; // "NGN"
   totalIncome: number; // in Naira
   paymentCount: number;
-  bySource: {
-    WEB?: {
-      count: number;
-      total: number;
-      byOrigin: Record<string, { count: number; total: number }>;
-    };
-    AIRTIME?: {
-      count: number;
-      total: number;
-      byOrigin: Record<string, { count: number; total: number }>;
-    };
-    USSD?: {
-      count: number;
-      total: number;
-      byOrigin: Record<string, { count: number; total: number }>;
-    };
-  };
-  telcoTotal: {
+  bySource: IncomeReportEntry[]; // Array with keys: "WEB", "AIRTIME", "USSD"
+  telcoTotal: IncomeReportEntry; // Single object with key "AIRTIME_AND_USSD"
+  byOrigin: Array<{
+    key: string;
+    amount: number;
     count: number;
-    total: number;
-  };
-  byProduct: {
-    subscriptions: { count: number; total: number };
-    tokenTopups: { count: number; total: number };
-  };
+  }>;
+  byProduct: IncomeReportEntry[]; // Array with keys: "SUBSCRIPTIONS", "TOKEN_TOPUPS", "OTHER"
 }
 
 // ============================================================================

@@ -37,10 +37,6 @@ export function QuestionView({
   const isCorrect = userSelectedAnswer && selectedIndex === question.correctIndex;
   const isWrong = userSelectedAnswer && selectedIndex !== question.correctIndex;
   const showResult = selectedIndex !== null; // Includes timeout (-1) and actual selections
-  
-  const nextButtonText = isCorrect 
-    ? "Next stage →"
-    : "Continue";
 
   const difficultyColors = {
     Easy: "bg-green-500/10 text-green-500 border-green-500",
@@ -215,7 +211,7 @@ export function QuestionView({
           {!isTimeout && (
             <p className="text-sm text-muted-foreground mt-0.5">
               {isCorrect
-                ? nextButtonText
+                ? "Tap to continue"
                 : `The correct answer was ${optionLabels[question.correctIndex]}`}
             </p>
           )}

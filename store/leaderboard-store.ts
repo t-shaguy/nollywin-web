@@ -86,7 +86,7 @@ export async function fetchLeaderboard(period: string = "monthly") {
     return response;
   } catch (error) {
     useLeaderboardStore.getState().setLoading(false);
-    console.error("Failed to fetch leaderboard:", error);
+    console.warn("Failed to fetch leaderboard:", error);
     throw error;
   }
 }

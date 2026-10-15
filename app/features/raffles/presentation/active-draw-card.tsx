@@ -14,8 +14,6 @@ export function ActiveDrawCard({
 }) {
   const [showModal, setShowModal] = useState(false);
 
-  const soldOutPercentage = Math.round((draw.entryCount / draw.maxWinners) * 100);
-
   return (
     <>
       <div
@@ -34,17 +32,11 @@ export function ActiveDrawCard({
               You have <span className="text-primary font-semibold">{userTickets} {userTickets === 1 ? "ticket" : "tickets"}</span> for this draw.
             </p>
             
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
-                <div 
-                  className="h-full bg-primary/50 transition-all"
-                  style={{ width: `${soldOutPercentage}%` }}
-                />
-              </div>
+            <p className="text-sm">
               <span className="text-xs text-muted-foreground whitespace-nowrap">
-                {draw.entryCount}/{draw.maxWinners} entries
+                {draw.entryCount} {draw.entryCount === 1 ? "entry" : "entries"} so far
               </span>
-            </div>
+            </p>
           </div>
         </div>
 

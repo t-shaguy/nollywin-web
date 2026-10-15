@@ -119,3 +119,49 @@ export async function buyTicket(drawId: string, data?: BuyTicketRequest): Promis
     body: JSON.stringify(data || {}),
   });
 }
+
+// ============================================================================
+// Raffle History Types
+// ============================================================================
+
+/**
+ * CONFIRMED API RESPONSE:
+ * GET /api/v1/rewards/draws/history?page=0&size=20
+ * 
+ * Real response shape (live-tested):
+ * [
+ *   {
+ *     "drawId": "095dfacf-e122-4878-be8c-bf68c0706355",
+ *     "prizeName": "iPhone 15 Pro Max",
+ *     "drawStatus": "ACTIVE" | "UPCOMING" | "CLOSED" | "CANCELLED",
+ *     "myTickets": 1,
+ *     "winnerStatus": "SELECTED" | null,  // "SELECTED" confirmed for wins, null presumed for losses (TBD)
+ *     "createdAt": "2026-09-22T12:33:19.517204Z"
+ *   }
+ * ]
+ */
+export interface RaffleHistoryEntry {
+  drawId: string;
+  prizeName: string;
+  drawStatus: "ACTIVE" | "UPCOMING" | "CLOSED" | "CANCELLED";
+  myTickets: number;
+  winnerStatus: "SELECTED" | null; // "SELECTED" = won, null = didn't win (presumed, not yet confirmed)
+  createdAt: string; // ISO 8601
+}
+
+// Backend returns array directly, not paginated object
+export type RaffleHistoryResponse = RaffleHistoryEntry[];
+
+/**
+ * Get user's raffle entry history
+ * GET /api/v1/rewards/draws/history?page=0&size=20
+ */
+export async function getRaffleHistory(page: number = 0, size: number = 20): Promise<RaffleHistoryResponse> {
+  const params = new URLSearchParams();
+  params.append("page", page.toString());
+  params.append("size", size.toString());
+  
+  return apiClient<RaffleHistoryResponse>(`/api/v1/rewards/draws/history?${params.toString()}`, {
+    method: "GET",
+  });
+}

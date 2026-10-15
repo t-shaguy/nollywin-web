@@ -3,7 +3,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Eye, EyeOff, Monitor } from "lucide-react";
+import Image from "next/image";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -91,10 +92,8 @@ export function AdminLoginForm() {
         {/* Logo & Title - Slightly larger */}
         <div className="flex flex-col items-center mb-7">
           <div className="flex items-center gap-2 mb-5">
-            <div className="bg-gradient-to-r from-[#F40289] to-[#FC0D28] p-2 rounded-lg">
-              <Monitor size={22} strokeWidth={2} className="text-white" />
-            </div>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F40289] to-[#FC0D28] font-bold text-xl">
+            <Image src="/logo-icon.png" alt="NollyWin" width={40} height={40} className="h-10 w-10 object-contain" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F40289] to-[#FC0D28] font-bold text-2xl">
               NollyWin
             </span>
           </div>

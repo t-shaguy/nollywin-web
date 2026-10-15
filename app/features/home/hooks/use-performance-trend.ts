@@ -36,7 +36,7 @@ export function usePerformanceTrend() {
 
         setData(chartData);
       } catch (error) {
-        console.error("Failed to fetch performance trend:", error);
+        console.warn("Failed to fetch performance trend:", error);
         // Fall back to placeholder so chart shows empty state instead of crashing
         setData(PLACEHOLDER_PERFORMANCE);
       } finally {

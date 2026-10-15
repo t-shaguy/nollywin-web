@@ -41,7 +41,7 @@ export default function ProfilePage() {
         const profile = await getProfile();
         updateUser(profile);
       } catch (err) {
-        console.error("Failed to fetch profile:", err);
+        console.warn("Failed to fetch profile:", err);
         // Silently fail - user data from auth store is still available
       }
     };
@@ -54,7 +54,7 @@ export default function ProfilePage() {
       try {
         await fetchReferralData();
       } catch (err) {
-        console.error("Failed to fetch referral data:", err);
+        console.warn("Failed to fetch referral data:", err);
         // Silently fail - will show "Loading..." or fallback
       }
     };
@@ -324,7 +324,6 @@ export default function ProfilePage() {
             <div className="flex-1">
               <p className="text-xs text-muted-foreground mb-0.5">EMAIL ADDRESS</p>
               <p className="text-sm font-medium">{email}</p>
-              <p className="text-xs text-muted-foreground mt-1">Contact support to change your email</p>
             </div>
           </div>
 

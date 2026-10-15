@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Monitor, User, Menu, X } from "lucide-react";
+import Image from "next/image";
+import { User, Menu, X } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
 import { useAvatarUrl } from "@/hooks/use-avatar-url";
 
@@ -33,10 +34,8 @@ export function Navbar() {
       <div className="flex items-center justify-between px-4 sm:px-8 py-6">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 z-50">
-          <div className="bg-brand-gradient h-9 w-9 rounded-lg flex items-center justify-center">
-            <Monitor size={18} className="text-white" strokeWidth={2.5} />
-          </div>
-          <span className="text-brand-gradient font-bold text-xl">NollyWin</span>
+          <Image src="/logo-icon.png" alt="NollyWin" width={44} height={44} className="h-11 w-11 object-contain" />
+          <span className="text-brand-gradient font-bold text-2xl">NollyWin</span>
         </Link>
 
         {/* Desktop Navigation */}

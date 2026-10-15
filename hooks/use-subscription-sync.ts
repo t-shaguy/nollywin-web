@@ -14,7 +14,7 @@ export function useSubscriptionSync() {
 
   const retryFetch = () => {
     fetchSubscriptionStatus().catch((error) => {
-      console.error("Failed to sync subscription status (retry):", error);
+      console.warn("Failed to sync subscription status (retry):", error);
       // Don't show toast again on retry failure to avoid spam
     });
   };
@@ -23,7 +23,7 @@ export function useSubscriptionSync() {
     // Only fetch if user is authenticated (has token)
     if (token && token !== "guest-session-token") {
       fetchSubscriptionStatus().catch((error: any) => {
-        console.error("Failed to sync subscription status:", error);
+        console.warn("Failed to sync subscription status:", error);
         // Don't show toast for 401 errors (user will be logged out automatically)
         if (error?.status !== 401) {
           showToast("Couldn't refresh subscription status", {

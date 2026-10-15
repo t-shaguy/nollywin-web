@@ -14,7 +14,7 @@ export function useWalletSync() {
 
   const retryFetch = () => {
     fetchWalletBalance().catch((error) => {
-      console.error("Failed to sync wallet balance (retry):", error);
+      console.warn("Failed to sync wallet balance (retry):", error);
       // Don't show toast again on retry failure to avoid spam
     });
   };
@@ -24,7 +24,7 @@ export function useWalletSync() {
     // Only fetch if user is authenticated (has token)
     if (token && token !== "guest-session-token") {
       fetchWalletBalance().catch((error: any) => {
-        console.error("Failed to sync wallet balance:", error);
+        console.warn("Failed to sync wallet balance:", error);
         // Don't show toast for 401 errors (user will be logged out automatically)
         if (error?.status !== 401) {
           showToast("Couldn't refresh your balance", {

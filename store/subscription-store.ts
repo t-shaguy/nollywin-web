@@ -99,7 +99,7 @@ export async function fetchSubscriptionStatus() {
     return subscriptions;
   } catch (error) {
     useSubscriptionStore.getState().setLoading(false);
-    console.error("Failed to fetch subscription status:", error);
+    console.warn("Failed to fetch subscription status:", error);
     throw error;
   }
 }

@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Monitor, BarChart3, Upload, CreditCard, Users, FileBarChart2, Trophy, ShieldCheck, Settings, Coins, Bell, FileText, X, RefreshCw } from "lucide-react";
+import { LogOut, BarChart3, Upload, CreditCard, Users, FileBarChart2, Trophy, ShieldCheck, Settings, Coins, Bell, FileText, X, RefreshCw } from "lucide-react";
 import { useAdminAuthStore } from "@/store/admin-auth-store";
 
 const NAV_ITEMS = [
@@ -39,9 +40,7 @@ export function AdminSidebar({ onClose }: { onClose?: () => void }) {
       {/* Header with close button on mobile */}
       <div className="flex items-center justify-between mb-8 sm:mb-12 shrink-0">
         <Link href="/admin/overview" className="flex items-center gap-2 sm:gap-3 px-2" onClick={handleNavClick}>
-          <div className="bg-brand-gradient h-8 w-8 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center">
-            <Monitor size={18} className="text-white sm:w-5 sm:h-5" strokeWidth={2.5} />
-          </div>
+          <Image src="/logo-icon.png" alt="NollyWin" width={32} height={32} className="h-8 w-8 sm:h-10 sm:w-10 object-contain" />
           <span className="text-brand-gradient font-bold text-lg sm:text-xl">NollyAdmin</span>
         </Link>
         {onClose && (
