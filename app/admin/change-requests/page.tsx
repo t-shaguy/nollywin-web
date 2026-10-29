@@ -293,7 +293,6 @@ export default function ChangeRequestsPage() {
                         onClick={() => handleApprove(request)}
                         disabled={true}
                         variant="gradient"
-                        size="sm"
                         className="flex-1 opacity-50 cursor-not-allowed"
                         title="Requires second admin account"
                       >
@@ -303,7 +302,6 @@ export default function ChangeRequestsPage() {
                         onClick={() => handleRejectClick(request)}
                         disabled={true}
                         variant="outline"
-                        size="sm"
                         className="flex-1 border-destructive/50 text-destructive hover:bg-destructive/10 hover:border-destructive opacity-50 cursor-not-allowed"
                         title="Requires second admin account"
                       >

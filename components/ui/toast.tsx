@@ -58,7 +58,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               {toast.action && (
                 <Button
                   variant="outline"
-                  size="sm"
                   onClick={() => {
                     toast.action!.onClick();
                     dismissToast(toast.id);

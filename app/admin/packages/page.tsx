@@ -2,9 +2,8 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Star, Plus, CheckCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
+import { AdminModal } from "@/components/admin/admin-modal";
+import { AdminInput } from "@/components/admin/admin-field";
 import {
   getPackages,
   createPackage,
@@ -135,7 +134,7 @@ export default function PackagesPage() {
           title="Packages & Fees" 
           description="Manage subscription plans and pricing" 
         />
-        <div className="bg-card border border-border rounded-2xl p-12 flex items-center justify-center">
+        <div className="bg-card border border-border rounded p-12 flex items-center justify-center">
           <div className="text-muted-foreground text-sm">Loading packages...</div>
         </div>
       </div>
@@ -156,7 +155,7 @@ export default function PackagesPage() {
 
       {/* Success Message */}
       {successMessage && (
-        <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-green-600 flex items-start gap-3 text-sm">
+        <div className="bg-green-500/10 border border-green-500/30 rounded p-4 text-green-600 flex items-start gap-3 text-sm">
           <CheckCircle size={18} className="shrink-0 mt-0.5" />
           <div>
             <p className="font-medium">{successMessage}</p>
@@ -167,41 +166,43 @@ export default function PackagesPage() {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 text-destructive text-sm">
+        <div className="bg-destructive/10 border border-destructive/30 rounded p-4 text-destructive text-sm">
           {error}
         </div>
       )}
 
       {packages.length === 0 && !loading ? (
-        <div className="bg-card border border-border rounded-2xl p-12 text-center text-muted-foreground text-sm">
+        <div className="bg-card border border-border rounded p-12 text-center text-muted-foreground text-sm">
           No packages available yet. Create your first package to get started.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {packages.map((pkg) => (
             <div
               key={pkg.id}
-              className="rounded-2xl p-5 sm:p-6 text-center flex flex-col items-center border bg-card border-border"
+              className="rounded p-4 text-center flex flex-col items-center border bg-card border-border"
             >
-              <Star size={24} className="text-muted-foreground" />
-              <p className="font-bold text-base sm:text-lg mt-3 sm:mt-4">{pkg.name}</p>
-              <p className="text-xl sm:text-2xl font-extrabold mt-2">{formatNaira(pkg.fee)}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1">{pkg.durationDays} days</p>
+              <div className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center">
+                <Star size={20} className="text-muted-foreground" />
+              </div>
+              <p className="font-semibold text-sm mt-3">{pkg.name}</p>
+              <p className="text-2xl font-bold mt-2 tabular-nums">{formatNaira(pkg.fee)}</p>
+              <p className="text-xs text-muted-foreground mt-1">{pkg.durationDays} days</p>
               
               {/* Read-only attempts info */}
               <div className="mt-3 text-xs text-muted-foreground">
                 {pkg.attemptsIncluded} attempts {pkg.attemptsPeriod?.toLowerCase()}
               </div>
               
-              <div className={`mt-4 rounded-full px-3 py-1 text-xs font-medium ${
+              <div className={`mt-4 rounded px-2.5 py-1 text-xs font-medium ${
                 pkg.active 
-                  ? "bg-primary/10 border border-primary/30 text-primary" 
+                  ? "bg-green-500/10 border border-green-500/30 text-green-600" 
                   : "bg-secondary border border-border text-muted-foreground"
               }`}>
                 {pkg.active ? "Active" : "Disabled"}
               </div>
 
-              <div className="flex gap-2 mt-5 sm:mt-6 w-full">
+              <div className="flex gap-2 mt-4 w-full">
                 <AdminActionButton 
                   variant="secondary" 
                   onClick={() => handleEdit(pkg)} 
@@ -218,55 +219,79 @@ export default function PackagesPage() {
 
       {/* Edit Modal */}
       {editingPackage && (
-        <Modal
+        <AdminModal
           open={!!editingPackage}
           onClose={() => {
             setEditingPackage(null);
             setError(null);
           }}
           title="Edit Package"
+          description="Update package details. Changes require approval."
+          footer={
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingPackage(null);
+                  setError(null);
+                }}
+                disabled={submitting}
+                className="h-8 px-3 text-[13px] font-medium rounded border border-border bg-transparent hover:bg-secondary transition-colors duration-120 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit(onSubmitEdit)}
+                disabled={submitting}
+                className="h-8 px-3 text-[13px] font-medium rounded bg-brand-gradient text-white hover:opacity-90 transition-opacity duration-120 disabled:opacity-50"
+              >
+                {submitting ? "Submitting..." : "Submit for Approval"}
+              </button>
+            </div>
+          }
         >
-          <form onSubmit={handleSubmit(onSubmitEdit)} className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Package Name</label>
-              <Input {...register("name", { required: "Name is required" })} placeholder="Weekly Plan" />
-              {errors.name && <p className="text-destructive text-sm mt-1">{errors.name.message}</p>}
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Duration (Days)</label>
-              <Input 
-                type="number" 
-                {...register("durationDays", { required: "Duration is required", valueAsNumber: true, min: 1 })} 
-                placeholder="7"
-              />
-              {errors.durationDays && <p className="text-destructive text-sm mt-1">{errors.durationDays.message}</p>}
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Fee (₦ Naira)</label>
-              <Input 
-                type="number" 
-                step="0.01"
-                {...register("fee", { required: "Fee is required", valueAsNumber: true, min: 0 })} 
-                placeholder="500"
-              />
-              {errors.fee && <p className="text-destructive text-sm mt-1">{errors.fee.message}</p>}
-              <p className="text-xs text-muted-foreground mt-1">Enter amount in naira (₦)</p>
-            </div>
+          <form onSubmit={handleSubmit(onSubmitEdit)} className="space-y-5">
+            <AdminInput
+              label="Package Name"
+              placeholder="Weekly Plan"
+              error={errors.name?.message}
+              {...register("name", { required: "Name is required" })}
+            />
+            
+            <AdminInput
+              label="Duration (Days)"
+              type="number"
+              placeholder="7"
+              error={errors.durationDays?.message}
+              {...register("durationDays", { required: "Duration is required", valueAsNumber: true, min: 1 })}
+            />
+            
+            <AdminInput
+              label="Fee (₦ Naira)"
+              type="number"
+              step="0.01"
+              placeholder="500"
+              helper="Enter amount in naira (₦)"
+              error={errors.fee?.message}
+              {...register("fee", { required: "Fee is required", valueAsNumber: true, min: 0 })}
+            />
+            
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
-                id="active"
+                id="active-edit"
                 {...register("active")}
-                className="h-4 w-4 rounded border-border"
+                className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
               />
-              <label htmlFor="active" className="text-sm font-medium cursor-pointer">
+              <label htmlFor="active-edit" className="text-sm font-medium cursor-pointer text-foreground">
                 Active (visible to users)
               </label>
             </div>
             
             {/* Read-only info */}
-            <div className="bg-secondary/30 rounded-xl p-3 text-sm">
-              <p className="font-medium mb-1">Read-only fields:</p>
+            <div className="bg-secondary/30 rounded p-3 text-sm border border-border">
+              <p className="font-medium mb-2 text-foreground">Read-only fields</p>
               <p className="text-xs text-muted-foreground">
                 • Attempts: {editingPackage.attemptsIncluded} {editingPackage.attemptsPeriod?.toLowerCase()}
               </p>
@@ -274,66 +299,83 @@ export default function PackagesPage() {
                 These fields cannot be edited from the admin panel.
               </p>
             </div>
-
-            <Button type="submit" variant="gradient" className="w-full justify-center" disabled={submitting}>
-              {submitting ? "Submitting..." : "Submit for Approval"}
-            </Button>
           </form>
-        </Modal>
+        </AdminModal>
       )}
 
       {/* Add Modal */}
-      <Modal
+      <AdminModal
         open={showAddModal}
         onClose={() => {
           setShowAddModal(false);
           setError(null);
         }}
         title="Add New Package"
+        description="Create a new subscription package. Changes require approval."
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowAddModal(false);
+                setError(null);
+              }}
+              disabled={submitting}
+              className="h-8 px-3 text-[13px] font-medium rounded border border-border bg-transparent hover:bg-secondary transition-colors duration-120 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit(onSubmitAdd)}
+              disabled={submitting}
+              className="h-8 px-3 text-[13px] font-medium rounded bg-brand-gradient text-white hover:opacity-90 transition-opacity duration-120 disabled:opacity-50"
+            >
+              {submitting ? "Submitting..." : "Submit for Approval"}
+            </button>
+          </div>
+        }
       >
-        <form onSubmit={handleSubmit(onSubmitAdd)} className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block">Package Name</label>
-            <Input {...register("name", { required: "Name is required" })} placeholder="Custom Plan" />
-            {errors.name && <p className="text-destructive text-sm mt-1">{errors.name.message}</p>}
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Duration (Days)</label>
-            <Input 
-              type="number" 
-              {...register("durationDays", { required: "Duration is required", valueAsNumber: true, min: 1 })} 
-              placeholder="30"
-            />
-            {errors.durationDays && <p className="text-destructive text-sm mt-1">{errors.durationDays.message}</p>}
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Fee (₦ Naira)</label>
-            <Input 
-              type="number" 
-              step="0.01"
-              {...register("fee", { required: "Fee is required", valueAsNumber: true, min: 0 })} 
-              placeholder="2000"
-            />
-            {errors.fee && <p className="text-destructive text-sm mt-1">{errors.fee.message}</p>}
-            <p className="text-xs text-muted-foreground mt-1">Enter amount in naira (₦)</p>
-          </div>
+        <form onSubmit={handleSubmit(onSubmitAdd)} className="space-y-5">
+          <AdminInput
+            label="Package Name"
+            placeholder="Custom Plan"
+            error={errors.name?.message}
+            {...register("name", { required: "Name is required" })}
+          />
+          
+          <AdminInput
+            label="Duration (Days)"
+            type="number"
+            placeholder="30"
+            error={errors.durationDays?.message}
+            {...register("durationDays", { required: "Duration is required", valueAsNumber: true, min: 1 })}
+          />
+          
+          <AdminInput
+            label="Fee (₦ Naira)"
+            type="number"
+            step="0.01"
+            placeholder="2000"
+            helper="Enter amount in naira (₦)"
+            error={errors.fee?.message}
+            {...register("fee", { required: "Fee is required", valueAsNumber: true, min: 0 })}
+          />
+          
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
               id="active-new"
               {...register("active")}
               defaultChecked
-              className="h-4 w-4 rounded border-border"
+              className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
             />
-            <label htmlFor="active-new" className="text-sm font-medium cursor-pointer">
+            <label htmlFor="active-new" className="text-sm font-medium cursor-pointer text-foreground">
               Active (visible to users)
             </label>
           </div>
-          <Button type="submit" variant="gradient" className="w-full justify-center" disabled={submitting}>
-            {submitting ? "Submitting..." : "Submit for Approval"}
-          </Button>
         </form>
-      </Modal>
+      </AdminModal>
     </div>
   );
 }

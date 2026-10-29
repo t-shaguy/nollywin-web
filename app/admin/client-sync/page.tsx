@@ -160,7 +160,7 @@ export default function ClientSyncPage() {
           title="Client Sync" 
           description="Manage synced client applications" 
         />
-        <div className="bg-card border border-border rounded-2xl p-12 flex items-center justify-center">
+        <div className="bg-card border border-border rounded p-12 flex items-center justify-center">
           <div className="text-muted-foreground text-sm">Loading synced clients...</div>
         </div>
       </div>
@@ -186,7 +186,7 @@ export default function ClientSyncPage() {
 
       {/* Success Message */}
       {successMessage && (
-        <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-green-600 flex items-start gap-3 text-sm">
+        <div className="bg-green-500/10 border border-green-500/30 rounded p-4 text-green-600 flex items-start gap-3 text-sm">
           <CheckCircle size={18} className="shrink-0 mt-0.5" />
           <div>
             <p className="font-medium">{successMessage}</p>
@@ -197,7 +197,7 @@ export default function ClientSyncPage() {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 text-destructive text-sm">
+        <div className="bg-destructive/10 border border-destructive/30 rounded p-4 text-destructive text-sm">
           {error}
         </div>
       )}
@@ -227,13 +227,13 @@ export default function ClientSyncPage() {
 
         {/* Search Result */}
         {searchResult && (
-          <div className="mt-4 bg-secondary/30 rounded-xl p-4">
+          <div className="mt-4 bg-secondary/30 rounded p-4">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm">{searchResult.displayName}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{searchResult.email}</p>
                 <div className="flex items-center gap-2 mt-2">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium border ${getChannelColor(searchResult.channel)}`}>
+                  <span className={`rounded px-2 py-0.5 text-xs font-medium border ${getChannelColor(searchResult.channel)}`}>
                     {searchResult.channel}
                   </span>
                   <span className="text-xs text-muted-foreground">
@@ -245,7 +245,7 @@ export default function ClientSyncPage() {
                 </p>
               </div>
               <div className="flex flex-col items-end gap-2 shrink-0">
-                <div className={`rounded-full px-3 py-1 text-xs font-medium border ${getStatusColor(searchResult)}`}>
+                <div className={`rounded px-3 py-1 text-xs font-medium border ${getStatusColor(searchResult)}`}>
                   {isClientEnabled(searchResult) ? "Enabled" : "Disabled"}
                 </div>
                 <AdminActionButton
@@ -263,7 +263,7 @@ export default function ClientSyncPage() {
 
         {/* Search Error */}
         {searchError && (
-          <div className="mt-4 bg-destructive/10 border border-destructive/30 rounded-xl p-3 text-destructive text-sm">
+          <div className="mt-4 bg-destructive/10 border border-destructive/30 rounded p-3 text-destructive text-sm">
             {searchError}
           </div>
         )}
@@ -297,7 +297,7 @@ export default function ClientSyncPage() {
                         <p className="text-xs text-muted-foreground mt-0.5">{client.email}</p>
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4">
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium border ${getChannelColor(client.channel)}`}>
+                        <span className={`rounded px-2 py-0.5 text-xs font-medium border ${getChannelColor(client.channel)}`}>
                           {client.channel}
                         </span>
                       </td>

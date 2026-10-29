@@ -38,22 +38,22 @@ export default function AdminOverviewPage() {
         // Process overview data
         if (overviewResult.status === "fulfilled") {
           setOverview(overviewResult.value);
-        } else {
+        } else if (overviewResult.status === "rejected") {
           console.warn("Failed to load overview:", overviewResult.reason);
         }
         
         // Process trend data
         if (trendResult.status === "fulfilled") {
           setRevenueTrend(trendResult.value);
-        } else {
+        } else if (trendResult.status === "rejected") {
           console.warn("Failed to load revenue trend:", trendResult.reason);
         }
         
         // Process activity data
         if (activityResult.status === "fulfilled") {
           setRecentActivity(activityResult.value);
-        } else {
-          console.warn("Failed to load recent activity:", overviewResult.reason);
+        } else if (activityResult.status === "rejected") {
+          console.warn("Failed to load recent activity:", activityResult.reason);
         }
         
         // Only show error if ALL requests failed

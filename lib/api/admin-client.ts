@@ -9,6 +9,8 @@
  * On 401 from admin routes: logout admin only (not player) and redirect to /admin/login
  */
 
+import { getSharedClientToken, clearSharedClientToken } from "./shared-client-token";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://3.211.19.155/nollywin/core";
 const REQUEST_TIMEOUT = 15000; // 15 seconds
 
@@ -38,91 +40,11 @@ export function createAdminApiError(params: AdminApiErrorData) {
   };
 }
 
-// In-memory cache for client token with expiry tracking
-let clientTokenCache: string | null = null;
-let clientTokenExpiry: number | null = null; // Unix timestamp in seconds
-let clientTokenPromise: Promise<string> | null = null;
-
-/**
- * Decode JWT and extract expiry timestamp (exp claim)
- */
-function decodeJwtExpiry(token: string): number | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    
-    const payload = JSON.parse(atob(parts[1]));
-    return payload.exp || null; // exp is in seconds since epoch
-  } catch (error) {
-    console.error("Failed to decode JWT expiry:", error);
-    return null;
-  }
-}
-
-/**
- * Check if cached token is still valid (not expired or within 60s of expiry)
- */
-function isCachedTokenValid(): boolean {
-  if (!clientTokenCache || !clientTokenExpiry) {
-    return false;
-  }
-  
-  const nowInSeconds = Math.floor(Date.now() / 1000);
-  const bufferSeconds = 60; // Refresh token if it expires within 60 seconds
-  
-  return clientTokenExpiry > (nowInSeconds + bufferSeconds);
-}
-
-/**
- * Fetch the client token from our server route (keeps secrets server-side)
- */
-async function getClientToken(): Promise<string> {
-  // Return cached token if still valid
-  if (isCachedTokenValid() && clientTokenCache) {
-    return clientTokenCache;
-  }
-
-  // If a fetch is already in progress, wait for it
-  if (clientTokenPromise) {
-    return clientTokenPromise;
-  }
-
-  // Start new fetch
-  clientTokenPromise = (async () => {
-    try {
-      const res = await fetch("/api/client-token");
-      if (!res.ok) {
-        throw new Error("Failed to fetch client token");
-      }
-      const data = await res.json();
-      const token = data.accessToken;
-      
-      // Cache token and its expiry
-      clientTokenCache = token;
-      clientTokenExpiry = decodeJwtExpiry(token);
-      
-      if (!clientTokenExpiry) {
-        console.warn("Client token has no expiry claim - will not proactively refresh");
-      }
-      
-      return token;
-    } catch (error) {
-      console.error("Error fetching client token:", error);
-      throw error;
-    } finally {
-      clientTokenPromise = null;
-    }
-  })();
-
-  return clientTokenPromise;
-}
-
 /**
  * Clear the cached client token (useful for testing or on auth errors)
  */
 export function clearAdminClientToken() {
-  clientTokenCache = null;
-  clientTokenExpiry = null;
+  clearSharedClientToken();
 }
 
 /**
@@ -166,7 +88,7 @@ async function handleClientTokenError(error: any, isRetry: boolean): Promise<boo
   
   if (isClientTokenError(error)) {
     console.warn("Client token error detected, refreshing token and retrying...");
-    clearAdminClientToken();
+    clearSharedClientToken();
     return true;
   }
   
@@ -185,8 +107,8 @@ export async function adminApiClient<T = unknown>(
   options: RequestInit = {},
   isRetry: boolean = false
 ): Promise<T> {
-  // Get client token (cached after first fetch)
-  const clientToken = await getClientToken();
+  // Get client token (cached and shared with player client)
+  const clientToken = await getSharedClientToken();
 
   // Get admin token from admin auth store if available
   // BUT: Skip Authorization header if this is an auth route (/api/v1/admin/auth/*)
@@ -234,13 +156,28 @@ export async function adminApiClient<T = unknown>(
     if (!res.ok) {
       // Handle expired/invalid admin session (only for authenticated admin routes)
       if (res.status === 401 && adminToken && !isAuthRoute) {
-        // Admin session is invalid/expired — clear it and send back to admin login
-        if (typeof window !== "undefined") {
-          const { useAdminAuthStore } = await import("@/store/admin-auth-store");
-          useAdminAuthStore.getState().logout();
-          // Note: Using location.href for auth redirect as recommended by Next.js docs for auth flows
-          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-          window.location.href = "/admin/login";
+        // CRITICAL SAFETY CHECK: Only redirect to admin login if we're actually on an admin page
+        // This prevents the bug where player pages accidentally import admin endpoints,
+        // triggering a 401 that yanks regular players out of their session.
+        const isOnAdminPage = typeof window !== "undefined" && window.location.pathname.startsWith("/admin");
+        
+        if (isOnAdminPage) {
+          // Admin session is invalid/expired — clear it and send back to admin login
+          if (typeof window !== "undefined") {
+            const { useAdminAuthStore } = await import("@/store/admin-auth-store");
+            useAdminAuthStore.getState().logout();
+            // Note: Using location.href for auth redirect as recommended by Next.js docs for auth flows
+            // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+            window.location.href = "/admin/login";
+          }
+        } else {
+          // We're NOT on an admin page - this means player code accidentally called an admin endpoint.
+          // Log the error loudly but DON'T redirect, so we don't break the player experience.
+          console.error(
+            `[ADMIN CLIENT] 401 on admin endpoint from NON-ADMIN page! ` +
+            `This is a bug: player-facing code should not import from lib/api/admin.ts. ` +
+            `Endpoint: ${endpoint}, Current path: ${window.location.pathname}`
+          );
         }
         // Still throw the error so any pending promises can handle it
       }
@@ -333,8 +270,8 @@ export async function adminApiClientMultipart<T = unknown>(
   options: Omit<RequestInit, "body" | "headers"> = {},
   isRetry: boolean = false
 ): Promise<T> {
-  // Get client token
-  const clientToken = await getClientToken();
+  // Get client token (cached and shared with player client)
+  const clientToken = await getSharedClientToken();
 
   // Get admin token from admin auth store
   let adminToken: string | null = null;
@@ -378,12 +315,22 @@ export async function adminApiClientMultipart<T = unknown>(
     if (!res.ok) {
       // Handle expired/invalid admin session
       if (res.status === 401 && adminToken) {
-        if (typeof window !== "undefined") {
-          const { useAdminAuthStore } = await import("@/store/admin-auth-store");
-          useAdminAuthStore.getState().logout();
-          // Note: Using location.href for auth redirect as recommended by Next.js docs for auth flows
-          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-          window.location.href = "/admin/login";
+        // CRITICAL SAFETY CHECK: Only redirect to admin login if we're actually on an admin page
+        const isOnAdminPage = typeof window !== "undefined" && window.location.pathname.startsWith("/admin");
+        
+        if (isOnAdminPage) {
+          if (typeof window !== "undefined") {
+            const { useAdminAuthStore } = await import("@/store/admin-auth-store");
+            useAdminAuthStore.getState().logout();
+            // Note: Using location.href for auth redirect as recommended by Next.js docs for auth flows
+            // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+            window.location.href = "/admin/login";
+          }
+        } else {
+          console.error(
+            `[ADMIN CLIENT MULTIPART] 401 on admin endpoint from NON-ADMIN page! ` +
+            `Endpoint: ${endpoint}, Current path: ${window.location.pathname}`
+          );
         }
       }
 

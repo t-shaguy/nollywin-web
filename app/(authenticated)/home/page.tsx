@@ -1,5 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { DashboardHeader } from "../../features/home/presentation/dashboard-header";
 import { DashboardStats } from "../../features/home/presentation/dashboard-stats";
 import { PerformanceChart } from "../../features/home/presentation/performance-chart";
@@ -7,14 +8,26 @@ import { ActiveSubscriptionCard } from "../../features/home/presentation/active-
 import { getPlayerDashboard } from "@/lib/api/auth";
 import { usePerformanceTrend } from "../../features/home/hooks/use-performance-trend";
 import { useWalletStore } from "@/store/wallet-store";
+import { delay } from "@/lib/utils/request-stagger";
 
 export default function HomePage() {
+  // Add a small stagger flag to prevent all hooks from firing simultaneously
+  const [staggerComplete, setStaggerComplete] = useState(false);
+  
+  useEffect(() => {
+    // Brief delay before allowing performance trend hook to fire
+    // This staggers it slightly after the useQuery dashboard call
+    const timer = setTimeout(() => setStaggerComplete(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
+
   const { data: dashboard, isLoading } = useQuery({
     queryKey: ["dashboard"],
     queryFn: getPlayerDashboard,
   });
 
-  const { data: performanceData, loading: performanceLoading } = usePerformanceTrend();
+  // Only trigger performance trend after stagger delay
+  const { data: performanceData, loading: performanceLoading } = usePerformanceTrend(staggerComplete);
 
   // Read token balance from Zustand store (same as header) for consistency
   const { tokenBalance } = useWalletStore();

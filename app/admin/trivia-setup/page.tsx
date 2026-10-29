@@ -264,7 +264,7 @@ export default function TriviaSetupPage() {
 
       {/* Success Message */}
       {successMessage && (
-        <div className="bg-muted/50 border border-border rounded-xl p-3 sm:p-4 flex items-start gap-2 sm:gap-3">
+        <div className="bg-muted/50 border border-border rounded p-3 sm:p-4 flex items-start gap-2 sm:gap-3">
           <CheckCircle size={16} className="sm:w-[18px] sm:h-[18px] shrink-0 mt-0.5 text-muted-foreground" />
           <div>
             <p className="text-xs sm:text-sm text-foreground">{successMessage}</p>
@@ -275,7 +275,7 @@ export default function TriviaSetupPage() {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3 sm:p-4 text-destructive text-xs sm:text-sm">
+        <div className="bg-destructive/10 border border-destructive/30 rounded p-3 sm:p-4 text-destructive text-xs sm:text-sm">
           {error}
         </div>
       )}
@@ -287,7 +287,6 @@ export default function TriviaSetupPage() {
           action={
             <Button 
               variant="outline" 
-              size="sm"
               onClick={() => {
                 resetCat({ name: "", active: true });
                 setShowCategoryModal(true);
@@ -323,7 +322,6 @@ export default function TriviaSetupPage() {
           action={
             <Button 
               variant="outline" 
-              size="sm"
               onClick={() => {
                 resetStage({ name: "", sortOrder: stages.length + 1, active: true, difficultyLabel: "" });
                 setShowStageModal(true);
@@ -362,7 +360,6 @@ export default function TriviaSetupPage() {
         action={
           <Button 
             variant="outline" 
-            size="sm"
             onClick={() => {
               resetPrize({ stageName: "", period: "WEEKLY", description: "" });
               setShowPrizeModal(true);
@@ -376,7 +373,7 @@ export default function TriviaSetupPage() {
       >
         {/* Prizes Error Banner */}
         {prizesError && (
-          <div className="bg-muted/50 border border-border rounded-xl p-3 mb-3 text-xs">
+          <div className="bg-muted/50 border border-border rounded p-3 mb-3 text-xs">
             <p className="font-medium text-muted-foreground">Note: {prizesError}</p>
             <p className="text-muted-foreground mt-0.5">This is a known server-side issue. You can still create new prizes above.</p>
           </div>
@@ -405,14 +402,13 @@ export default function TriviaSetupPage() {
       {/* Questions Section */}
       <AdminCard title="Trivia Questions">
         <div className="flex flex-col sm:flex-row gap-2 mb-4">
-          <Button variant="outline" size="sm" onClick={downloadCSVTemplate} className="gap-1.5 text-xs h-8 px-2.5">
+          <Button variant="outline" onClick={downloadCSVTemplate} className="gap-1.5 text-xs h-8 px-2.5">
             <Download size={14} />
             CSV Template
           </Button>
           <Button 
             type="button"
             variant="outline" 
-            size="sm" 
             disabled={uploadingCSV}
             onClick={() => {
               console.log("Bulk upload button clicked");
@@ -433,7 +429,6 @@ export default function TriviaSetupPage() {
           />
           <Button 
             variant="outline" 
-            size="sm"
             onClick={() => {
               resetQuestion({ 
                 questionText: "", 
@@ -454,7 +449,7 @@ export default function TriviaSetupPage() {
           </Button>
         </div>
         
-        <div className="bg-secondary/20 rounded-xl p-3 text-xs text-muted-foreground text-center">
+        <div className="bg-secondary/20 rounded p-3 text-xs text-muted-foreground text-center">
           <p>Use the form above to add questions individually, or download the CSV template for bulk uploads.</p>
           <p className="mt-1 text-xs">All questions are submitted for maker-checker approval before going live.</p>
         </div>
@@ -469,7 +464,7 @@ export default function TriviaSetupPage() {
         }}
         title="Add Category"
       >
-        <form onSubmit={handleSubmitCat(onSubmitCategory)} className="space-y-3">
+        <form onSubmit={handleSubmitCat(onSubmitCategory)} className="space-y-4">
           <div>
             <label className="text-xs font-medium mb-1.5 block">Category Name</label>
             <Input {...registerCat("name", { required: "Name is required" })} placeholder="Actors & Actresses" className="h-9 text-sm" />
@@ -486,7 +481,7 @@ export default function TriviaSetupPage() {
               Active (visible to users)
             </label>
           </div>
-          <Button type="submit" variant="gradient" className="w-full justify-center h-9 text-sm" disabled={submitting}>
+          <Button type="submit" variant="gradient" className="w-full justify-center h-9 text-sm !rounded" disabled={submitting}>
             {submitting ? "Submitting..." : "Submit for Approval"}
           </Button>
         </form>
@@ -501,7 +496,7 @@ export default function TriviaSetupPage() {
         }}
         title="Add Stage"
       >
-        <form onSubmit={handleSubmitStage(onSubmitStage)} className="space-y-3">
+        <form onSubmit={handleSubmitStage(onSubmitStage)} className="space-y-4">
           <div>
             <label className="text-xs font-medium mb-1.5 block">Stage Name</label>
             <Input {...registerStage("name", { required: "Name is required" })} placeholder="Beginner" className="h-9 text-sm" />
@@ -532,7 +527,7 @@ export default function TriviaSetupPage() {
               Active (visible to users)
             </label>
           </div>
-          <Button type="submit" variant="gradient" className="w-full justify-center h-9 text-sm" disabled={submitting}>
+          <Button type="submit" variant="gradient" className="w-full justify-center h-9 text-sm !rounded" disabled={submitting}>
             {submitting ? "Submitting..." : "Submit for Approval"}
           </Button>
         </form>
@@ -547,12 +542,12 @@ export default function TriviaSetupPage() {
         }}
         title="Add Prize"
       >
-        <form onSubmit={handleSubmitPrize(onSubmitPrize)} className="space-y-3">
+        <form onSubmit={handleSubmitPrize(onSubmitPrize)} className="space-y-4">
           <div>
             <label className="text-xs font-medium mb-1.5 block">Stage Name</label>
             <select 
               {...registerPrize("stageName", { required: "Stage is required" })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-xl h-9 text-sm"
+              className="w-full px-3 py-2 bg-background border border-border rounded h-9 text-sm"
             >
               <option value="">Select a stage</option>
               {stages.filter(s => s.active).map(stage => (
@@ -565,7 +560,7 @@ export default function TriviaSetupPage() {
             <label className="text-xs font-medium mb-1.5 block">Period</label>
             <select 
               {...registerPrize("period", { required: "Period is required" })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-xl h-9 text-sm"
+              className="w-full px-3 py-2 bg-background border border-border rounded h-9 text-sm"
             >
               <option value="WEEKLY">Weekly</option>
               <option value="MONTHLY">Monthly</option>
@@ -577,7 +572,7 @@ export default function TriviaSetupPage() {
             <Input {...registerPrize("description", { required: "Description is required" })} placeholder="Top performer prize for this stage" className="h-9 text-sm" />
             {errorsPrize.description && <p className="text-destructive text-xs mt-1">{errorsPrize.description.message}</p>}
           </div>
-          <Button type="submit" variant="gradient" className="w-full justify-center h-9 text-sm" disabled={submitting}>
+          <Button type="submit" variant="gradient" className="w-full justify-center h-9 text-sm !rounded" disabled={submitting}>
             {submitting ? "Submitting..." : "Submit for Approval"}
           </Button>
         </form>
@@ -592,17 +587,17 @@ export default function TriviaSetupPage() {
         }}
         title="Add Question"
       >
-        <form onSubmit={handleSubmitQuestion(onSubmitQuestion)} className="space-y-3 max-h-[70vh] overflow-y-auto pr-2">
+        <form onSubmit={handleSubmitQuestion(onSubmitQuestion)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
           <div>
             <label className="text-xs font-medium mb-1.5 block">Question Text</label>
             <textarea 
               {...registerQuestion("questionText", { required: "Question is required" })}
               placeholder="Who directed The Dark Knight?"
-              className="w-full px-3 py-2 bg-background border border-border rounded-xl min-h-[70px] text-sm"
+              className="w-full px-3 py-2 bg-background border border-border rounded min-h-[70px] text-sm"
             />
             {errorsQuestion.questionText && <p className="text-destructive text-xs mt-1">{errorsQuestion.questionText.message}</p>}
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium mb-1.5 block">Option A</label>
               <Input {...registerQuestion("optionA", { required: "Required" })} placeholder="First option" className="h-9 text-sm" />
@@ -628,7 +623,7 @@ export default function TriviaSetupPage() {
             <label className="text-xs font-medium mb-1.5 block">Correct Option</label>
             <select 
               {...registerQuestion("correctOption", { required: "Correct option is required" })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-xl h-9 text-sm"
+              className="w-full px-3 py-2 bg-background border border-border rounded h-9 text-sm"
             >
               <option value="A">A</option>
               <option value="B">B</option>
@@ -641,7 +636,7 @@ export default function TriviaSetupPage() {
             <label className="text-xs font-medium mb-1.5 block">Stage</label>
             <select 
               {...registerQuestion("stageName", { required: "Stage is required" })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-xl h-9 text-sm"
+              className="w-full px-3 py-2 bg-background border border-border rounded h-9 text-sm"
             >
               <option value="">Select a stage</option>
               {stages.filter(s => s.active).map(stage => (
@@ -654,7 +649,7 @@ export default function TriviaSetupPage() {
             <label className="text-xs font-medium mb-1.5 block">Category</label>
             <select 
               {...registerQuestion("categoryName", { required: "Category is required" })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-xl h-9 text-sm"
+              className="w-full px-3 py-2 bg-background border border-border rounded h-9 text-sm"
             >
               <option value="">Select a category</option>
               {categories.filter(c => c.active).map(category => (
@@ -663,7 +658,7 @@ export default function TriviaSetupPage() {
             </select>
             {errorsQuestion.categoryName && <p className="text-destructive text-xs mt-1">{errorsQuestion.categoryName.message}</p>}
           </div>
-          <Button type="submit" variant="gradient" className="w-full justify-center h-9 text-sm" disabled={submitting}>
+          <Button type="submit" variant="gradient" className="w-full justify-center h-9 text-sm !rounded" disabled={submitting}>
             {submitting ? "Submitting..." : "Submit for Approval"}
           </Button>
         </form>

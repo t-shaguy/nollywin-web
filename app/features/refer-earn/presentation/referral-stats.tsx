@@ -1,5 +1,4 @@
 import { StatPill } from "@/components/ui/stat-pill";
-import { Gift, AlertCircle } from "lucide-react";
 
 // Shows all four distinct referral metrics + reward program status
 export function ReferralStats({
@@ -19,52 +18,8 @@ export function ReferralStats({
   maxRewardsPerReferrer: number;
   rewardsActive: boolean;
 }) {
-  // Generate reward program messaging
-  let rewardMessage = "";
-  if (!rewardsActive) {
-    rewardMessage = "Referral rewards launching soon";
-  } else {
-    const rewardAmount = `${rewardTokensPerReferral} token${rewardTokensPerReferral === 1 ? "" : "s"}`;
-    if (maxRewardsPerReferrer === 0) {
-      // Uncapped
-      rewardMessage = `Earn ${rewardAmount} per verified referral`;
-    } else {
-      // Capped
-      rewardMessage = `Earn ${rewardAmount} per verified referral (up to ${maxRewardsPerReferrer} rewards)`;
-    }
-  }
-
   return (
     <div className="space-y-6">
-      {/* Reward Program Status Banner */}
-      <div className={`border rounded-xl p-4 flex items-start gap-3 ${
-        rewardsActive 
-          ? "bg-green-500/10 border-green-500/30" 
-          : "bg-yellow-500/10 border-yellow-500/30"
-      }`}>
-        <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
-          rewardsActive 
-            ? "bg-green-500/20" 
-            : "bg-yellow-500/20"
-        }`}>
-          {rewardsActive ? (
-            <Gift size={20} className="text-green-600" />
-          ) : (
-            <AlertCircle size={20} className="text-yellow-600" />
-          )}
-        </div>
-        <div className="flex-1">
-          <p className={`font-semibold text-sm ${
-            rewardsActive ? "text-green-700" : "text-yellow-700"
-          }`}>
-            {rewardsActive ? "Reward Program Active" : "Reward Program Coming Soon"}
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">
-            {rewardMessage}
-          </p>
-        </div>
-      </div>
-
       {/* Referral Statistics */}
       <div>
         <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">

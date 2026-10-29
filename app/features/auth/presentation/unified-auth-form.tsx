@@ -338,9 +338,8 @@ export function UnifiedAuthForm() {
         </button>
 
         {/* Logo + Brand */}
-        <div className="flex items-center justify-center gap-2.5 py-2">
-          <Image src="/logo-icon.png" alt="NollyWin" width={40} height={40} className="h-10 w-10 object-contain" />
-          <h1 className="text-2xl font-bold text-brand-gradient">NollyWin</h1>
+        <div className="flex items-center justify-center py-4">
+          <Image src="/logo.png" alt="NollyWin" width={180} height={180} className="w-45 h-45 object-contain" />
         </div>
 
         <div className="text-center space-y-2 pt-2">
@@ -394,9 +393,8 @@ export function UnifiedAuthForm() {
       </button>
 
       {/* Logo + Brand */}
-      <div className="flex items-center justify-center gap-2.5 py-1">
-        <Image src="/logo-icon.png" alt="NollyWin" width={40} height={40} className="h-10 w-10 object-contain" />
-        <h1 className="text-2xl font-bold text-brand-gradient">NollyWin</h1>
+      <div className="flex items-center justify-center py-4">
+        <Image src="/logo.png" alt="NollyWin" width={180} height={180} className="w-45 h-45 object-contain" />
       </div>
 
       {/* Mode Toggle (Login / Sign Up) - Segmented control like a switch */}

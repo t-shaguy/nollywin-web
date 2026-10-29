@@ -91,11 +91,8 @@ export function AdminLoginForm() {
 
         {/* Logo & Title - Slightly larger */}
         <div className="flex flex-col items-center mb-7">
-          <div className="flex items-center gap-2 mb-5">
-            <Image src="/logo-icon.png" alt="NollyWin" width={40} height={40} className="h-10 w-10 object-contain" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F40289] to-[#FC0D28] font-bold text-2xl">
-              NollyWin
-            </span>
+          <div className="flex items-center justify-center mb-5">
+            <Image src="/logo.png" alt="NollyWin" width={180} height={180} className="w-45 h-45 object-contain" />
           </div>
 
           <h1 className="text-white text-2xl font-bold mb-1.5">Admin Login</h1>

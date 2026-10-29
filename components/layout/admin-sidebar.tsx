@@ -40,8 +40,7 @@ export function AdminSidebar({ onClose }: { onClose?: () => void }) {
       {/* Header with close button on mobile */}
       <div className="flex items-center justify-between mb-8 sm:mb-12 shrink-0">
         <Link href="/admin/overview" className="flex items-center gap-2 sm:gap-3 px-2" onClick={handleNavClick}>
-          <Image src="/logo-icon.png" alt="NollyWin" width={32} height={32} className="h-8 w-8 sm:h-10 sm:w-10 object-contain" />
-          <span className="text-brand-gradient font-bold text-lg sm:text-xl">NollyAdmin</span>
+          <Image src="/logo.png" alt="NollyWin" width={200} height={200} className="h-16 sm:h-[100px] w-auto object-contain" />
         </Link>
         {onClose && (
           <button onClick={onClose} className="lg:hidden p-2 hover:bg-secondary rounded-lg">

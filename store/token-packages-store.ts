@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getCurrentTokenExchangeRate } from "@/lib/api/admin";
+import { getCurrentTokenExchangeRate } from "@/lib/api/wallet";
 
 export interface TokenPackage {
   id: string;

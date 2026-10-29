@@ -1,10 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, CheckCircle, ArrowLeft, Trophy } from "lucide-react";
+import { Plus, CheckCircle, ArrowLeft, Trophy, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Modal } from "@/components/ui/modal";
+import { AdminModal, ModalSection, FormGrid, ModalFooter } from "@/components/admin/admin-modal";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { AdminInput, AdminSelect } from "@/components/admin/admin-field";
+import { StatusBadge, CountPill } from "@/components/admin/status-badge";
 import {
   getRewardDraws,
   createRewardDraw,
@@ -17,10 +19,12 @@ import {
   type RewardDraw,
   type CreateRewardDrawRequest,
 } from "@/lib/api/admin";
+import { getDrawActions, getDrawStatusMessage } from "@/lib/utils/draw-actions";
+import { pluralize } from "@/lib/utils/format";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminActionButton } from "@/components/admin/admin-action-button";
 import { AdminCard } from "@/components/admin/admin-card";
-import { AdminTableWrapper } from "@/components/admin/admin-table-wrapper";
+import { cn } from "@/lib/utils";
 
 interface CreateDrawForm {
   prizeName: string;
@@ -48,10 +52,13 @@ export default function AdminRewardsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [closingDrawId, setClosingDrawId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [showCloseDrawModal, setShowCloseDrawModal] = useState(false);
+
+  // Confirmation dialogs
+  const [showCloseDrawDialog, setShowCloseDrawDialog] = useState(false);
+  const [showSelectWinnersDialog, setShowSelectWinnersDialog] = useState(false);
   const [drawToClose, setDrawToClose] = useState<string | null>(null);
+  const [drawToSelectWinners, setDrawToSelectWinners] = useState<string | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateDrawForm>({
     defaultValues: {
@@ -113,8 +120,6 @@ export default function AdminRewardsPage() {
       setSuccessMessage(response.message || "Reward draw created and submitted for approval");
       setShowCreateModal(false);
       reset();
-      
-      // Note: Do NOT add to local state (maker-checker pattern)
     } catch (err) {
       console.error("Error creating reward draw:", err);
       setError(err instanceof Error ? err.message : "Failed to create reward draw");
@@ -125,27 +130,27 @@ export default function AdminRewardsPage() {
 
   const handleCloseDraw = async (drawId: string) => {
     try {
-      setClosingDrawId(drawId);
+      setSubmitting(true);
       setError(null);
       setSuccessMessage(null);
 
       const response = await closeRewardDraw(drawId);
       setSuccessMessage(response.message || "Draw close submitted for approval");
-      // Do NOT assume the draw is actually closed yet - maker-checker pattern.
       await loadDraws();
-      setShowCloseDrawModal(false);
+      
+      // Reload detail if viewing this draw
+      if (selectedDrawId === drawId) {
+        await handleViewDraw(drawId);
+      }
+      
+      setShowCloseDrawDialog(false);
       setDrawToClose(null);
     } catch (err) {
       console.error("Error closing draw:", err);
       setError(err instanceof Error ? err.message : "Failed to close draw");
     } finally {
-      setClosingDrawId(null);
+      setSubmitting(false);
     }
-  };
-
-  const handleCloseDrawClick = (drawId: string) => {
-    setDrawToClose(drawId);
-    setShowCloseDrawModal(true);
   };
 
   const handleViewDraw = async (drawId: string) => {
@@ -156,7 +161,7 @@ export default function AdminRewardsPage() {
       
       const [detail, winners] = await Promise.all([
         getRewardDrawById(drawId),
-        getDrawWinners(drawId).catch(() => []), // May not exist yet
+        getDrawWinners(drawId).catch(() => []),
       ]);
       
       setDrawDetail(detail);
@@ -170,10 +175,6 @@ export default function AdminRewardsPage() {
   };
 
   const handleSelectWinners = async (drawId: string) => {
-    if (!confirm("Manually trigger winner selection for this draw?")) {
-      return;
-    }
-
     try {
       setSubmitting(true);
       setError(null);
@@ -181,11 +182,14 @@ export default function AdminRewardsPage() {
 
       const response = await selectDrawWinners(drawId);
       setSuccessMessage(response.message || "Winner selection submitted for approval");
-      // Do NOT assume winners are actually selected yet - maker-checker pattern.
+      
+      await loadDraws();
       if (selectedDrawId === drawId) {
         await handleViewDraw(drawId);
       }
-      await loadDraws();
+      
+      setShowSelectWinnersDialog(false);
+      setDrawToSelectWinners(null);
     } catch (err) {
       console.error("Error selecting winners:", err);
       setError(err instanceof Error ? err.message : "Failed to select winners");
@@ -203,8 +207,6 @@ export default function AdminRewardsPage() {
       const response = await setLeaderboardPrize(data.rank, data.prizeAmount);
       setSuccessMessage(response.message || "Leaderboard prize set and submitted for approval");
       resetPrize();
-      
-      // Reload prizes after setting
       await loadLeaderboardPrizes();
     } catch (err) {
       console.error("Error setting leaderboard prize:", err);
@@ -218,28 +220,70 @@ export default function AdminRewardsPage() {
   if (selectedDrawId) {
     if (detailLoading) {
       return (
-        <div className="space-y-6">
-          <AdminPageHeader title="Draw Details" />
-          <div className="bg-card border border-border rounded-2xl p-12 flex items-center justify-center">
-            <div className="text-muted-foreground text-sm">Loading draw details...</div>
+        <div className="space-y-5">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="md" icon={<ArrowLeft size={16} strokeWidth={1.5} />} onClick={() => setSelectedDrawId(null)}>
+              Back
+            </Button>
+            <h1 className="text-xl font-semibold">Draw Details</h1>
+          </div>
+          <div className="bg-card border border-border rounded-xl p-12 flex items-center justify-center">
+            <div className="text-muted-foreground text-[13px]">Loading draw details...</div>
           </div>
         </div>
       );
     }
 
+    if (!drawDetail) {
+      return (
+        <div className="space-y-5">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="md" icon={<ArrowLeft size={16} strokeWidth={1.5} />} onClick={() => setSelectedDrawId(null)}>
+              Back
+            </Button>
+            <h1 className="text-xl font-semibold">Draw Details</h1>
+          </div>
+          <div className="bg-card border border-border rounded-xl p-12 flex items-center justify-center">
+            <div className="text-muted-foreground text-[13px]">Draw not found</div>
+          </div>
+        </div>
+      );
+    }
+
+    // Get actions for this draw
+    const actions = getDrawActions(drawDetail, {
+      onCloseAndSelectWinners: () => {
+        setDrawToClose(drawDetail.id);
+        setShowCloseDrawDialog(true);
+      },
+      onSelectWinners: () => {
+        setDrawToSelectWinners(drawDetail.id);
+        setShowSelectWinnersDialog(true);
+      },
+    });
+
+    const statusMessage = getDrawStatusMessage(drawDetail);
+
     return (
-      <div className="space-y-6">
+      <div className="space-y-5">
+        {/* Header */}
         <div className="flex items-center gap-3">
-          <AdminActionButton variant="secondary" onClick={() => setSelectedDrawId(null)} icon={ArrowLeft} size="sm">
+          <Button
+            variant="ghost"
+            size="md"
+            icon={<ArrowLeft size={16} strokeWidth={1.5} />}
+            onClick={() => setSelectedDrawId(null)}
+          >
             Back
-          </AdminActionButton>
-          <h1 className="text-2xl sm:text-3xl font-extrabold">Draw Details</h1>
+          </Button>
+          <h1 className="text-xl font-semibold">{drawDetail.prizeName}</h1>
+          <StatusBadge status={drawDetail.status} />
         </div>
 
         {/* Success Message */}
         {successMessage && (
-          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-green-600 flex items-start gap-3 text-sm">
-            <CheckCircle size={18} className="shrink-0 mt-0.5" />
+          <div className="bg-[var(--success-bg)] border border-[var(--success-border)] rounded-lg p-4 text-[var(--success)] flex items-start gap-3 text-[13px]">
+            <CheckCircle size={18} strokeWidth={1.5} className="shrink-0 mt-0.5" />
             <div>
               <p className="font-medium">{successMessage}</p>
               <p className="text-xs mt-1 opacity-80">Changes will take effect after approval by a checker.</p>
@@ -249,121 +293,196 @@ export default function AdminRewardsPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 text-destructive text-sm">
+          <div className="bg-[var(--danger-bg)] border border-[var(--danger-border)] rounded-lg p-4 text-[var(--danger)] text-[13px]">
             {error}
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Draw Info */}
-          <AdminCard title="Draw Information" className="lg:col-span-2">
-            {drawDetail ? (
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between py-2 border-b border-border/50">
-                  <span className="text-muted-foreground">Prize Name</span>
-                  <span className="font-medium">{drawDetail.prizeName}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border/50">
-                  <span className="text-muted-foreground">Status</span>
-                  <span className={`font-medium px-2.5 py-1 rounded-full text-xs ${
-                    drawDetail.status === "ACTIVE" 
-                      ? "bg-green-500/10 border border-green-500/30 text-green-600"
-                      : "bg-yellow-500/10 border border-yellow-500/30 text-yellow-600"
-                  }`}>
-                    {drawDetail.status}
-                  </span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border/50">
-                  <span className="text-muted-foreground">Ticket Cost</span>
-                  <span className="font-medium">{drawDetail.ticketCostTokens.toLocaleString()} tokens</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border/50">
-                  <span className="text-muted-foreground">Schedule</span>
-                  <span className="font-medium">{drawDetail.scheduleLabel}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border/50">
-                  <span className="text-muted-foreground">Entry Count</span>
-                  <span className="font-medium">{drawDetail.entryCount.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border/50">
-                  <span className="text-muted-foreground">Max Winners</span>
-                  <span className="font-medium">{drawDetail.maxWinners}</span>
-                </div>
-                <div className="flex justify-between py-2">
-                  <span className="text-muted-foreground">Winners Selected</span>
-                  <span className="font-medium">{drawDetail.winnersSelected ? "Yes" : "No"}</span>
-                </div>
+          <div className="lg:col-span-2 bg-card border border-border rounded-xl p-4">
+            <h3 className="text-sm font-semibold mb-4">Draw Information</h3>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-[13px]">
+              <div>
+                <div className="text-muted-foreground mb-1">Prize Name</div>
+                <div className="font-medium">{drawDetail.prizeName}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground mb-1">Status</div>
+                <div><StatusBadge status={drawDetail.status} /></div>
+              </div>
+              <div>
+                <div className="text-muted-foreground mb-1">Ticket Cost</div>
+                <div className="font-medium">{pluralize(drawDetail.ticketCostTokens, "token", "tokens")}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground mb-1">Schedule</div>
+                <div className="font-medium">{drawDetail.scheduleLabel}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground mb-1">Entry Count</div>
+                <div className="font-medium">{drawDetail.entryCount.toLocaleString()}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground mb-1">Max Winners</div>
+                <div className="font-medium">{drawDetail.maxWinners}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground mb-1">Winners Selected</div>
+                <div className="font-medium">{drawDetail.winnersSelected ? "Yes" : "No"}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions or Status Message */}
+          <div className="bg-card border border-border rounded-xl p-4">
+            <h3 className="text-sm font-semibold mb-4">Actions</h3>
+            {statusMessage?.show ? (
+              <div className="flex items-start gap-2 p-3 bg-secondary/50 rounded-lg text-[13px] text-muted-foreground">
+                <AlertCircle size={16} strokeWidth={1.5} className="shrink-0 mt-0.5" />
+                <p>{statusMessage.message}</p>
+              </div>
+            ) : actions.length > 0 ? (
+              <div className="space-y-2">
+                {actions.map((action, idx) => (
+                  <Button
+                    key={idx}
+                    variant={action.variant}
+                    size="md"
+                    onClick={action.onClick}
+                    disabled={action.disabled || submitting}
+                    loading={submitting}
+                    className="w-full justify-center"
+                  >
+                    {action.label}
+                  </Button>
+                ))}
               </div>
             ) : (
-              <p className="text-muted-foreground text-sm">No details available</p>
+              <p className="text-[13px] text-muted-foreground">No actions available</p>
             )}
-          </AdminCard>
-
-          {/* Actions */}
-          <AdminCard title="Actions">
-            <AdminActionButton
-              onClick={() => handleSelectWinners(selectedDrawId)}
-              disabled={submitting}
-              size="md"
-              className="w-full"
-            >
-              {submitting ? "Selecting..." : "Select Winners"}
-            </AdminActionButton>
-          </AdminCard>
+          </div>
         </div>
 
-        {/* Winners List */}
-        <AdminCard title="Winners">
+        {/* Winners */}
+        <div className="bg-card border border-border rounded-xl p-4">
+          <h3 className="text-sm font-semibold mb-4">Winners</h3>
           {drawWinners.length > 0 ? (
-            <div className="space-y-2">
-              {drawWinners.map((winner, idx) => (
-                <div key={idx} className="p-3 sm:p-4 bg-secondary/30 rounded-xl">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
-                    {Object.entries(winner).map(([key, value]) => (
-                      <div key={key}>
-                        <p className="text-xs text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
-                        <p className="font-medium">{String(value)}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 px-3 font-medium text-muted-foreground">Email</th>
+                    <th className="text-left py-2 px-3 font-medium text-muted-foreground">Selected At</th>
+                    {drawWinners.some(w => w.userId || w.user_id) && (
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">User ID</th>
+                    )}
+                    {drawWinners.some(w => w.entryId || w.entry_id) && (
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Entry ID</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {drawWinners.map((winner, idx) => (
+                    <tr key={idx} className="border-b border-border last:border-0 hover:bg-secondary/30 transition-colors">
+                      <td className="py-3 px-3">{String(winner.email || winner.userEmail || "-")}</td>
+                      <td className="py-3 px-3 text-muted-foreground">
+                        {winner.selectedAt || winner.selected_at 
+                          ? new Date(String(winner.selectedAt || winner.selected_at)).toLocaleString('en-GB', { 
+                              day: '2-digit', 
+                              month: 'short', 
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          : "-"}
+                      </td>
+                      {drawWinners.some(w => w.userId || w.user_id) && (
+                        <td className="py-3 px-3 font-mono text-xs">{String(winner.userId || winner.user_id || "-")}</td>
+                      )}
+                      {drawWinners.some(w => w.entryId || w.entry_id) && (
+                        <td className="py-3 px-3 font-mono text-xs">{String(winner.entryId || winner.entry_id || "-")}</td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
-            <p className="text-center py-8 text-muted-foreground text-sm">No winners selected yet</p>
+            <p className="text-center py-8 text-muted-foreground text-[13px]">No winners selected yet</p>
           )}
-        </AdminCard>
+        </div>
+
+        {/* Confirm Dialogs */}
+        <ConfirmDialog
+          open={showCloseDrawDialog}
+          onClose={() => {
+            setShowCloseDrawDialog(false);
+            setDrawToClose(null);
+          }}
+          onConfirm={() => drawToClose && handleCloseDraw(drawToClose)}
+          title="Close Draw & Select Winners"
+          description="Are you sure you want to close this draw and select winners? This action will be submitted for approval."
+          confirmLabel="Yes, Close Draw"
+          variant="danger"
+          loading={submitting}
+        />
+
+        <ConfirmDialog
+          open={showSelectWinnersDialog}
+          onClose={() => {
+            setShowSelectWinnersDialog(false);
+            setDrawToSelectWinners(null);
+          }}
+          onConfirm={() => drawToSelectWinners && handleSelectWinners(drawToSelectWinners)}
+          title="Select Winners"
+          description="Manually trigger winner selection for this draw? This action will be submitted for approval."
+          confirmLabel="Select Winners"
+          variant="primary"
+          loading={submitting}
+        />
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <AdminPageHeader title="Rewards" />
-        <div className="bg-card border border-border rounded-2xl p-12 flex items-center justify-center">
-          <div className="text-muted-foreground text-sm">Loading reward draws...</div>
+      <div className="space-y-5">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-xl font-semibold">Rewards</h1>
+            <p className="text-[13px] text-muted-foreground mt-1">Manage raffle draws and prizes</p>
+          </div>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-12 flex items-center justify-center">
+          <div className="text-muted-foreground text-[13px]">Loading reward draws...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <AdminPageHeader 
-        title="Rewards" 
-        description="Manage raffle draws and prizes"
-        action={
-          <AdminActionButton icon={Plus} onClick={() => setShowCreateModal(true)} size="md">
-            Create Draw
-          </AdminActionButton>
-        }
-      />
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold">Rewards</h1>
+          <p className="text-[13px] text-muted-foreground mt-1">Manage raffle draws and prizes</p>
+        </div>
+        <Button
+          variant="gradient"
+          size="md"
+          icon={<Plus size={16} strokeWidth={1.5} />}
+          onClick={() => setShowCreateModal(true)}
+        >
+          Create Draw
+        </Button>
+      </div>
 
       {/* Success Message */}
       {successMessage && (
-        <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-green-600 flex items-start gap-3 text-sm">
-          <CheckCircle size={18} className="shrink-0 mt-0.5" />
+        <div className="bg-[var(--success-bg)] border border-[var(--success-border)] rounded-lg p-4 text-[var(--success)] flex items-start gap-3 text-[13px]">
+          <CheckCircle size={18} strokeWidth={1.5} className="shrink-0 mt-0.5" />
           <div>
             <p className="font-medium">{successMessage}</p>
             <p className="text-xs mt-1 opacity-80">Changes will take effect after approval by a checker.</p>
@@ -373,25 +492,24 @@ export default function AdminRewardsPage() {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 text-destructive text-sm">
+        <div className="bg-[var(--danger-bg)] border border-[var(--danger-border)] rounded-lg p-4 text-[var(--danger)] text-[13px]">
           {error}
         </div>
       )}
 
-      {/* Leaderboard Prize Form */}
-      <AdminCard title="Leaderboard Prizes">
+      {/* Leaderboard Prizes */}
+      <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex items-center gap-2 mb-4">
-          <Trophy size={18} className="text-primary" />
-          <h3 className="font-semibold">Configure Prizes</h3>
+          <Trophy size={18} strokeWidth={1.5} className="text-muted-foreground" />
+          <h3 className="text-sm font-semibold">Leaderboard Prizes</h3>
         </div>
         
-        {/* Current Prizes Display */}
         {prizesLoading ? (
-          <div className="mb-4 p-4 bg-secondary/30 rounded-lg text-center text-sm text-muted-foreground">
+          <div className="mb-4 p-4 bg-secondary/30 rounded-lg text-center text-[13px] text-muted-foreground">
             Loading current prizes...
           </div>
         ) : prizesError ? (
-          <div className="mb-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
+          <div className="mb-4 p-4 bg-[var(--danger-bg)] border border-[var(--danger-border)] rounded-lg text-[13px] text-[var(--danger)]">
             {prizesError}
           </div>
         ) : leaderboardPrizes.length > 0 ? (
@@ -399,7 +517,7 @@ export default function AdminRewardsPage() {
             <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">Current Prizes</p>
             <div className="space-y-2">
               {leaderboardPrizes.map((prize) => (
-                <div key={prize.rank} className="flex items-center justify-between text-sm py-1">
+                <div key={prize.rank} className="flex items-center justify-between text-[13px] py-1">
                   <span className="font-medium">#{prize.rank}</span>
                   <span className="font-bold text-primary">₦{prize.prizeAmount.toLocaleString()}</span>
                 </div>
@@ -407,17 +525,17 @@ export default function AdminRewardsPage() {
             </div>
           </div>
         ) : (
-          <div className="mb-4 p-4 bg-secondary/30 rounded-lg text-center text-sm text-muted-foreground">
+          <div className="mb-4 p-4 bg-secondary/30 rounded-lg text-center text-[13px] text-muted-foreground">
             No prizes configured yet
           </div>
         )}
         
-        <p className="text-xs sm:text-sm text-muted-foreground mb-4">
+        <p className="text-xs text-muted-foreground mb-4">
           Configure prize amounts for specific leaderboard ranks.
         </p>
         <form onSubmit={handleSubmitPrize(handleSetLeaderboardPrize)} className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
-            <Input
+            <AdminInput
               type="number"
               {...registerPrize("rank", { 
                 required: "Rank is required", 
@@ -425,12 +543,11 @@ export default function AdminRewardsPage() {
                 min: { value: 1, message: "Must be at least 1" }
               })}
               placeholder="Rank (e.g. 1)"
-              className="text-sm"
+              error={errorsPrize.rank?.message}
             />
-            {errorsPrize.rank && <p className="text-destructive text-xs mt-1">{errorsPrize.rank.message}</p>}
           </div>
           <div className="flex-1">
-            <Input
+            <AdminInput
               type="number"
               {...registerPrize("prizeAmount", { 
                 required: "Amount is required", 
@@ -438,106 +555,121 @@ export default function AdminRewardsPage() {
                 min: { value: 0, message: "Must be 0 or greater" }
               })}
               placeholder="Prize amount (kobo)"
-              className="text-sm"
+              error={errorsPrize.prizeAmount?.message}
             />
-            {errorsPrize.prizeAmount && <p className="text-destructive text-xs mt-1">{errorsPrize.prizeAmount.message}</p>}
           </div>
-          <AdminActionButton type="submit" disabled={submitting} size="md">
-            {submitting ? "Setting..." : "Set Prize"}
-          </AdminActionButton>
+          <Button type="submit" variant="gradient" size="md" disabled={submitting} loading={submitting}>
+            Set Prize
+          </Button>
         </form>
-      </AdminCard>
+      </div>
 
-      {/* Reward Draws */}
-      {draws.length === 0 && !loading ? (
-        <div className="bg-card border border-border rounded-2xl p-12 text-center text-muted-foreground text-sm">
+      {/* Draws Grid */}
+      {draws.length === 0 ? (
+        <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground text-[13px]">
           No reward draws yet. Create your first draw to get started.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {draws.map((draw) => (
-            <div 
-              key={draw.id} 
-              className="bg-card border border-border rounded-2xl p-4 sm:p-6 cursor-pointer hover:border-primary transition-colors"
-              onClick={() => handleViewDraw(draw.id)}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <h3 className="font-bold text-base sm:text-lg">{draw.prizeName}</h3>
-                <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 ${
-                  draw.status === "ACTIVE" 
-                    ? "bg-green-500/10 border border-green-500/30 text-green-600"
-                    : draw.status === "CLOSED"
-                    ? "bg-yellow-500/10 border border-yellow-500/30 text-yellow-600"
-                    : "bg-blue-500/10 border border-blue-500/30 text-blue-600"
-                }`}>
-                  {draw.status}
-                </span>
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {draws.map((draw) => {
+            const actions = getDrawActions(draw, {
+              onCloseAndSelectWinners: () => {
+                setDrawToClose(draw.id);
+                setShowCloseDrawDialog(true);
+              },
+              onSelectWinners: () => {
+                setDrawToSelectWinners(draw.id);
+                setShowSelectWinnersDialog(true);
+              },
+            });
 
-              <div className="space-y-2 text-xs sm:text-sm mb-4">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Schedule</span>
-                  <span className="font-medium">{draw.scheduleLabel}</span>
+            return (
+              <div
+                key={draw.id}
+                className="bg-card border border-border rounded-xl p-4 cursor-pointer hover:border-primary transition-colors"
+                onClick={() => handleViewDraw(draw.id)}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <h3 className="font-semibold text-sm">{draw.prizeName}</h3>
+                  <StatusBadge status={draw.status} />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Ticket Cost</span>
-                  <span className="font-medium">{draw.ticketCostTokens.toLocaleString()} tokens</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Entries</span>
-                  <span className="font-medium">{draw.entryCount.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Max Winners</span>
-                  <span className="font-medium">{draw.maxWinners}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Winners Selected</span>
-                  <span className="font-medium">{draw.winnersSelected ? "Yes" : "No"}</span>
-                </div>
-              </div>
 
-              {draw.status === "ACTIVE" && (
-                <AdminActionButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCloseDrawClick(draw.id);
-                  }}
-                  disabled={closingDrawId === draw.id}
-                  variant="danger"
-                  size="sm"
-                  className="w-full"
-                >
-                  {closingDrawId === draw.id ? "Closing..." : "Close & Select Winners"}
-                </AdminActionButton>
-              )}
-            </div>
-          ))}
+                <div className="space-y-2 text-xs mb-4">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Schedule</span>
+                    <span className="font-medium">{draw.scheduleLabel}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Ticket Cost</span>
+                    <span className="font-medium">{pluralize(draw.ticketCostTokens, "token", "tokens")}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Entries</span>
+                    <span className="font-medium">{draw.entryCount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Winners Selected</span>
+                    <span className="font-medium">{draw.winnersSelected ? "Yes" : "No"}</span>
+                  </div>
+                </div>
+
+                {actions.length > 0 && (
+                  <Button
+                    variant={actions[0].variant}
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      actions[0].onClick();
+                    }}
+                    disabled={actions[0].disabled}
+                    className="w-full justify-center"
+                  >
+                    {actions[0].label}
+                  </Button>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
       {/* Create Draw Modal */}
-      <Modal
+      <AdminModal
         open={showCreateModal}
         onClose={() => {
           setShowCreateModal(false);
           setError(null);
         }}
         title="Create New Reward Draw"
+        description="Set up a new raffle draw for rewards"
+        size="md"
+        footer={
+          <ModalFooter>
+            <Button variant="ghost" size="md" onClick={() => setShowCreateModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="gradient"
+              size="md"
+              onClick={handleSubmit(handleCreateDraw)}
+              loading={submitting}
+            >
+              Submit for Approval
+            </Button>
+          </ModalFooter>
+        }
       >
         <form onSubmit={handleSubmit(handleCreateDraw)} className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block">Prize Name</label>
-            <Input
-              {...register("prizeName", { required: "Prize name is required" })}
-              placeholder="e.g. Samsung Galaxy S24"
-            />
-            {errors.prizeName && <p className="text-destructive text-sm mt-1">{errors.prizeName.message}</p>}
-          </div>
+          <AdminInput
+            label="Prize Name"
+            {...register("prizeName", { required: "Prize name is required" })}
+            placeholder="e.g. Samsung Galaxy S24"
+            error={errors.prizeName?.message}
+          />
 
-          <div>
-            <label className="text-sm font-medium mb-2 block">Ticket Cost (tokens)</label>
-            <Input
+          <FormGrid>
+            <AdminInput
+              label="Ticket Cost (tokens)"
               type="number"
               {...register("ticketCostTokens", { 
                 required: "Ticket cost is required",
@@ -545,27 +677,11 @@ export default function AdminRewardsPage() {
                 min: { value: 1, message: "Must be at least 1" },
               })}
               placeholder="5000"
+              error={errors.ticketCostTokens?.message}
             />
-            {errors.ticketCostTokens && <p className="text-destructive text-sm mt-1">{errors.ticketCostTokens.message}</p>}
-          </div>
 
-          <div>
-            <label className="text-sm font-medium mb-2 block">Schedule Label</label>
-            <select
-              {...register("scheduleLabel", { required: "Schedule is required" })}
-              className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground"
-            >
-              <option value="">Select schedule</option>
-              <option value="Daily">Daily</option>
-              <option value="Weekly">Weekly</option>
-              <option value="Monthly">Monthly</option>
-            </select>
-            {errors.scheduleLabel && <p className="text-destructive text-sm mt-1">{errors.scheduleLabel.message}</p>}
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-2 block">Max Winners</label>
-            <Input
+            <AdminInput
+              label="Max Winners"
               type="number"
               {...register("maxWinners", { 
                 required: "Max winners is required",
@@ -573,64 +689,62 @@ export default function AdminRewardsPage() {
                 min: { value: 1, message: "Must be at least 1" },
               })}
               placeholder="1"
+              error={errors.maxWinners?.message}
             />
-            {errors.maxWinners && <p className="text-destructive text-sm mt-1">{errors.maxWinners.message}</p>}
-          </div>
+          </FormGrid>
 
-          <div>
-            <label className="text-sm font-medium mb-2 block">Initial Status</label>
-            <select
-              {...register("status", { required: "Status is required" })}
-              className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground"
-            >
-              <option value="OPEN">Open</option>
-              <option value="CLOSED">Closed</option>
-            </select>
-            {errors.status && <p className="text-destructive text-sm mt-1">{errors.status.message}</p>}
-          </div>
+          <AdminSelect
+            label="Schedule Label"
+            {...register("scheduleLabel", { required: "Schedule is required" })}
+            options={[
+              { value: "", label: "Select schedule" },
+              { value: "Daily", label: "Daily" },
+              { value: "Weekly", label: "Weekly" },
+              { value: "Monthly", label: "Monthly" },
+            ]}
+            error={errors.scheduleLabel?.message}
+          />
 
-          <Button type="submit" variant="gradient" className="w-full justify-center" disabled={submitting}>
-            {submitting ? "Submitting..." : "Submit for Approval"}
-          </Button>
+          <AdminSelect
+            label="Initial Status"
+            {...register("status", { required: "Status is required" })}
+            options={[
+              { value: "OPEN", label: "Open" },
+              { value: "CLOSED", label: "Closed" },
+            ]}
+            error={errors.status?.message}
+          />
         </form>
-      </Modal>
+      </AdminModal>
 
-      {/* Close Draw Confirmation Modal */}
-      <Modal
-        open={showCloseDrawModal}
+      {/* Confirm Dialogs */}
+      <ConfirmDialog
+        open={showCloseDrawDialog}
         onClose={() => {
-          setShowCloseDrawModal(false);
+          setShowCloseDrawDialog(false);
           setDrawToClose(null);
         }}
+        onConfirm={() => drawToClose && handleCloseDraw(drawToClose)}
         title="Close Draw & Select Winners"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Are you sure you want to close this draw and select winners? This action will be submitted for approval.
-          </p>
-          
-          <div className="flex gap-3 mt-6">
-            <Button
-              onClick={() => {
-                setShowCloseDrawModal(false);
-                setDrawToClose(null);
-              }}
-              variant="outline"
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => drawToClose && handleCloseDraw(drawToClose)}
-              variant="destructive"
-              className="flex-1"
-              disabled={closingDrawId !== null}
-            >
-              {closingDrawId ? "Closing..." : "Yes, Close Draw"}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        description="Are you sure you want to close this draw and select winners? This action will be submitted for approval."
+        confirmLabel="Yes, Close Draw"
+        variant="danger"
+        loading={submitting}
+      />
+
+      <ConfirmDialog
+        open={showSelectWinnersDialog}
+        onClose={() => {
+          setShowSelectWinnersDialog(false);
+          setDrawToSelectWinners(null);
+        }}
+        onConfirm={() => drawToSelectWinners && handleSelectWinners(drawToSelectWinners)}
+        title="Select Winners"
+        description="Manually trigger winner selection for this draw? This action will be submitted for approval."
+        confirmLabel="Select Winners"
+        variant="primary"
+        loading={submitting}
+      />
     </div>
   );
 }

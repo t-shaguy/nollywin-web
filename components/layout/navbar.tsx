@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { User, Menu, X } from "lucide-react";
+import { User, Menu, X, Monitor } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
 import { useAvatarUrl } from "@/hooks/use-avatar-url";
 
@@ -30,12 +30,11 @@ export function Navbar() {
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
-    <nav className="relative">
-      <div className="flex items-center justify-between px-4 sm:px-8 py-6">
+    <nav className="sticky top-0 z-50 bg-background border-b border-white/5">
+      <div className="flex items-center justify-between px-4 sm:px-8 py-3">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 z-50">
-          <Image src="/logo-icon.png" alt="NollyWin" width={44} height={44} className="h-11 w-11 object-contain" />
-          <span className="text-brand-gradient font-bold text-2xl">NollyWin</span>
+          <Image src="/logo.png" alt="NollyWin" width={160} height={160} className="h-[80px] w-auto object-contain" />
         </Link>
 
         {/* Desktop Navigation */}

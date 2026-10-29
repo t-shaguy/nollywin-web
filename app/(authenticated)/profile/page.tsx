@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Star, User, Mail, Phone, ChevronRight, Lock, Bell, UserPlus } from "lucide-react";
 import Link from "next/link";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { getProfile, updateProfile } from "@/lib/api/profile";
 import { toInternationalPhone } from "@/lib/utils/phone";
 
-export default function ProfilePage() {
+function ProfileContent() {
   const searchParams = useSearchParams();
   const { tokenBalance } = useWalletStore();
   const user = useAuthStore((s) => s.user);
@@ -490,5 +490,14 @@ export default function ProfilePage() {
           </Link>
         </section>
       </div>
+  );
+}
+
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background p-4" />}>
+      <ProfileContent />
+    </Suspense>
   );
 }

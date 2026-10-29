@@ -65,50 +65,53 @@ export default function PaymentSettingsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-8">
-        <h1 className="text-3xl font-extrabold">Payment Settings</h1>
-        <div className="bg-card border border-border rounded-2xl p-12 flex items-center justify-center">
-          <div className="text-muted-foreground">Loading payment settings...</div>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-xl font-semibold">Payment Settings</h1>
+          <p className="text-muted-foreground text-sm mt-1">Configure payment gateway callbacks and settings</p>
+        </div>
+        <div className="bg-card border border-border rounded p-12 flex items-center justify-center">
+          <div className="text-muted-foreground text-sm">Loading payment settings...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-extrabold">Payment Settings</h1>
-        <p className="text-muted-foreground mt-1">Configure payment gateway callbacks and settings</p>
+        <h1 className="text-xl font-semibold">Payment Settings</h1>
+        <p className="text-muted-foreground text-sm mt-1">Configure payment gateway callbacks and settings</p>
       </div>
 
       {/* Success Message */}
       {successMessage && (
-        <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-green-600 flex items-start gap-3">
-          <CheckCircle size={20} className="shrink-0 mt-0.5" />
+        <div className="bg-green-500/10 border border-green-500/30 rounded p-4 text-green-600 flex items-start gap-3 text-sm">
+          <CheckCircle size={18} className="shrink-0 mt-0.5" />
           <p className="font-medium">{successMessage}</p>
         </div>
       )}
 
       {/* Error Message */}
       {error && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 text-destructive">
+        <div className="bg-destructive/10 border border-destructive/30 rounded p-4 text-destructive text-sm">
           {error}
         </div>
       )}
 
       {/* Current Settings */}
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <div className="flex items-center gap-2 mb-6">
-          <CreditCard size={20} className="text-primary" />
-          <h2 className="text-xl font-bold">Current Settings</h2>
+      <div className="bg-card border border-border rounded p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <CreditCard size={16} className="text-muted-foreground" />
+          <h2 className="text-sm font-semibold">Current Settings</h2>
         </div>
         
         {/* TODO(tartor): Generic render until response shape confirmed */}
         {settings && settings.length > 0 ? (
           <div className="space-y-3">
             {settings.map((setting, idx) => (
-              <div key={idx} className="p-4 bg-secondary/30 rounded-xl border border-border/50">
-                <div className="grid grid-cols-2 gap-3">
+              <div key={idx} className="p-3 bg-secondary/30 rounded border border-border/50">
+                <div className="grid grid-cols-2 gap-3 text-[13px]">
                   {Object.entries(setting).map(([key, value]) => (
                     <div key={key}>
                       <p className="text-xs text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
@@ -120,30 +123,30 @@ export default function PaymentSettingsPage() {
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground">No settings available</p>
+          <p className="text-muted-foreground text-sm">No settings available</p>
         )}
       </div>
 
       {/* Set Callback URL Form */}
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <h2 className="text-xl font-bold mb-6">Set Payment Callback URL</h2>
+      <div className="bg-card border border-border rounded p-4">
+        <h2 className="text-sm font-semibold mb-4">Set Payment Callback URL</h2>
         
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="text-sm font-medium mb-2 block">Payment Channel</label>
+            <label className="text-xs font-medium mb-1.5 block">Payment Channel</label>
             <select
               {...register("channel", { required: "Channel is required" })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-xl"
+              className="w-full px-3 py-2 bg-background border border-border rounded text-[13px]"
             >
               <option value="">Select a channel</option>
               <option value="WEB">WEB</option>
               <option value="MOBILE">MOBILE</option>
             </select>
-            {errors.channel && <p className="text-destructive text-sm mt-1">{errors.channel.message}</p>}
+            {errors.channel && <p className="text-destructive text-xs mt-1">{errors.channel.message}</p>}
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-2 block">Callback URL</label>
+            <label className="text-xs font-medium mb-1.5 block">Callback URL</label>
             <Input
               {...register("callbackUrl", { 
                 required: "Callback URL is required",

@@ -76,48 +76,56 @@ export default function TokenRatePage() {
 
   if (loading) {
     return (
-      <div className="space-y-4 sm:space-y-5">
-        <AdminPageHeader title="Token Exchange Rate" />
-        <AdminCard>
-          <div className="py-8 flex items-center justify-center">
-            <div className="text-muted-foreground text-xs">Loading exchange rates...</div>
-          </div>
-        </AdminCard>
+      <div className="space-y-6">
+        <AdminPageHeader 
+          title="Token Exchange Rate" 
+          description="Manage the token-to-naira conversion rate"
+        />
+        <div className="bg-card border border-border rounded p-12 flex items-center justify-center">
+          <div className="text-muted-foreground text-sm">Loading exchange rates...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 sm:space-y-5">
-      <AdminPageHeader title="Token Exchange Rate" />
+    <div className="space-y-6">
+      <AdminPageHeader 
+        title="Token Exchange Rate" 
+        description="Manage the token-to-naira conversion rate"
+      />
 
       {/* Success Message */}
       {successMessage && (
-        <div className="bg-muted/50 border border-border rounded-xl p-3 sm:p-4 flex items-start gap-2 sm:gap-3">
-          <CheckCircle size={16} className="sm:w-[18px] sm:h-[18px] shrink-0 mt-0.5 text-muted-foreground" />
-          <p className="text-xs sm:text-sm text-foreground">{successMessage}</p>
+        <div className="bg-muted/50 border border-border rounded p-4 flex items-start gap-3">
+          <CheckCircle size={16} className="shrink-0 mt-0.5 text-muted-foreground" />
+          <p className="text-sm text-foreground">{successMessage}</p>
         </div>
       )}
 
       {/* Error Message */}
       {error && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3 sm:p-4 text-destructive text-xs sm:text-sm">
+        <div className="bg-destructive/10 border border-destructive/30 rounded p-4 text-destructive text-sm">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Current Rate Display */}
-        <AdminStatCard
-          icon={Coins}
-          label="Current Rate"
-          value={currentRate ? `₦${(currentRate.koboPerToken / 100).toFixed(2)}` : "Not Set"}
-          iconColor="text-yellow-500"
-          iconBg="bg-yellow-500/10"
-        />
+        <div className="bg-card border border-border rounded p-4">
+          <div className="w-8 h-8 rounded bg-secondary/50 flex items-center justify-center mb-3">
+            <Coins size={16} className="text-muted-foreground" />
+          </div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Current Rate</p>
+          <p className="text-2xl font-bold mt-1 tabular-nums">
+            {currentRate ? `₦${(currentRate.koboPerToken / 100).toFixed(2)}` : "Not Set"}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">per token</p>
+        </div>
 
         {/* Set New Rate Form */}
-        <AdminCard title="Set New Exchange Rate" className="lg:col-span-2">
+        <div className="bg-card border border-border rounded p-4 lg:col-span-2">
+          <h3 className="text-sm font-semibold mb-3">Set New Exchange Rate</h3>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
             <div>
               <label className="text-xs font-medium mb-1.5 block">Rate (Kobo per Token)</label>
@@ -131,14 +139,14 @@ export default function TokenRatePage() {
                     min: { value: 0.01, message: "Must be greater than 0" } 
                   })} 
                   placeholder="100"
-                  className="flex-1 h-9 text-sm"
+                  className="flex-1"
                 />
                 <Button 
                   type="submit" 
                   disabled={submitting}
                   variant="gradient"
                   size="sm"
-                  className="h-9 px-4"
+                  className="!rounded"
                 >
                   {submitting ? "Saving..." : "Update Rate"}
                 </Button>
@@ -151,31 +159,32 @@ export default function TokenRatePage() {
               Financial operation. Example: 100 kobo = ₦1.00 per token
             </p>
           </form>
-        </AdminCard>
+        </div>
       </div>
 
       {/* Rate History Table */}
-      <AdminCard title="Rate Change History">
+      <div className="bg-card border border-border rounded p-4">
+        <h3 className="text-sm font-semibold mb-3">Rate Change History</h3>
         {history.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-2 px-3 text-xs font-medium text-muted-foreground">Effective From</th>
-                  <th className="text-left py-2 px-3 text-xs font-medium text-muted-foreground">Rate (Kobo)</th>
-                  <th className="text-left py-2 px-3 text-xs font-medium text-muted-foreground">Rate (Naira)</th>
+                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">Effective From</th>
+                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">Rate (Kobo)</th>
+                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">Rate (Naira)</th>
                 </tr>
               </thead>
               <tbody>
                 {history.map((entry) => (
-                  <tr key={entry.id} className="border-b border-border/50 hover:bg-secondary/20">
-                    <td className="py-2 px-3 text-xs">
+                  <tr key={entry.id} className="border-b border-border last:border-0 hover:bg-secondary/50">
+                    <td className="py-2 px-3">
                       {new Date(entry.effectiveFrom).toLocaleDateString()}
                     </td>
-                    <td className="py-2 px-3 text-xs font-medium">
+                    <td className="py-2 px-3 font-medium tabular-nums">
                       {entry.koboPerToken.toFixed(2)}
                     </td>
-                    <td className="py-2 px-3 text-xs">
+                    <td className="py-2 px-3 tabular-nums">
                       ₦{(entry.koboPerToken / 100).toFixed(2)}
                     </td>
                   </tr>
@@ -184,11 +193,11 @@ export default function TokenRatePage() {
             </table>
           </div>
         ) : (
-          <div className="text-center py-6 text-muted-foreground text-xs">
+          <div className="text-center py-8 text-muted-foreground text-sm">
             No rate history available
           </div>
         )}
-      </AdminCard>
+      </div>
     </div>
   );
 }

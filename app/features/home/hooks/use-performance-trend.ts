@@ -13,12 +13,18 @@ interface DataPoint {
  * 
  * Maps API response (date/gamesPlayed/pointsEarned) to chart format (label/value).
  * On error, falls back to PLACEHOLDER_PERFORMANCE so the chart still renders its empty state.
+ * 
+ * @param enabled - Optional flag to control when the fetch should run (for staggering)
  */
-export function usePerformanceTrend() {
+export function usePerformanceTrend(enabled: boolean = true) {
   const [data, setData] = useState<DataPoint[]>(PLACEHOLDER_PERFORMANCE);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     async function fetchTrend() {
       try {
         const trend = await getPerformanceTrend(7);
@@ -45,7 +51,7 @@ export function usePerformanceTrend() {
     }
 
     fetchTrend();
-  }, []);
+  }, [enabled]);
 
   return { data, loading };
 }
