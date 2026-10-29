@@ -170,9 +170,9 @@ export function TriviaFlow() {
           console.error("[TRIVIA] Failed to refresh wallet balance after game end:", err);
         }
         
-        setTimeout(() => {
-          setStep("cleared");
-        }, 1500);
+        // DO NOT auto-redirect on last question - let user click "Tap to see result" button
+        // The button will call handleNextAfterAnswer which will navigate to results
+        setPendingQuestion(null); // Mark as no next question
       } else {
         // Do NOT swap currentQuestion yet — just stash it.
         // The user is still looking at feedback for the question they 
@@ -222,9 +222,8 @@ export function TriviaFlow() {
           console.error("[TRIVIA] Failed to refresh wallet balance after timeout:", err);
         }
         
-        setTimeout(() => {
-          setStep("cleared");
-        }, 1500);
+        // DO NOT auto-redirect on last question - let user click button
+        setPendingQuestion(null); // Mark as no next question
       } else {
         setPendingQuestion(response.nextQuestion);
       }
@@ -237,13 +236,18 @@ export function TriviaFlow() {
   };
 
   const handleNextAfterAnswer = () => {
-    // Promote pending question to current, if present
-    if (pendingQuestion) {
-      setCurrentQuestion(pendingQuestion);
-      setCurrentSequence(pendingQuestion.sequenceNumber);
-      setTimeLeft(pendingQuestion.secondsAllowed);
-      setPendingQuestion(null);
+    // If no pending question, game is over - navigate to results
+    if (!pendingQuestion) {
+      setStep("cleared");
+      return;
     }
+    
+    // Promote pending question to current
+    setCurrentQuestion(pendingQuestion);
+    setCurrentSequence(pendingQuestion.sequenceNumber);
+    setTimeLeft(pendingQuestion.secondsAllowed);
+    setPendingQuestion(null);
+    
     // Reset feedback state for the question that's now showing
     setSelectedIndex(null);
     setShowFeedback(false);
@@ -364,7 +368,7 @@ export function TriviaFlow() {
           onAnswer={handleAnswer}
           onNext={handleNextAfterAnswer}
           isTimeout={selectedIndex === -1}
-          isLastQuestionInStage={true} // Each question is treated as a stage
+          isLastQuestionInStage={!pendingQuestion} // True if no next question (game over)
           answeredQuestionsPerStage={questionScores.map((score) => score > 0 ? 1 : 0)}
           currentQuestionInStage={0}
         />

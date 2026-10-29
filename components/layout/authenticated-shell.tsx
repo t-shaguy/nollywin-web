@@ -27,7 +27,7 @@ export function AuthenticatedShell({
       <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <div className="flex-1 min-w-0 min-h-0 flex flex-col h-screen overflow-hidden">
         <TopBar tokenBalance={tokenBalance} unreadCount={unreadCount} onMenuClick={() => setMobileNavOpen(true)} />
-        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-6 max-w-6xl">{children}</div>
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 md:px-6 pb-4 md:pb-6 max-w-6xl">{children}</div>
       </div>
     </div>
   );

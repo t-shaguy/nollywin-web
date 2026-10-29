@@ -206,15 +206,19 @@ export function QuestionView({
                 ? "text-muted-foreground" 
                 : "text-red-500"
           }`}>
-            {isCorrect ? "Correct! +50 pts" : isTimeout ? "⏰ Time's up! +0 pts" : "Wrong answer. +0 pts"}
+            {isCorrect 
+              ? "Correct! +50 pts" 
+              : isTimeout 
+                ? "⏰ Time's up! +0 pts" 
+                : "Wrong answer. +0 pts"}
           </p>
-          {!isTimeout && (
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {isCorrect
-                ? "Tap to continue"
-                : `The correct answer was ${optionLabels[question.correctIndex]}`}
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {isCorrect
+              ? isLastQuestionInStage
+                ? "Tap to see result"
+                : "Tap to continue"
+              : `The correct answer was ${optionLabels[question.correctIndex]}. Tap to ${isLastQuestionInStage ? "see result" : "continue"}`}
+          </p>
         </button>
       )}
     </div>
