@@ -62,13 +62,22 @@ export async function fetchWalletBalance() {
   try {
     console.log("[WALLET FETCH] Starting balance fetch...");
     const { getBalance } = await import("@/lib/api/wallet");
+    const { useAuthStore } = await import("@/store/auth-store");
     useWalletStore.getState().setLoading(true);
     
     const balance = await getBalance();
     console.log("[WALLET FETCH] API returned tokenBalance:", balance.tokenBalance);
+    console.log("[WALLET FETCH] API returned authUserId:", balance.authUserId);
     
     useWalletStore.getState().setBalance(balance.tokenBalance);
     console.log("[WALLET FETCH] Zustand store updated with balance:", balance.tokenBalance);
+    
+    // Update auth store with authUserId if not already set
+    const currentUser = useAuthStore.getState().user;
+    if (currentUser && !currentUser.authUserId && balance.authUserId) {
+      useAuthStore.getState().updateUser({ authUserId: balance.authUserId });
+      console.log("[WALLET FETCH] Updated auth store with authUserId:", balance.authUserId);
+    }
     
     return balance;
   } catch (error) {

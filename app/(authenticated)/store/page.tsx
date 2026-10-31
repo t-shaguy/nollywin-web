@@ -278,7 +278,7 @@ export default function StorePage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{plan.attemptsIncluded} {plan.attemptsIncluded === 1 ? 'attempt' : 'attempts'} / {plan.attemptsPeriod.toLowerCase()}</p>
+                    <p className="text-xs text-muted-foreground">{plan.attemptsIncluded} {plan.attemptsIncluded === 1 ? 'attempt' : 'attempts'} / {plan.attemptsPeriod?.toLowerCase() || 'period'}</p>
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-lg" style={{ color: PINK }}>₦{plan.fee.toLocaleString()}</p>

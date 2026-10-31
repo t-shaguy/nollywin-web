@@ -1,8 +1,5 @@
 "use client";
-import { useState } from "react";
-import { Star, Ticket } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { PurchaseTicketModal } from "./purchase-ticket-modal";
+import { Clock } from "lucide-react";
 import { Raffle } from "@/store/raffle-store";
 
 export function ActiveDrawCard({ 
@@ -12,52 +9,37 @@ export function ActiveDrawCard({
   draw: Raffle;
   userTickets: number;
 }) {
-  const [showModal, setShowModal] = useState(false);
-
   return (
-    <>
-      <div
-        className="border border-primary/20 rounded-2xl p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_260px] gap-6 sm:items-center"
-        style={{
-          background:
-            "radial-gradient(120% 140% at 0% 0%, rgba(236,20,105,0.28) 0%, rgba(236,20,105,0.10) 45%, transparent 75%)",
-        }}
-      >
-        <div className="min-w-0">
-          <h2 className="text-2xl font-extrabold break-words">{draw.prizeName}</h2>
-          {/* No description field in verified backend response */}
-          
-          <div className="mt-4 space-y-2">
-            <p className="text-sm">
-              You have <span className="text-primary font-semibold">{userTickets} {userTickets === 1 ? "ticket" : "tickets"}</span> for this draw.
-            </p>
-            
-            <p className="text-sm">
-              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                {draw.entryCount} {draw.entryCount === 1 ? "entry" : "entries"} so far
-              </span>
-            </p>
+    <div
+      className="border border-primary/20 rounded-2xl p-6 sm:p-8"
+      style={{
+        background:
+          "radial-gradient(120% 140% at 0% 0%, rgba(236,20,105,0.28) 0%, rgba(236,20,105,0.10) 45%, transparent 75%)",
+      }}
+    >
+      <div className="min-w-0">
+        <h2 className="text-2xl font-extrabold break-words">{draw.prizeName}</h2>
+        
+        {/* Timeframe */}
+        {draw.scheduleLabel && (
+          <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock size={13} />
+            <span>{draw.scheduleLabel}</span>
           </div>
-        </div>
-
-        <div className="bg-card rounded-2xl p-5 text-center">
-          <p className="text-sm text-muted-foreground">Cost per Ticket</p>
-          <p className="flex items-center justify-center gap-1.5 text-xl font-bold mt-2">
-            <Star size={18} className="text-amber-500" />
-            {draw.ticketCostTokens.toLocaleString()}
+        )}
+        
+        <div className="mt-4 space-y-2">
+          <p className="text-sm">
+            You have <span className="text-primary font-semibold">{userTickets} {userTickets === 1 ? "ticket" : "tickets"}</span> for this draw.
           </p>
-          <p className="text-xs text-muted-foreground mt-1">tokens</p>
-          <Button onClick={() => setShowModal(true)} className="w-full justify-center mt-4">
-            Buy Ticket
-          </Button>
+          
+          <p className="text-sm">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {draw.entryCount} {draw.entryCount === 1 ? "entry" : "entries"} so far
+            </span>
+          </p>
         </div>
       </div>
-
-      <PurchaseTicketModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        raffle={draw}
-      />
-    </>
+    </div>
   );
 }

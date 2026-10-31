@@ -3,61 +3,51 @@ import Link from "next/link";
 import { Play, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/auth-store";
+import { useWalletStore } from "@/store/wallet-store";
 import type { PlayerDashboard } from "@/lib/api/auth";
 
 export function DashboardHeader({
   hasActiveSubscription,
   paymentPending,
-  attemptsRemaining,
+  tokenBalance,
   tokenCost,
   subscription,
 }: {
   hasActiveSubscription: boolean;
   paymentPending: boolean;
-  attemptsRemaining: number | null;
+  tokenBalance: number;
   tokenCost: number;
   subscription: PlayerDashboard["subscription"];
 }) {
   const user = useAuthStore((s) => s.user);
   const firstName = user?.firstName ?? "Player";
+  const isWalletLoading = useWalletStore((s) => s.isLoading);
   
   // Determine play availability
-  const canPlay = hasActiveSubscription && (attemptsRemaining === null || attemptsRemaining > 0);
-  const noAttemptsLeft = hasActiveSubscription && attemptsRemaining !== null && attemptsRemaining <= 0;
+  const canPlay = hasActiveSubscription && tokenBalance >= tokenCost;
+  const noTokensLeft = hasActiveSubscription && tokenBalance < tokenCost;
 
-  // Generate attempt status text
-  let attemptStatusText = "";
+  // Generate token status text
+  let tokenStatusText = "";
+  let activeTillText = "";
   
   if (paymentPending) {
-    attemptStatusText = "Payment pending";
+    tokenStatusText = "Payment pending";
   } else if (!hasActiveSubscription) {
-    attemptStatusText = "No active plan";
-  } else if (attemptsRemaining === null) {
-    // Pure time-based subscription with no attempt limit
-    attemptStatusText = `Unlimited plays • ${tokenCost} token${tokenCost === 1 ? "" : "s"}/play`;
-  } else if (subscription) {
-    // Has attempt-based subscription
-    const { attemptsPeriod, attemptsResetAt, expiresAt } = subscription;
+    tokenStatusText = "No active plan";
+  } else if (!isWalletLoading) {
+    // Show token balance and cost
+    tokenStatusText = `${tokenBalance} token${tokenBalance === 1 ? "" : "s"} left • ${tokenCost} token${tokenCost === 1 ? "" : "s"}/play`;
     
-    if (attemptsPeriod === "DAY" && attemptsResetAt) {
-      // Daily resets - show reset time
-      const resetTime = new Date(attemptsResetAt).toLocaleTimeString("en-US", { 
-        hour: "numeric", 
-        minute: "2-digit",
-        hour12: true 
-      });
-      attemptStatusText = `${attemptsRemaining} attempt${attemptsRemaining === 1 ? "" : "s"} left today, resets at ${resetTime}`;
-    } else if (attemptsPeriod === "MONTH") {
-      // Monthly pool - show valid until date
-      const expiryDate = new Date(expiresAt).toLocaleDateString("en-US", { 
+    // Show subscription expiry date
+    if (subscription?.expiresAt) {
+      const expiryDate = new Date(subscription.expiresAt).toLocaleDateString("en-US", { 
         month: "short", 
-        day: "numeric" 
+        day: "numeric",
+        year: "numeric"
       });
-      attemptStatusText = `${attemptsRemaining} attempt${attemptsRemaining === 1 ? "" : "s"} left this period, valid until ${expiryDate}`;
+      activeTillText = `Active till ${expiryDate}`;
     }
-    
-    // Append token cost
-    attemptStatusText += ` • ${tokenCost} token${tokenCost === 1 ? "" : "s"}/play`;
   }
 
   return (
@@ -76,13 +66,22 @@ export function DashboardHeader({
           <Link href="/game">
             <Button disabled={!canPlay} className="disabled:opacity-50">
               <Play size={18} />
-              {noAttemptsLeft ? "No attempts left" : "Start Playing"}
+              {noTokensLeft ? "No tokens left" : "Start Playing"}
             </Button>
           </Link>
         )}
-        <p className="text-xs text-muted-foreground">
-          {attemptStatusText}
-        </p>
+        {tokenStatusText && (
+          <div className="flex flex-col items-start sm:items-end gap-0.5">
+            <p className="text-xs text-muted-foreground">
+              {tokenStatusText}
+            </p>
+            {activeTillText && (
+              <p className="text-xs text-muted-foreground">
+                {activeTillText}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

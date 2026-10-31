@@ -148,7 +148,7 @@ export function RaffleHistoryList() {
         </div>
         <h3 className="text-lg font-bold mb-2">No entries yet</h3>
         <p className="text-sm text-muted-foreground">
-          Buy tickets for active draws to see your entries here
+          Your raffle entries will appear here
         </p>
       </div>
     );
@@ -182,7 +182,7 @@ export function RaffleHistoryList() {
 
             <div className="flex items-center gap-6 text-xs text-muted-foreground">
               <span>
-                Your tickets: <span className="font-semibold text-foreground">{entry.myTickets}</span>
+                Your {entry.myTickets === 1 ? "ticket" : "tickets"}: <span className="font-semibold text-foreground">{entry.myTickets}</span>
               </span>
               <span>
                 Draw status: <span className="font-semibold text-foreground capitalize">{entry.drawStatus.toLowerCase()}</span>

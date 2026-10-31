@@ -39,22 +39,13 @@ export default function HomePage() {
   // Use real dashboard fields for subscription status
   const hasActiveSubscription = dashboard?.hasActiveSubscription ?? false;
   const paymentPending = dashboard?.subscriptionPaymentPending ?? false;
-  const attemptsRemaining = dashboard?.subscription?.attemptsRemaining ?? null;
-
-  // DIAGNOSTIC: Log dashboard data
-  if (dashboard) {
-    console.log("[DASHBOARD DEBUG] Raw response:", dashboard);
-    console.log("[DASHBOARD DEBUG] hasActiveSubscription:", dashboard.hasActiveSubscription);
-    console.log("[DASHBOARD DEBUG] subscriptionPaymentPending:", dashboard.subscriptionPaymentPending);
-    console.log("[DASHBOARD DEBUG] subscription:", dashboard.subscription);
-  }
 
   return (
     <div className="space-y-6">
       <DashboardHeader 
         hasActiveSubscription={hasActiveSubscription}
         paymentPending={paymentPending}
-        attemptsRemaining={attemptsRemaining}
+        tokenBalance={tokenBalance}
         tokenCost={tokenCost}
         subscription={dashboard?.subscription ?? null}
       />

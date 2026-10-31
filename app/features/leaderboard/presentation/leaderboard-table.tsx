@@ -100,22 +100,41 @@ export function LeaderboardTable({
             >
               <RankBadge rank={entry.rank} />
               <div className="flex items-center gap-3 min-w-0">
-                {/* Avatar with initials (no real photo available from API) */}
+                {/* Avatar with initials */}
                 <div 
                   className={`h-8 w-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold ${
-                    isCurrentUser ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"
+                    isCurrentUser ? "bg-primary/20 text-primary" : "bg-secondary/50"
                   }`}
                 >
-                  {initials}
+                  {isCurrentUser && initials}
                 </div>
-                <span className={`font-medium truncate ${isCurrentUser ? "text-primary" : ""}`}>
-                  {entry.player}
-                  {isCurrentUser && <span className="ml-2 text-xs text-muted-foreground">(You)</span>}
+                <span className={`font-medium truncate ${
+                  isCurrentUser ? "text-primary" : "text-muted-foreground/40"
+                }`}>
+                  {isCurrentUser ? (
+                    <>
+                      {entry.player}
+                      <span className="ml-2 text-xs text-muted-foreground">(You)</span>
+                    </>
+                  ) : (
+                    "•••"
+                  )}
                 </span>
               </div>
-              <span className="text-muted-foreground font-mono">{entry.points.toLocaleString()}</span>
-              <span className={entry.prizeAmount > 0 ? "text-primary font-medium" : "text-muted-foreground"}>
-                {entry.prizeAmount > 0 ? `₦${entry.prizeAmount.toLocaleString()}` : "—"}
+              <span className={`font-mono ${
+                isCurrentUser ? "text-muted-foreground" : "text-muted-foreground/40"
+              }`}>
+                {isCurrentUser ? entry.points.toLocaleString() : "•••"}
+              </span>
+              <span className={
+                isCurrentUser 
+                  ? entry.prizeAmount > 0 ? "text-primary font-medium" : "text-muted-foreground"
+                  : "text-muted-foreground/40"
+              }>
+                {isCurrentUser 
+                  ? entry.prizeAmount > 0 ? `₦${entry.prizeAmount.toLocaleString()}` : "—"
+                  : "•••"
+                }
               </span>
             </div>
           );

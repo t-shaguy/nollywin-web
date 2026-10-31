@@ -6,7 +6,7 @@ import { getLeaderboard } from "@/lib/api/leaderboard";
 import { useAuthStore } from "@/store/auth-store";
 
 export default function LeaderboardPage() {
-  const currentUserId = useAuthStore((s) => s.user?.email) || null;
+  const currentUserId = useAuthStore((s) => s.user?.authUserId) || null;
   
   const { data, isLoading, error } = useQuery({
     queryKey: ["leaderboard", "monthly"],
@@ -30,13 +30,15 @@ export default function LeaderboardPage() {
     console.log("[LEADERBOARD DEBUG] Raw response:", data);
     console.log("[LEADERBOARD DEBUG] periodEndsAt:", data.periodEndsAt);
     console.log("[LEADERBOARD DEBUG] Total entries:", data.entries.length);
+    console.log("[LEADERBOARD DEBUG] currentUserId from auth store:", currentUserId);
     
     const currentUserEntry = entries.find(e => e.isCurrentUser);
     if (currentUserEntry) {
-      console.log("[LEADERBOARD DEBUG] Current user entry:", currentUserEntry);
+      console.log("[LEADERBOARD DEBUG] Current user entry found:", currentUserEntry);
     } else {
       console.log("[LEADERBOARD DEBUG] Current user NOT found in leaderboard");
       console.log("[LEADERBOARD DEBUG] Looking for authUserId:", currentUserId);
+      console.log("[LEADERBOARD DEBUG] Available authUserIds:", data.entries.map(e => e.authUserId));
     }
   }
 

@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { fetchWalletBalance } from "./wallet-store";
 
 // VERIFIED: Backend returns this exact shape for active draws
 export interface Raffle {
@@ -20,7 +19,6 @@ interface RaffleState {
   isLoading: boolean;
   setRaffles: (raffles: Raffle[]) => void;
   setLoading: (loading: boolean) => void;
-  updateRaffleTickets: (raffleId: string, entryCount: number, userTicketCount: number) => void;
 }
 
 export const useRaffleStore = create<RaffleState>()(
@@ -32,15 +30,6 @@ export const useRaffleStore = create<RaffleState>()(
       setRaffles: (raffles) => set({ raffles, isLoading: false }),
       
       setLoading: (loading) => set({ isLoading: loading }),
-
-      updateRaffleTickets: (raffleId, entryCount, userTicketCount) =>
-        set((state) => ({
-          raffles: state.raffles.map((r) =>
-            r.id === raffleId
-              ? { ...r, entryCount, userTicketCount }
-              : r
-          ),
-        })),
     }),
     { name: "raffle-storage" }
   )
@@ -66,37 +55,6 @@ export async function fetchActiveDraws() {
   } catch (error) {
     useRaffleStore.getState().setLoading(false);
     console.warn("Failed to fetch active draws:", error);
-    throw error;
-  }
-}
-
-/**
- * Purchase a raffle ticket
- * @param raffleId - The raffle draw ID
- * @param quantity - Number of tickets to purchase (default 1)
- */
-export async function purchaseRaffleTicket(raffleId: string, quantity: number = 1) {
-  try {
-    const { buyTicket } = await import("@/lib/api/leaderboard");
-    const response = await buyTicket(raffleId, { quantity });
-    
-    // Update local state with new ticket counts
-    const state = useRaffleStore.getState();
-    const raffle = state.raffles.find((r) => r.id === raffleId);
-    
-    if (raffle) {
-      useRaffleStore.getState().updateRaffleTickets(
-        raffleId,
-        raffle.entryCount + quantity,
-        (raffle.userTicketCount || 0) + quantity
-      );
-    }
-    
-    // Refresh wallet balance (tokens were deducted)
-    fetchWalletBalance().catch(console.error);
-    
-    return response;
-  } catch (error) {
     throw error;
   }
 }

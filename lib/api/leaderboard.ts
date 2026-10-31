@@ -53,18 +53,6 @@ export interface RaffleDraw {
 // Backend returns array directly, not wrapped in object
 export type ActiveDrawsResponse = RaffleDraw[];
 
-export interface BuyTicketRequest {
-  quantity?: number; // Default 1
-}
-
-export interface BuyTicketResponse {
-  message: string;
-  ticketNumbers?: string[];
-  totalCost?: number;
-  newBalance?: number;
-  [key: string]: any;
-}
-
 // ============================================================================
 // Leaderboard API Functions
 // ============================================================================
@@ -104,19 +92,6 @@ export async function getLeaderboard(period: string = "monthly"): Promise<Leader
 export async function getActiveDraws(): Promise<ActiveDrawsResponse> {
   return apiClient<ActiveDrawsResponse>("/api/v1/rewards/draws/active", {
     method: "GET",
-  });
-}
-
-/**
- * Buy a raffle ticket
- * POST /api/v1/rewards/draws/{drawId}/buy-ticket
- * 
- * Note: Response shape TBD - not yet verified with live backend
- */
-export async function buyTicket(drawId: string, data?: BuyTicketRequest): Promise<BuyTicketResponse> {
-  return apiClient<BuyTicketResponse>(`/api/v1/rewards/draws/${drawId}/buy-ticket`, {
-    method: "POST",
-    body: JSON.stringify(data || {}),
   });
 }
 

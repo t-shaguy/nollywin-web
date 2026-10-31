@@ -3,6 +3,7 @@ import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
 
 // VERIFIED: Profile shape from backend (returned in login/verify-otp response and GET /api/v1/users/profile)
 export interface User {
+  authUserId?: string; // User ID from backend (available from wallet API, may not be in all responses)
   email: string;
   firstName: string | null; // Can be null for phone-authenticated accounts
   lastName: string | null;  // Can be null for phone-authenticated accounts

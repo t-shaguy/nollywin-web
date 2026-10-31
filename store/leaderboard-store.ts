@@ -65,8 +65,8 @@ export async function fetchLeaderboard(period: string = "monthly") {
       return response;
     }
     
-    // Get current user ID from auth store
-    const currentUserId = useAuthStore.getState().user?.email || null; // Use email as unique identifier
+    // Get current user ID from auth store (use authUserId, not email)
+    const currentUserId = useAuthStore.getState().user?.authUserId || null;
     
     // Map API response to store format
     const entries: LeaderboardEntry[] = response.entries.map((entry) => ({
