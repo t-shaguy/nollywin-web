@@ -7,8 +7,18 @@ export interface TriviaQuestion {
   difficulty: "Easy" | "Medium" | "Hard";
 }
 
-// TODO: replace with GET /trivia/stages/:id/questions once the backend is live.
-// 3 questions total - 1 per stage
+/**
+ * ⚠️ MOCK DATA - FOR TYPE DEFINITIONS AND FALLBACK ONLY
+ * 
+ * This file defines the TriviaQuestion type and provides a minimal fallback dataset.
+ * 
+ * PRIMARY SOURCE: Questions come from the API via GET /game/attempts/start
+ * This mock data should NEVER be used directly except as a last resort fallback
+ * when the API is completely unavailable.
+ * 
+ * TODO: replace with GET /trivia/stages/:id/questions once the backend is live.
+ * 3 questions total - 1 per stage
+ */
 export const MOCK_QUESTIONS: TriviaQuestion[] = [
   // Stage 1 - Easy
   {

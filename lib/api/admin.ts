@@ -732,24 +732,7 @@ export async function setTokenExchangeRate(koboPerToken: number): Promise<MakerC
   });
 }
 
-// ============================================================================
-// Rewards: Additional Draw Management
-// ============================================================================
-
-export async function getRewardDrawById(id: string): Promise<RewardDraw> {
-  return adminApiClient<RewardDraw>(`/api/v1/admin/rewards/draws/${id}`);
-}
-
-export async function selectDrawWinners(drawId: string): Promise<{ message: string } & AdminJson> {
-  return adminApiClient<{ message: string } & AdminJson>(`/api/v1/admin/rewards/draws/${drawId}/select-winners`, {
-    method: "POST",
-  });
-}
-
-export async function getDrawWinners(drawId: string): Promise<Record<string, unknown>[]> {
-  const response = await adminApiClient<Record<string, unknown>[]>(`/api/v1/admin/rewards/draws/${drawId}/winners`);
-  return Array.isArray(response) ? response : [];
-}
+// V36 draw management functions removed - replaced by V37 endpoints below
 
 // ============================================================================
 // Leaderboard Prizes API Functions
@@ -1030,4 +1013,192 @@ export async function enableSyncedClient(email: string): Promise<MakerCheckerWri
   return adminApiClient<MakerCheckerWriteResponse>(`/api/v1/admin/clients-sync/${encodeURIComponent(email)}/enable`, {
     method: "POST",
   });
+}
+
+// ============================================================================
+// Rewards/Draws Management (V37 - Points-based)
+// ============================================================================
+
+/**
+ * V37 Draw Types (REAL BACKEND with position field)
+ */
+export interface CreateDrawRequest {
+  raffleCode: string; // Unique code like "NW-202611-0001"
+  prizeName: string;
+  scheduleLabel: string; // e.g. "Monthly Draw", "Weekly Draw"
+  startsOn: string; // YYYY-MM-DD
+  endsOn: string; // YYYY-MM-DD
+  drawDate: string; // YYYY-MM-DD (when winners are drawn, can equal endsOn)
+  maxWinners: number;
+  prizeTiers?: {
+    position: number; // Sort order
+    tierName: string;
+    prizeName: string;
+    winnersCount: number;
+  }[];
+}
+
+export interface UpdateDrawRequest {
+  prizeName?: string;
+  scheduleLabel?: string;
+  startsOn?: string;
+  endsOn?: string;
+  drawDate?: string;
+  maxWinners?: number;
+  prizeTiers?: {
+    position: number;
+    tierName: string;
+    prizeName: string;
+    winnersCount: number;
+  }[];
+}
+
+export interface AdminDrawDetails {
+  id: string;
+  raffleCode: string;
+  prizeName: string;
+  scheduleLabel: string;
+  startsOn: string;
+  endsOn: string;
+  drawDate: string;
+  maxWinners: number;
+  prizeTiers: {
+    position: number; // Sort order
+    tierName: string;
+    prizeName: string;
+    winnersCount: number;
+  }[];
+  status: "ACTIVE" | "UPCOMING" | "COMPLETED" | "CANCELLED" | "CLOSED";
+  entryCount: number;
+  winnersSelected: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DrawStandingsEntry {
+  position: number; // Verified shape
+  authUserId: string;
+  email: string; // Verified shape (not displayName)
+  points: number;
+  correctAnswers: number; // Verified shape
+}
+
+export interface DrawWinner {
+  authUserId: string;
+  displayName: string;
+  email: string;
+  phoneNumber: string | null;
+  points: number;
+  tier?: string | null; // For multi-tier draws
+  prize?: string | null;
+  selectedAt: string;
+}
+
+/**
+ * Get all draws (paginated)
+ * GET /api/v1/admin/rewards/draws?page=0&size=20&status=ACTIVE
+ */
+export async function getAdminDraws(page: number = 0, size: number = 20, status?: string): Promise<{
+  page: number;
+  size: number;
+  total: number;
+  entries: AdminDrawDetails[];
+}> {
+  const params = new URLSearchParams();
+  params.append("page", page.toString());
+  params.append("size", size.toString());
+  if (status) params.append("status", status);
+  
+  return adminApiClient(`/api/v1/admin/rewards/draws?${params.toString()}`);
+}
+
+/**
+ * Get draw by ID
+ * GET /api/v1/admin/rewards/draws/{id}
+ */
+export async function getAdminDraw(id: string): Promise<AdminDrawDetails> {
+  return adminApiClient(`/api/v1/admin/rewards/draws/${id}`);
+}
+
+/**
+ * Create a new draw (MAKER-CHECKER)
+ * POST /api/v1/admin/rewards/draws
+ */
+export async function createDraw(data: CreateDrawRequest): Promise<MakerCheckerWriteResponse> {
+  return adminApiClient<MakerCheckerWriteResponse>("/api/v1/admin/rewards/draws", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Update a draw (MAKER-CHECKER)
+ * PUT /api/v1/admin/rewards/draws/{id}
+ */
+export async function updateDraw(id: string, data: UpdateDrawRequest): Promise<MakerCheckerWriteResponse> {
+  return adminApiClient<MakerCheckerWriteResponse>(`/api/v1/admin/rewards/draws/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Close a draw (MAKER-CHECKER)
+ * POST /api/v1/admin/rewards/draws/{id}/close
+ * 
+ * Closes qualifying period - no more entries accepted
+ */
+export async function closeDraw(id: string): Promise<MakerCheckerWriteResponse> {
+  return adminApiClient<MakerCheckerWriteResponse>(`/api/v1/admin/rewards/draws/${id}/close`, {
+    method: "POST",
+  });
+}
+
+/**
+ * Cancel a draw (MAKER-CHECKER)
+ * POST /api/v1/admin/rewards/draws/{id}/cancel
+ */
+export async function cancelDraw(id: string, reason?: string): Promise<MakerCheckerWriteResponse> {
+  return adminApiClient<MakerCheckerWriteResponse>(`/api/v1/admin/rewards/draws/${id}/cancel`, {
+    method: "POST",
+    body: reason ? JSON.stringify({ reason }) : undefined,
+  });
+}
+
+/**
+ * Get draw standings (qualifying players ranked by points)
+ * GET /api/v1/admin/rewards/draws/{id}/standings
+ * 
+ * Verified shape: { position, authUserId, email, points, correctAnswers }[]
+ */
+export async function getDrawStandings(id: string): Promise<DrawStandingsEntry[]> {
+  const response = await adminApiClient<AdminJson>(`/api/v1/admin/rewards/draws/${id}/standings`);
+  if (Array.isArray(response)) {
+    return response as DrawStandingsEntry[];
+  }
+  return [];
+}
+
+/**
+ * Select winners (MAKER-CHECKER)
+ * POST /api/v1/admin/rewards/draws/{id}/select-winners
+ * 
+ * Randomly selects top N players as winners from standings
+ */
+export async function selectDrawWinners(id: string): Promise<MakerCheckerWriteResponse> {
+  return adminApiClient<MakerCheckerWriteResponse>(`/api/v1/admin/rewards/draws/${id}/select-winners`, {
+    method: "POST",
+  });
+}
+
+/**
+ * Get draw winners (after selection)
+ * GET /api/v1/admin/rewards/draws/{id}/winners
+ */
+export async function getDrawWinners(id: string): Promise<DrawWinner[]> {
+  const response = await adminApiClient<AdminJson>(`/api/v1/admin/rewards/draws/${id}/winners`);
+  if (Array.isArray(response)) {
+    return response as DrawWinner[];
+  }
+  return [];
 }

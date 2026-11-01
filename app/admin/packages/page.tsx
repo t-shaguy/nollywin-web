@@ -187,7 +187,7 @@ export default function PackagesPage() {
               </div>
               <p className="font-semibold text-sm mt-3">{pkg.name}</p>
               <p className="text-2xl font-bold mt-2 tabular-nums">{formatNaira(pkg.fee)}</p>
-              <p className="text-xs text-muted-foreground mt-1">{pkg.durationDays} days</p>
+              <p className="text-xs text-muted-foreground mt-1">{pkg.durationDays} {pkg.durationDays === 1 ? 'day' : 'days'}</p>
               
               {/* Read-only attempts info */}
               <div className="mt-3 text-xs text-muted-foreground">

@@ -21,6 +21,9 @@ export default function ChangeRequestsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("PENDING");
   
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [approvingRequest, setApprovingRequest] = useState<ChangeRequest | null>(null);
+  const [approvalNote, setApprovalNote] = useState("");
   const [rejectingRequest, setRejectingRequest] = useState<ChangeRequest | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -45,6 +48,15 @@ export default function ChangeRequestsPage() {
   }, [statusFilter]);
 
   const handleApprove = async (request: ChangeRequest) => {
+    // Show approval modal for financial requests (approvalNote required)
+    if (request.financial) {
+      setApprovingRequest(request);
+      setApprovalNote("");
+      setShowApprovalModal(true);
+      return;
+    }
+
+    // Non-financial: approve directly
     try {
       setSubmitting(true);
       setError(null);
@@ -57,15 +69,75 @@ export default function ChangeRequestsPage() {
       
       // Remove from pending list (optimistic)
       setChangeRequests((prev) => prev.filter((r) => r.id !== request.id));
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error approving change request:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to approve change request";
+      
+      // Extract backend error message
+      const backendMessage = err?.message || err?.error || "Failed to approve change request";
       
       // Check for 403 Forbidden
-      if (errorMessage.includes("403") || errorMessage.includes("Forbidden")) {
+      if (err?.status === 403 || backendMessage.includes("403") || backendMessage.includes("Forbidden")) {
         setError("Access denied: Your admin account doesn't have CHECKER role permissions. Please contact your system administrator.");
-      } else {
-        setError(errorMessage);
+      } 
+      // For 4xx errors (including 409), show backend message and keep request in place
+      else if (err?.status >= 400 && err?.status < 500) {
+        setError(backendMessage);
+        // Don't remove the request from the list - let user try again
+      } 
+      else {
+        setError(backendMessage);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleApprovalSubmit = async () => {
+    if (!approvingRequest) return;
+
+    // Financial requests require approval note
+    if (approvingRequest.financial && !approvalNote.trim()) {
+      setError("Approval note is required for financial change requests");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      const response = await approveChangeRequest(
+        approvingRequest.id,
+        approvalNote.trim() || undefined
+      );
+      
+      // Show success message with resultSummary if available
+      setSuccessMessage(response.resultSummary || response.approvalNote || "Change request approved successfully");
+      
+      // Remove from pending list (optimistic)
+      setChangeRequests((prev) => prev.filter((r) => r.id !== approvingRequest.id));
+      
+      setShowApprovalModal(false);
+      setApprovingRequest(null);
+      setApprovalNote("");
+    } catch (err: any) {
+      console.error("Error approving change request:", err);
+      
+      // Extract backend error message
+      const backendMessage = err?.message || err?.error || "Failed to approve change request";
+      
+      // Check for 403 Forbidden
+      if (err?.status === 403 || backendMessage.includes("403") || backendMessage.includes("Forbidden")) {
+        setError("Access denied: Your admin account doesn't have CHECKER role permissions. Please contact your system administrator.");
+      } 
+      // For 4xx errors (including 409), show backend message and keep request in place
+      else if (err?.status >= 400 && err?.status < 500) {
+        setError(backendMessage);
+        // Don't remove the request - leave modal open so user can see the error
+        // They can close it manually and try again later
+      } 
+      else {
+        setError(backendMessage);
       }
     } finally {
       setSubmitting(false);
@@ -97,15 +169,23 @@ export default function ChangeRequestsPage() {
       setShowRejectModal(false);
       setRejectingRequest(null);
       setRejectionReason("");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error rejecting change request:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to reject change request";
+      
+      // Extract backend error message
+      const backendMessage = err?.message || err?.error || "Failed to reject change request";
       
       // Check for 403 Forbidden
-      if (errorMessage.includes("403") || errorMessage.includes("Forbidden")) {
+      if (err?.status === 403 || backendMessage.includes("403") || backendMessage.includes("Forbidden")) {
         setError("Access denied: Your admin account doesn't have CHECKER role permissions. Please contact your system administrator.");
-      } else {
-        setError(errorMessage);
+      } 
+      // For 4xx errors, show backend message and keep request in place
+      else if (err?.status >= 400 && err?.status < 500) {
+        setError(backendMessage);
+        // Don't remove the request - leave modal open
+      } 
+      else {
+        setError(backendMessage);
       }
     } finally {
       setSubmitting(false);
@@ -203,10 +283,18 @@ export default function ChangeRequestsPage() {
                 {/* Header */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-bold text-sm">{request.resourceType}</h3>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${getActionColor(request.action)}`}>
-                      {request.action}
-                    </span>
+                    <div className="flex items-center gap-1.5 bg-secondary/50 px-2.5 py-1 rounded-lg">
+                      <h3 className="font-bold text-sm">{request.resourceType}</h3>
+                      <span className="text-xs text-muted-foreground">·</span>
+                      <span className={`text-xs font-semibold ${
+                        request.action === "CREATE" ? "text-green-600" :
+                        request.action === "UPDATE" ? "text-blue-600" :
+                        request.action === "DELETE" ? "text-red-600" :
+                        "text-muted-foreground"
+                      }`}>
+                        {request.action}
+                      </span>
+                    </div>
                     {request.financial && (
                       <span className="text-xs font-medium px-2 py-0.5 rounded-full border bg-amber-500/10 border-amber-500/30 text-amber-600">
                         FINANCIAL
@@ -280,34 +368,24 @@ export default function ChangeRequestsPage() {
 
                 {/* Actions (PENDING only) */}
                 {request.status === "PENDING" && (
-                  <div className="space-y-2">
-                    {/* Disabled state notice */}
-                    <div className="bg-muted/50 border border-border rounded-lg p-2 text-xs text-muted-foreground">
-                      <p className="font-medium mb-0.5">Approval Feature Not Available</p>
-                      <p>Approval requires a second admin account — not yet available for testing.</p>
-                    </div>
-                    
-                    {/* Disabled buttons - keeping for future activation */}
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => handleApprove(request)}
-                        disabled={true}
-                        variant="gradient"
-                        className="flex-1 opacity-50 cursor-not-allowed"
-                        title="Requires second admin account"
-                      >
-                        Approve
-                      </Button>
-                      <Button
-                        onClick={() => handleRejectClick(request)}
-                        disabled={true}
-                        variant="outline"
-                        className="flex-1 border-destructive/50 text-destructive hover:bg-destructive/10 hover:border-destructive opacity-50 cursor-not-allowed"
-                        title="Requires second admin account"
-                      >
-                        Reject
-                      </Button>
-                    </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleApprove(request)}
+                      disabled={submitting}
+                      size="sm"
+                      className="flex-1 bg-gradient-to-r from-[#F40289] to-[#FC0D28] text-white hover:opacity-90"
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      onClick={() => handleRejectClick(request)}
+                      disabled={submitting}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 border-destructive/50 text-destructive hover:bg-destructive/10 hover:border-destructive"
+                    >
+                      Reject
+                    </Button>
                   </div>
                 )}
               </AdminCard>
@@ -315,6 +393,59 @@ export default function ChangeRequestsPage() {
           })}
         </div>
       )}
+
+      {/* Approval Modal (for financial requests) */}
+      <Modal
+        open={showApprovalModal}
+        onClose={() => {
+          setShowApprovalModal(false);
+          setApprovingRequest(null);
+          setApprovalNote("");
+        }}
+        title="Approve Change Request"
+      >
+        <div className="space-y-4">
+          {approvingRequest?.financial && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-amber-600 text-xs">
+              <p className="font-medium">Financial Change Request</p>
+              <p className="mt-1">Approval note is required for financial transactions.</p>
+            </div>
+          )}
+          <p className="text-sm text-muted-foreground">
+            {approvingRequest?.financial 
+              ? "Please provide an approval note explaining your decision." 
+              : "Optionally provide an approval note."}
+          </p>
+          <textarea
+            value={approvalNote}
+            onChange={(e) => setApprovalNote(e.target.value)}
+            placeholder="Enter approval note..."
+            className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground resize-none min-h-[100px]"
+            disabled={submitting}
+          />
+          <div className="flex gap-3">
+            <Button
+              onClick={() => {
+                setShowApprovalModal(false);
+                setApprovingRequest(null);
+                setApprovalNote("");
+              }}
+              disabled={submitting}
+              variant="outline"
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleApprovalSubmit}
+              disabled={submitting || (approvingRequest?.financial && !approvalNote.trim())}
+              className="flex-1 bg-gradient-to-r from-[#F40289] to-[#FC0D28] text-white hover:opacity-90"
+            >
+              {submitting ? "Approving..." : "Confirm Approve"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Reject Modal */}
       <Modal

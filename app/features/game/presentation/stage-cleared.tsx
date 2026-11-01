@@ -1,8 +1,6 @@
 "use client";
-import { useEffect } from "react";
 import { Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { fetchWalletBalance } from "@/store/wallet-store";
 
 export function StageCleared({
   correctCount,
@@ -21,12 +19,7 @@ export function StageCleared({
   onNextStage: () => void;
   questionScores?: number[];
 }) {
-  // Refresh wallet balance when Game Over screen appears
-  useEffect(() => {
-    fetchWalletBalance().catch((err) => {
-      console.error("Failed to refresh wallet balance on Game Over screen:", err);
-    });
-  }, []);
+  // V37: Dashboard refresh happens in trivia-flow.tsx after game ends
   
   // Default to all correct (50 pts each) if not provided
   const scores = questionScores || Array(total).fill(50);

@@ -263,34 +263,46 @@ export async function changePassword(data: ChangePasswordRequest): Promise<Chang
 
 
 // ============================================================================
-// Player Dashboard
+// Player Dashboard (V37 - Subscription-only play)
 // ============================================================================
 
 export interface PlayerDashboard {
   displayName: string;
   totalPoints: number;
   pointsToday: number;
-  tokensLeft: number;
-  tokenCostPerPlay: number;
-  monthlyRank: {
+  tokensLeft: number | null; // V37 FINAL: equals subscription.attemptsRemaining - 0 = no tokens/plan, null = unlimited
+  canPlay: boolean; // V37: true if user can start a game
+  tokenCostPerPlay?: number; // Deprecated but may still be returned
+  monthlyRank: { // Monthly leaderboard (not tied to a specific draw)
     rank: number | null;
     participants: number;
     topPercent: number | null;
-    periodEndsAt: string;
+    periodEndsAt: string; // ISO 8601 UTC
   } | null;
-  hasActiveSubscription: boolean; // Use this instead of null-checking subscription object
-  subscriptionPaymentPending: boolean; // True for 30min after checkout starts, before confirmation
+  hasActiveSubscription: boolean;
+  subscriptionPaymentPending: boolean;
   subscription: {
     packageName: string;
-    expiresAt: string; // ISO date
-    attemptsPeriod: "DAY" | "MONTH"; // Admin-configurable period
-    attemptsResetAt: string | null; // Next reset time (only when attemptsPeriod is "DAY", null for "MONTH")
-    attemptsIncluded: number | null; // null for pure time-based packages with no free attempts
-    attemptsUsed: number | null;
-    attemptsRemaining: number | null;
+    expiresAt: string; // ISO 8601 UTC
+    attemptsIncluded: number | null; // null = unlimited
+    attemptsUsed: number;
+    attemptsRemaining: number | null; // null = unlimited (this equals tokensLeft)
+    attemptsPeriod: "DAY" | "MONTH" | null;
+    attemptsResetAt: string; // ISO 8601 UTC
   } | null;
-  activeRaffles: { id: string; prizeName: string; ticketCostTokens: number; entered: boolean; myTickets: number }[];
+  freeAttemptsLeft: number; // V37 FINAL: additional field from verified backend
   unreadNotifications: number;
+  activeRaffles: Array<{
+    id: string;
+    raffleCode: string;
+    prizeName: string;
+    startsOn: string | null; // YYYY-MM-DD UTC (null for legacy)
+    endsOn: string | null; // YYYY-MM-DD UTC (null for legacy)
+    drawDate: string | null; // YYYY-MM-DD UTC (null for legacy)
+    myPoints: number | null; // null for legacy draws
+    entered: boolean; // V37 FINAL: true only after earning points in this draw's period
+    myTickets: number; // Legacy ticket count (new draws = 1 once entered, don't show)
+  }>;
 }
 
 /**

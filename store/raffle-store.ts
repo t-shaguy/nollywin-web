@@ -1,18 +1,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { type RaffleDraw } from "@/lib/api/leaderboard";
 
-// VERIFIED: Backend returns this exact shape for active draws
-export interface Raffle {
-  id: string;
-  prizeName: string;
-  ticketCostTokens: number;
-  scheduleLabel: string;
-  maxWinners: number;
-  status: "ACTIVE" | "UPCOMING" | "COMPLETED" | "CANCELLED";
-  entryCount: number;
-  winnersSelected: boolean;
-  userTicketCount?: number; // Added by frontend after purchase
-}
+// V37: Use RaffleDraw type from API directly
+export type Raffle = RaffleDraw;
 
 interface RaffleState {
   raffles: Raffle[];
@@ -36,10 +27,8 @@ export const useRaffleStore = create<RaffleState>()(
 );
 
 /**
- * Fetch active raffle draws from the API
+ * Fetch active raffle draws from the API (V37)
  * Call this when the raffles/home page is loaded or when data needs to be refreshed
- * 
- * VERIFIED: GET /api/v1/rewards/draws/active returns array of RaffleDraw
  */
 export async function fetchActiveDraws() {
   try {
@@ -48,7 +37,7 @@ export async function fetchActiveDraws() {
     
     const draws = await getActiveDraws();
     
-    // Backend returns array directly - use as-is
+    // Backend returns array directly
     useRaffleStore.getState().setRaffles(draws);
     
     return draws;

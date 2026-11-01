@@ -3,28 +3,23 @@ import { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { AuthenticatedShell } from "@/components/layout/authenticated-shell";
-import { useWalletStore } from "@/store/wallet-store";
-import { useNotificationsSync } from "@/hooks/use-notifications-sync";
 
 /**
- * Shared layout for all authenticated routes.
+ * Shared layout for all authenticated routes (V37)
  * 
  * AuthenticatedShell is mounted ONCE for the entire route group, not per-page.
- * This prevents redundant wallet/subscription API calls on every navigation.
+ * This prevents redundant API calls on every navigation.
  * 
- * Before: AuthenticatedShell unmounted/remounted on every page change → redundant fetches
- * After: AuthenticatedShell stays mounted during navigation → fetch once per session
+ * The shell now fetches its own dashboard data for tokens and notifications.
  * 
  * NOTE: ToastProvider is now in root layout (app/layout.tsx) so it works on ALL routes,
  * including /payments/callback which is outside the (authenticated) group.
  */
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
-  const { tokenBalance } = useWalletStore();
-  const { unreadCount } = useNotificationsSync();
   const pathname = usePathname();
   
   return (
-    <AuthenticatedShell tokenBalance={tokenBalance} unreadCount={unreadCount}>
+    <AuthenticatedShell>
       <AnimatePresence mode="wait">
         <motion.div
           key={pathname}

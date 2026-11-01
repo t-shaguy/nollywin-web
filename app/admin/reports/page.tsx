@@ -447,8 +447,11 @@ export default function ReportsPage() {
                 <table className="w-full text-[13px]">
                   <thead>
                     <tr className="border-b border-border">
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Raffle Code</th>
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">Prize Name</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Ticket Cost</th>
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Starts On</th>
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Ends On</th>
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Draw Date</th>
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">Max Winners</th>
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">Schedule</th>
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">Status</th>
@@ -460,8 +463,11 @@ export default function ReportsPage() {
                   <tbody>
                     {raffleData.entries.map((entry: any, idx: number) => (
                       <tr key={idx} className="border-b border-border last:border-0 hover:bg-secondary/50">
+                        <td className="py-2 px-3 font-mono text-xs">{entry.raffleCode || "—"}</td>
                         <td className="py-2 px-3 font-medium">{entry.prizeName || "—"}</td>
-                        <td className="py-2 px-3">{entry.ticketCostTokens || 0} tokens</td>
+                        <td className="py-2 px-3 text-muted-foreground">{entry.startsOn || "—"}</td>
+                        <td className="py-2 px-3 text-muted-foreground">{entry.endsOn || "—"}</td>
+                        <td className="py-2 px-3 text-muted-foreground">{entry.drawDate || "—"}</td>
                         <td className="py-2 px-3">{entry.maxWinners || 0}</td>
                         <td className="py-2 px-3">{entry.scheduleLabel || "—"}</td>
                         <td className="py-2 px-3">

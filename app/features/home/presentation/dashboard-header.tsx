@@ -3,50 +3,60 @@ import Link from "next/link";
 import { Play, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/auth-store";
-import { useWalletStore } from "@/store/wallet-store";
-import type { PlayerDashboard } from "@/lib/api/auth";
 
 export function DashboardHeader({
+  canPlay,
+  tokensLeft,
   hasActiveSubscription,
   paymentPending,
-  tokenBalance,
-  tokenCost,
-  subscription,
+  expiresAt,
+  isLoading,
 }: {
+  canPlay: boolean;
+  tokensLeft: number | null; // 0 = no plan, null = unlimited, N = tokens remaining
   hasActiveSubscription: boolean;
   paymentPending: boolean;
-  tokenBalance: number;
-  tokenCost: number;
-  subscription: PlayerDashboard["subscription"];
+  expiresAt?: string | null;
+  isLoading?: boolean;
 }) {
   const user = useAuthStore((s) => s.user);
   const firstName = user?.firstName ?? "Player";
-  const isWalletLoading = useWalletStore((s) => s.isLoading);
   
-  // Determine play availability
-  const canPlay = hasActiveSubscription && tokenBalance >= tokenCost;
-  const noTokensLeft = hasActiveSubscription && tokenBalance < tokenCost;
+  // REAL BACKEND: Button states
+  // 1. No plan: hasActiveSubscription = false → "Get a Plan"
+  // 2. Active plan, 0 tokens: hasActiveSubscription = true, tokensLeft = 0 → "No tokens left" (disabled)
+  // 3. Active plan with tokens: hasActiveSubscription = true, tokensLeft = N → "Start Playing" (enabled)
+  // 4. Unlimited: hasActiveSubscription = true, tokensLeft = null → "Start Playing" (enabled)
+  
+  const noTokensLeft = hasActiveSubscription && tokensLeft === 0;
+  const noPlan = !hasActiveSubscription && !paymentPending;
 
-  // Generate token status text
-  let tokenStatusText = "";
-  let activeTillText = "";
+  // Status line text
+  let statusText = "";
+  let secondLineText = "";
   
-  if (paymentPending) {
-    tokenStatusText = "Payment pending";
-  } else if (!hasActiveSubscription) {
-    tokenStatusText = "No active plan";
-  } else if (!isWalletLoading) {
-    // Show token balance and cost
-    tokenStatusText = `${tokenBalance} token${tokenBalance === 1 ? "" : "s"} left • ${tokenCost} token${tokenCost === 1 ? "" : "s"}/play`;
+  if (isLoading) {
+    // Don't show anything while loading
+  } else if (paymentPending) {
+    statusText = "Payment pending";
+  } else if (noPlan) {
+    statusText = "No active plan";
+  } else if (hasActiveSubscription) {
+    // Show tokens
+    if (tokensLeft === null) {
+      statusText = "Unlimited plays";
+    } else {
+      statusText = `${tokensLeft} token${tokensLeft === 1 ? '' : 's'} left`;
+    }
     
-    // Show subscription expiry date
-    if (subscription?.expiresAt) {
-      const expiryDate = new Date(subscription.expiresAt).toLocaleDateString("en-US", { 
+    // Show expiry date
+    if (expiresAt) {
+      const expiryDate = new Date(expiresAt).toLocaleDateString("en-US", { 
         month: "short", 
         day: "numeric",
         year: "numeric"
       });
-      activeTillText = `Active till ${expiryDate}`;
+      secondLineText = `Active till ${expiryDate}`;
     }
   }
 
@@ -63,22 +73,27 @@ export function DashboardHeader({
             Payment Pending
           </Button>
         ) : (
-          <Link href="/game">
-            <Button disabled={!canPlay} className="disabled:opacity-50">
+          <Link href={noPlan ? "/store" : "/game"}>
+            <Button disabled={!canPlay && !noPlan} className="disabled:opacity-50">
               <Play size={18} />
-              {noTokensLeft ? "No tokens left" : "Start Playing"}
+              {noPlan ? "Get a Plan" : noTokensLeft ? "No tokens left" : "Start Playing"}
             </Button>
           </Link>
         )}
-        {tokenStatusText && (
+        {!isLoading && statusText && (
           <div className="flex flex-col items-start sm:items-end gap-0.5">
             <p className="text-xs text-muted-foreground">
-              {tokenStatusText}
+              {statusText}
             </p>
-            {activeTillText && (
+            {secondLineText && (
               <p className="text-xs text-muted-foreground">
-                {activeTillText}
+                {secondLineText}
               </p>
+            )}
+            {noPlan && (
+              <Link href="/store" className="text-xs text-primary hover:underline mt-0.5">
+                Browse plans
+              </Link>
             )}
           </div>
         )}

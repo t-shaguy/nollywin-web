@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GameDetails } from "./game-details";
 import { QuestionView } from "./question-view";
 import { StageCleared } from "./stage-cleared";
-import { useWalletStore, fetchWalletBalance } from "@/store/wallet-store";
 import * as gameApi from "@/lib/api/game";
 import { getPlayerDashboard } from "@/lib/api/auth";
 import type { ApiError } from "@/lib/api/client";
@@ -51,15 +50,14 @@ function adaptQuestion(apiQuestion: GameQuestion, correctOption?: "A" | "B" | "C
 export function TriviaFlow() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { tokenBalance } = useWalletStore();
   
-  // Token cost from dashboard API
-  const [tokenCostPerPlay, setTokenCostPerPlay] = useState<number>(1); // fallback
+  // Token cost from dashboard API (v37: may be undefined, default to 1)
+  const [tokenCostPerPlay, setTokenCostPerPlay] = useState<number>(1);
   
   // Load token cost from dashboard on mount
   useEffect(() => {
     getPlayerDashboard()
-      .then((dashboard) => setTokenCostPerPlay(dashboard.tokenCostPerPlay))
+      .then((dashboard) => setTokenCostPerPlay(dashboard.tokenCostPerPlay ?? 1))
       .catch((err) => console.warn("Failed to load dashboard:", err));
   }, []);
   
@@ -87,18 +85,8 @@ export function TriviaFlow() {
   const startGame = async () => {
     setError(null);
     
-    // OPTIMISTIC UPDATE: Deduct token immediately for instant UI feedback
-    const { deductTokens } = useWalletStore.getState();
-    const deducted = deductTokens(1);
-    
-    if (!deducted) {
-      setError("Insufficient tokens");
-      setTimeout(() => router.push("/store"), 2000);
-      return;
-    }
-    
     try {
-      // Start a new attempt - this debits 1 token on the backend
+      // V37: Start a new attempt - debits 1 token on backend (subscription-only)
       // Returns first question directly (not wrapped)
       const question = await gameApi.startAttempt();
       
@@ -112,25 +100,25 @@ export function TriviaFlow() {
       setQuestionScores([]);
       setStep("playing");
       
-      // Refresh wallet balance from API to confirm real balance
+      // V37: Refresh dashboard to update tokensLeft and draw points
       try {
-        await fetchWalletBalance();
         queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-shell"] });
       } catch (err) {
-        console.error("Failed to refresh wallet balance after game start:", err);
-        // Optimistic update already applied, continue with game
+        console.error("Failed to refresh dashboard after game start:", err);
       }
     } catch (err) {
       const apiError = err as ApiError;
-      setError(apiError.message || "Failed to start game");
       
-      // ROLLBACK: Game start failed, add the token back
-      useWalletStore.getState().addTokens(1);
-      
-      // If insufficient tokens, redirect to store
-      if (apiError.status === 400 || apiError.message?.toLowerCase().includes("insufficient")) {
-        setTimeout(() => router.push("/store"), 2000);
+      // V37: Handle 402 Payment Required (no subscription or no tokens)
+      if (apiError.status === 402) {
+        setError("You need an active subscription with tokens to play. Get a plan to continue.");
+        setTimeout(() => router.push("/store"), 2500);
+        return;
       }
+      
+      // Generic error
+      setError(apiError.message || "Failed to start game");
     }
   };
 
@@ -162,12 +150,12 @@ export function TriviaFlow() {
           console.log("Game summary:", response.summary);
         }
         
-        // Refresh wallet balance - AWAIT to ensure it completes before showing results
+        // V37: Refresh dashboard to update tokensLeft and draw points after game end
         try {
-          await fetchWalletBalance();
           queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+          queryClient.invalidateQueries({ queryKey: ["dashboard-shell"] });
         } catch (err) {
-          console.error("[TRIVIA] Failed to refresh wallet balance after game end:", err);
+          console.error("[TRIVIA] Failed to refresh dashboard after game end:", err);
         }
         
         // DO NOT auto-redirect on last question - let user click "Tap to see result" button
@@ -214,12 +202,12 @@ export function TriviaFlow() {
           console.log("Game summary:", response.summary);
         }
         
-        // Refresh wallet balance - AWAIT to ensure it completes before showing results
+        // V37: Refresh dashboard to update tokensLeft and draw points after timeout
         try {
-          await fetchWalletBalance();
           queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+          queryClient.invalidateQueries({ queryKey: ["dashboard-shell"] });
         } catch (err) {
-          console.error("[TRIVIA] Failed to refresh wallet balance after timeout:", err);
+          console.error("[TRIVIA] Failed to refresh dashboard after timeout:", err);
         }
         
         // DO NOT auto-redirect on last question - let user click button
@@ -268,7 +256,12 @@ export function TriviaFlow() {
     return () => clearTimeout(timer);
   }, [step, timeLeft, selectedIndex, currentQuestion]);
 
-  const backToDashboard = () => router.push("/home");
+  const backToDashboard = () => {
+    // V37: Refresh dashboard to update tokensLeft and draw points after game
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard-shell"] });
+    router.push("/home");
+  };
 
   const restartGame = () => {
     setStep("details");
@@ -311,7 +304,6 @@ export function TriviaFlow() {
   if (step === "details") {
     return (
       <GameDetails
-        currentTokens={tokenBalance}
         tokenCostPerPlay={tokenCostPerPlay}
         onStartGame={startGame}
         onBack={backToDashboard}

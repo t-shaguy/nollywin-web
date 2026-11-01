@@ -28,7 +28,7 @@ export function DashboardStats({
 }: {
   monthlyRank: number | null;
   totalPoints: number;
-  tokensLeft: number;
+  tokensLeft: number | null; // V37: 0 = no plan, null = unlimited, N = tokens remaining
   isLoading?: boolean;
 }) {
   if (isLoading) {
@@ -41,6 +41,9 @@ export function DashboardStats({
     );
   }
 
+  // Display value for tokens
+  const tokensDisplay = tokensLeft === null ? "Unlimited" : tokensLeft;
+
   const stats: ColoredStat[] = [
     {
       icon: Trophy,
@@ -50,7 +53,7 @@ export function DashboardStats({
       iconColor: "text-amber-500",
     },
     { icon: Star, label: "Total Points", value: totalPoints.toLocaleString(), iconBg: "bg-primary/15", iconColor: "text-primary" },
-    { icon: Coins, label: "Tokens Left", value: tokensLeft, iconBg: "bg-destructive/15", iconColor: "text-destructive" },
+    { icon: Coins, label: "Tokens Left", value: tokensDisplay, iconBg: "bg-destructive/15", iconColor: "text-destructive" },
   ];
 
   return (

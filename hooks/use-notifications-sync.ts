@@ -12,7 +12,9 @@ export function useNotificationsSync() {
   const { data: unreadCount = 0, isLoading: loading } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: getUnreadCount,
-    refetchInterval: 60_000, // Refresh every 60 seconds
+    refetchInterval: false, // Disable auto-refresh
+    staleTime: 5 * 60 * 1000, // Consider fresh for 5 minutes
+    retry: 1,
   });
 
   useEffect(() => {

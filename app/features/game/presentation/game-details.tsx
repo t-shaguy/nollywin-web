@@ -4,30 +4,41 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { STAGES } from "../data/mock-questions";
 import { getGameSettings, type GameSettings } from "@/lib/api/game";
+import { getPlayerDashboard } from "@/lib/api/auth";
 
 interface GameDetailsProps {
-  currentTokens: number;
   tokenCostPerPlay: number;
   onStartGame: () => void;
   onBack: () => void;
 }
 
-export function GameDetails({ currentTokens, tokenCostPerPlay, onStartGame, onBack }: GameDetailsProps) {
+export function GameDetails({ tokenCostPerPlay, onStartGame, onBack }: GameDetailsProps) {
   const [settings, setSettings] = useState<GameSettings | null>(null);
+  const [canPlay, setCanPlay] = useState<boolean>(false);
+  const [tokensLeft, setTokensLeft] = useState<number | null>(null);
 
   useEffect(() => {
-    // NOTE: This endpoint is currently admin-only in lib/api/admin.ts (uses adminApiClient).
-    // If it works with player tokens, great; if it 401s, we need a player-accessible version.
+    // Fetch game settings
     getGameSettings()
       .then(setSettings)
       .catch((err) => console.warn("Failed to load game settings:", err));
+    
+    // V37: Fetch dashboard to get canPlay and tokensLeft
+    getPlayerDashboard()
+      .then((dashboard) => {
+        setCanPlay(dashboard.canPlay);
+        setTokensLeft(dashboard.tokensLeft);
+      })
+      .catch((err) => console.warn("Failed to load dashboard:", err));
   }, []);
 
   const secondsPerQuestion = settings?.secondsPerQuestion ?? 10; // fallback while loading
   const pointsPerCorrect = settings?.pointsPerCorrectAnswer ?? 50; // fallback while loading
   
-  const balanceAfterPlay = currentTokens - tokenCostPerPlay;
-  const canPlay = currentTokens >= tokenCostPerPlay;
+  // V37: Calculate balance after play
+  // tokensLeft can be: null (unlimited), 0 (no tokens), or N (remaining)
+  const currentTokens = tokensLeft ?? 0;
+  const balanceAfterPlay = tokensLeft === null ? null : Math.max((tokensLeft ?? 0) - tokenCostPerPlay, 0);
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
@@ -55,12 +66,16 @@ export function GameDetails({ currentTokens, tokenCostPerPlay, onStartGame, onBa
           </div>
           <div className="flex items-center justify-between">
             <span className="text-foreground">Current balance</span>
-            <span className="font-medium">{currentTokens} tokens</span>
+            <span className="font-medium">
+              {tokensLeft === null ? 'Unlimited' : `${currentTokens} tokens`}
+            </span>
           </div>
           <div className="h-px bg-border" />
           <div className="flex items-center justify-between">
             <span className="text-foreground">Balance after play</span>
-            <span className="font-bold text-[#F40289]">{balanceAfterPlay} tokens</span>
+            <span className="font-bold text-[#F40289]">
+              {balanceAfterPlay === null ? 'Unlimited' : `${balanceAfterPlay} tokens`}
+            </span>
           </div>
         </div>
       </div>
@@ -110,7 +125,7 @@ export function GameDetails({ currentTokens, tokenCostPerPlay, onStartGame, onBa
 
       {!canPlay && (
         <p className="text-destructive text-sm text-center">
-          You need at least {tokenCostPerPlay} {tokenCostPerPlay === 1 ? 'token' : 'tokens'} to play. Visit the Store to top up.
+          You need an active subscription with tokens to play. Visit the Store to get a plan.
         </p>
       )}
     </div>

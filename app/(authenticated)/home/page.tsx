@@ -7,7 +7,6 @@ import { PerformanceChart } from "../../features/home/presentation/performance-c
 import { ActiveSubscriptionCard } from "../../features/home/presentation/active-subscription-card";
 import { getPlayerDashboard } from "@/lib/api/auth";
 import { usePerformanceTrend } from "../../features/home/hooks/use-performance-trend";
-import { useWalletStore } from "@/store/wallet-store";
 import { delay } from "@/lib/utils/request-stagger";
 
 export default function HomePage() {
@@ -29,31 +28,28 @@ export default function HomePage() {
   // Only trigger performance trend after stagger delay
   const { data: performanceData, loading: performanceLoading } = usePerformanceTrend(staggerComplete);
 
-  // Read token balance from Zustand store (same as header) for consistency
-  const { tokenBalance } = useWalletStore();
-
-  const tokenCost = dashboard?.tokenCostPerPlay ?? 0;
   const rank = dashboard?.monthlyRank?.rank ?? null;
   const totalPoints = dashboard?.totalPoints ?? 0;
-
-  // Use real dashboard fields for subscription status
+  const tokensLeft = dashboard?.tokensLeft ?? 0;
+  const canPlay = dashboard?.canPlay ?? false;
   const hasActiveSubscription = dashboard?.hasActiveSubscription ?? false;
   const paymentPending = dashboard?.subscriptionPaymentPending ?? false;
 
   return (
     <div className="space-y-6">
       <DashboardHeader 
+        canPlay={canPlay}
+        tokensLeft={tokensLeft}
         hasActiveSubscription={hasActiveSubscription}
         paymentPending={paymentPending}
-        tokenBalance={tokenBalance}
-        tokenCost={tokenCost}
-        subscription={dashboard?.subscription ?? null}
+        expiresAt={dashboard?.subscription?.expiresAt}
+        isLoading={isLoading}
       />
 
       <DashboardStats
         monthlyRank={rank}
         totalPoints={totalPoints}
-        tokensLeft={tokenBalance}
+        tokensLeft={tokensLeft}
         isLoading={isLoading}
       />
 
