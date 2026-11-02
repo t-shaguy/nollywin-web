@@ -24,7 +24,15 @@ const NAV_ITEMS = [
 export function AdminSidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
+  const session = useAdminAuthStore((s) => s.session);
   const logout = useAdminAuthStore((s) => s.logout);
+  
+  const isChecker = session?.role === 'AUTH';
+  
+  // TEMP: Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[AdminSidebar] Session role:', session?.role, 'isChecker:', isChecker);
+  }
 
   const handleLogout = () => {
     logout();
@@ -34,12 +42,20 @@ export function AdminSidebar({ onClose }: { onClose?: () => void }) {
   const handleNavClick = () => {
     if (onClose) onClose();
   };
+  
+  // For checkers, show only Verifications
+  const visibleNavItems = isChecker 
+    ? NAV_ITEMS.filter(item => item.href === '/admin/change-requests')
+    : NAV_ITEMS;
+  
+  // Logo link depends on role
+  const logoHref = isChecker ? '/admin/change-requests' : '/admin/overview';
 
   return (
     <aside className="flex flex-col w-72 shrink-0 h-screen min-h-0 border-r border-border bg-background px-4 sm:px-6 py-4 sm:py-6">
       {/* Header with close button on mobile */}
       <div className="flex items-center justify-between mb-8 sm:mb-12 shrink-0">
-        <Link href="/admin/overview" className="flex items-center gap-2 sm:gap-3 px-2" onClick={handleNavClick}>
+        <Link href={logoHref} className="flex items-center gap-2 sm:gap-3 px-2" onClick={handleNavClick}>
           <Image src="/logo.png" alt="NollyWin" width={200} height={200} className="h-16 sm:h-[100px] w-auto object-contain" />
         </Link>
         {onClose && (
@@ -51,7 +67,7 @@ export function AdminSidebar({ onClose }: { onClose?: () => void }) {
 
       {/* Navigation */}
       <nav className="flex-1 min-h-0 overflow-y-auto space-y-1 sm:space-y-2">
-        {NAV_ITEMS.map((item) => {
+        {visibleNavItems.map((item) => {
           const active = pathname === item.href || pathname?.startsWith(item.href + "/");
           return (
             <Link

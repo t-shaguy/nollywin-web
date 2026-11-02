@@ -57,8 +57,15 @@ export function AdminLoginForm() {
       }
       
       // REAL API: accessToken (not admin_token), email (not admin object)
-      setSession(res.accessToken, { email: res.email });
-      router.push("/admin/overview");
+      setSession(res.accessToken, { email: res.email }, res, 'admin');
+      
+      // Redirect based on role
+      const session = useAdminAuthStore.getState().session;
+      if (session?.role === 'AUTH') {
+        router.push("/admin/change-requests");
+      } else {
+        router.push("/admin/overview");
+      }
       
     } catch (err: any) {
       // Step 2: If 401/403, try checker fallback
@@ -79,8 +86,10 @@ export function AdminLoginForm() {
             console.debug('[AdminLogin] Checker login successful via fallback');
           }
           
-          setSession(fallbackRes.accessToken, { email: fallbackRes.email });
-          router.push("/admin/overview");
+          setSession(fallbackRes.accessToken, { email: fallbackRes.email }, fallbackRes, 'fallback');
+          
+          // Checker always goes to verifications
+          router.push("/admin/change-requests");
           return;
           
         } catch (fallbackErr: any) {

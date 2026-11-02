@@ -31,14 +31,11 @@ export default function ChangeRequestsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Log admin session in dev to check for role field
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && adminSession) {
-      console.debug('[AdminChangeRequests] Admin session:', adminSession);
-    }
-  }, [adminSession]);
+  // Role-based permissions: only CHECKER (AUTH) can approve/reject
+  const isChecker = adminSession?.role === 'AUTH';
+  const canApproveReject = isChecker;
 
-  // Check if logged-in admin proposed this request
+  // Check if logged-in admin proposed this request (for checkers only)
   const isOwnRequest = (request: ChangeRequest): boolean => {
     if (!adminSession?.admin?.email) return false;
     const loggedInEmail = adminSession.admin.email.trim().toLowerCase();
@@ -65,6 +62,9 @@ export default function ChangeRequestsPage() {
   }, [statusFilter]);
 
   const handleApprove = async (request: ChangeRequest) => {
+    // Only checker can approve
+    if (!canApproveReject) return;
+    
     // Show approval modal for financial requests (approvalNote required)
     if (request.financial) {
       setApprovingRequest(request);
@@ -110,6 +110,9 @@ export default function ChangeRequestsPage() {
   };
 
   const handleApprovalSubmit = async () => {
+    // Only checker can approve
+    if (!canApproveReject) return;
+    
     if (!approvingRequest) return;
 
     // Financial requests require approval note
@@ -162,12 +165,18 @@ export default function ChangeRequestsPage() {
   };
 
   const handleRejectClick = (request: ChangeRequest) => {
+    // Only checker can reject
+    if (!canApproveReject) return;
+    
     setRejectingRequest(request);
     setRejectionReason("");
     setShowRejectModal(true);
   };
 
   const handleRejectSubmit = async () => {
+    // Only checker can reject
+    if (!canApproveReject) return;
+    
     if (!rejectingRequest || !rejectionReason.trim()) return;
 
     try {
@@ -389,27 +398,40 @@ export default function ChangeRequestsPage() {
                     <div className="flex gap-2">
                       <Button
                         onClick={() => handleApprove(request)}
-                        disabled={submitting || isOwnRequest(request)}
+                        disabled={!canApproveReject || (canApproveReject && isOwnRequest(request)) || submitting}
                         size="sm"
-                        className="flex-1 bg-gradient-to-r from-[#F40289] to-[#FC0D28] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={isOwnRequest(request) ? "You proposed this request. A different admin must review it." : undefined}
-                        aria-disabled={isOwnRequest(request)}
+                        className="flex-1 bg-gradient-to-r from-[#F40289] to-[#FC0D28] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:opacity-50"
+                        title={
+                          !canApproveReject 
+                            ? "Only a checker can approve or reject this request." 
+                            : (isOwnRequest(request) ? "You proposed this request. A different admin must review it." : undefined)
+                        }
+                        aria-disabled={!canApproveReject || (canApproveReject && isOwnRequest(request))}
                       >
                         Approve
                       </Button>
                       <Button
                         onClick={() => handleRejectClick(request)}
-                        disabled={submitting || isOwnRequest(request)}
+                        disabled={!canApproveReject || (canApproveReject && isOwnRequest(request)) || submitting}
                         variant="outline"
                         size="sm"
-                        className="flex-1 border-destructive/50 text-destructive hover:bg-destructive/10 hover:border-destructive disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                        title={isOwnRequest(request) ? "You proposed this request. A different admin must review it." : undefined}
-                        aria-disabled={isOwnRequest(request)}
+                        className="flex-1 border-destructive/50 text-destructive hover:bg-destructive/10 hover:border-destructive disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-destructive/50"
+                        title={
+                          !canApproveReject 
+                            ? "Only a checker can approve or reject this request." 
+                            : (isOwnRequest(request) ? "You proposed this request. A different admin must review it." : undefined)
+                        }
+                        aria-disabled={!canApproveReject || (canApproveReject && isOwnRequest(request))}
                       >
                         Reject
                       </Button>
                     </div>
-                    {isOwnRequest(request) && (
+                    {!canApproveReject && (
+                      <p className="text-xs text-muted-foreground italic text-center">
+                        Only a checker can approve or reject this request.
+                      </p>
+                    )}
+                    {canApproveReject && isOwnRequest(request) && (
                       <p className="text-xs text-muted-foreground italic text-center">
                         You proposed this request. A different admin must review it.
                       </p>

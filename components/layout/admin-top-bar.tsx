@@ -1,8 +1,12 @@
 "use client";
 import { Search, Bell, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useAdminAuthStore } from "@/store/admin-auth-store";
 
 export function AdminTopBar({ onMenuClick }: { onMenuClick?: () => void }) {
+  const session = useAdminAuthStore((s) => s.session);
+  const isChecker = session?.role === 'AUTH';
+  
   return (
     <header className="shrink-0 h-14 sm:h-16 border-b border-border px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 sm:gap-6">
       {/* Mobile Menu Button */}
@@ -17,15 +21,20 @@ export function AdminTopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         </button>
       )}
 
-      {/* Search Bar */}
-      <div className="relative flex-1 max-w-md">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search..."
-          className="pl-9 h-9 text-sm"
-        />
-      </div>
+      {/* Search Bar - hidden for checkers */}
+      {!isChecker && (
+        <div className="relative flex-1 max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search..."
+            className="pl-9 h-9 text-sm"
+          />
+        </div>
+      )}
+      
+      {/* Spacer for checkers */}
+      {isChecker && <div className="flex-1" />}
 
       {/* Right Side Actions */}
       <div className="flex items-center gap-2 sm:gap-3">
@@ -38,7 +47,7 @@ export function AdminTopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         </button>
 
         <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
-          A
+          {session?.admin?.email?.charAt(0).toUpperCase() || 'A'}
         </div>
       </div>
     </header>
