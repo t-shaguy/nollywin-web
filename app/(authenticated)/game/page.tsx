@@ -1,14 +1,10 @@
 "use client";
-import { useQuery } from "@tanstack/react-query";
-import { getPlayerDashboard } from "@/lib/api/auth";
+import { usePlayerDashboard } from "@/hooks/use-player-dashboard";
 import { SubscriptionRequiredBanner } from "@/components/ui/subscription-banner";
 import { TriviaFlow } from "../../features/game/presentation/trivia-flow";
 
 export default function GamePage() {
-  const { data: dashboard } = useQuery({
-    queryKey: ["dashboard"],
-    queryFn: getPlayerDashboard,
-  });
+  const { data: dashboard } = usePlayerDashboard();
 
   const hasActiveSubscription = dashboard?.hasActiveSubscription ?? false;
   const paymentPending = dashboard?.subscriptionPaymentPending ?? false;

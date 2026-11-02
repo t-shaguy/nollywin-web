@@ -3,7 +3,6 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Star, User, Mail, Phone, ChevronRight, Lock, Bell, UserPlus } from "lucide-react";
 import Link from "next/link";
-import { useWalletStore } from "@/store/wallet-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useSubscriptionStore } from "@/store/subscription-store";
 import { useReferralStore, fetchReferralData } from "@/store/referral-store";
@@ -14,7 +13,6 @@ import { toInternationalPhone } from "@/lib/utils/phone";
 
 function ProfileContent() {
   const searchParams = useSearchParams();
-  const { tokenBalance } = useWalletStore();
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
   const { hasActivePlan, planName } = useSubscriptionStore();
@@ -40,6 +38,21 @@ function ProfileContent() {
       try {
         const profile = await getProfile();
         updateUser(profile);
+        
+        // Backfill authUserId from wallet API if still missing after profile load
+        if (!profile.authUserId && !user?.authUserId) {
+          try {
+            const { getBalance } = await import("@/lib/api/wallet");
+            const balance = await getBalance();
+            if (balance.authUserId) {
+              updateUser({ authUserId: balance.authUserId });
+              console.log("[PROFILE] Backfilled authUserId from wallet API:", balance.authUserId);
+            }
+          } catch (err) {
+            // Wallet API might return 410 or fail, that's okay
+            console.warn("[PROFILE] Could not backfill authUserId from wallet:", err);
+          }
+        }
       } catch (err) {
         console.warn("Failed to fetch profile:", err);
         // Silently fail - user data from auth store is still available

@@ -4,41 +4,56 @@ import { Countdown } from "../../features/leaderboard/presentation/countdown";
 import { LeaderboardTable } from "../../features/leaderboard/presentation/leaderboard-table";
 import { getLeaderboard } from "@/lib/api/leaderboard";
 import { useAuthStore } from "@/store/auth-store";
+import { usePlayerDashboard } from "@/hooks/use-player-dashboard";
 
 export default function LeaderboardPage() {
   const currentUserId = useAuthStore((s) => s.user?.authUserId) || null;
+  const { data: dashboard } = usePlayerDashboard();
   
   const { data, isLoading, error } = useQuery({
     queryKey: ["leaderboard", "monthly"],
     queryFn: () => getLeaderboard("monthly"),
   });
 
+  // Get user's rank from dashboard for fallback
+  const userRank = dashboard?.monthlyRank?.rank ?? null;
+
   // Map API entries to include isCurrentUser flag
-  const entries = data?.entries?.map((entry) => ({
-    rank: entry.rank,
-    playerId: entry.authUserId,
-    player: entry.displayName,
-    points: entry.points,
-    prizeAmount: entry.prizeAmount,
-    isCurrentUser: currentUserId ? entry.authUserId === currentUserId : false,
-  })) || [];
+  // Use authUserId match if available, otherwise fallback to rank match
+  const entries = data?.entries?.map((entry) => {
+    let isCurrentUser = false;
+    
+    if (currentUserId) {
+      // Primary: Match by authUserId
+      isCurrentUser = entry.authUserId === currentUserId;
+    } else if (userRank) {
+      // Fallback: Match by rank when authUserId is unavailable
+      isCurrentUser = entry.rank === userRank;
+    }
+    
+    return {
+      rank: entry.rank,
+      playerId: entry.authUserId,
+      player: entry.displayName,
+      points: entry.points,
+      prizeAmount: entry.prizeAmount,
+      isCurrentUser,
+    };
+  }) || [];
 
   const periodEndsAt = data?.periodEndsAt ? new Date(data.periodEndsAt) : null;
 
-  // DIAGNOSTIC: Log leaderboard data to investigate points/rank mismatch
+  // DIAGNOSTIC: Log leaderboard data
   if (data) {
     console.log("[LEADERBOARD DEBUG] Raw response:", data);
-    console.log("[LEADERBOARD DEBUG] periodEndsAt:", data.periodEndsAt);
-    console.log("[LEADERBOARD DEBUG] Total entries:", data.entries.length);
     console.log("[LEADERBOARD DEBUG] currentUserId from auth store:", currentUserId);
+    console.log("[LEADERBOARD DEBUG] userRank from dashboard:", userRank);
     
     const currentUserEntry = entries.find(e => e.isCurrentUser);
     if (currentUserEntry) {
       console.log("[LEADERBOARD DEBUG] Current user entry found:", currentUserEntry);
     } else {
       console.log("[LEADERBOARD DEBUG] Current user NOT found in leaderboard");
-      console.log("[LEADERBOARD DEBUG] Looking for authUserId:", currentUserId);
-      console.log("[LEADERBOARD DEBUG] Available authUserIds:", data.entries.map(e => e.authUserId));
     }
   }
 

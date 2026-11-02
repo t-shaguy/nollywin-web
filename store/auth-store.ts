@@ -1,9 +1,38 @@
 import { create } from "zustand";
 import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
 
+/**
+ * Decode JWT payload (without verification - client-side only for extracting user ID)
+ * Returns null if token is invalid
+ */
+function decodeJWTPayload(token: string): any | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    
+    const payload = parts[1];
+    const decoded = JSON.parse(atob(payload));
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extract authUserId from JWT token
+ * Checks common claim names: sub, userId, authUserId
+ */
+function extractAuthUserIdFromToken(token: string): string | null {
+  const payload = decodeJWTPayload(token);
+  if (!payload) return null;
+  
+  // Check common JWT claim names for user ID
+  return payload.sub || payload.userId || payload.authUserId || null;
+}
+
 // VERIFIED: Profile shape from backend (returned in login/verify-otp response and GET /api/v1/users/profile)
 export interface User {
-  authUserId?: string; // User ID from backend (available from wallet API, may not be in all responses)
+  authUserId?: string; // User ID from backend - sourced from JWT token or wallet API
   email: string;
   firstName: string | null; // Can be null for phone-authenticated accounts
   lastName: string | null;  // Can be null for phone-authenticated accounts
@@ -57,13 +86,23 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       rememberMe: true, // Default to localStorage
       setSession: (token, user, rememberMe = true) => {
-        set({ token, user, rememberMe });
+        // Extract authUserId from JWT if not present in user profile
+        let enrichedUser = user;
+        if (!user.authUserId) {
+          const authUserIdFromToken = extractAuthUserIdFromToken(token);
+          if (authUserIdFromToken) {
+            enrichedUser = { ...user, authUserId: authUserIdFromToken };
+            console.log("[AUTH] Extracted authUserId from JWT:", authUserIdFromToken);
+          }
+        }
+        
+        set({ token, user: enrichedUser, rememberMe });
         
         // Switch storage based on rememberMe preference
         if (typeof window !== "undefined") {
           const key = "nollywin-auth";
           const data = JSON.stringify({
-            state: { token, user, rememberMe },
+            state: { token, user: enrichedUser, rememberMe },
             version: 0,
           });
 

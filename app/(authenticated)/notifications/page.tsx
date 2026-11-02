@@ -2,7 +2,6 @@
 import { ArrowLeft, Play, Ticket, CreditCard, Trophy, Sparkles, Bell, Coins, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { useWalletStore } from "@/store/wallet-store";
 import { useEffect, useState } from "react";
 import { getNotifications, markAsRead, markAllAsRead, deleteNotification, type Notification } from "@/lib/api/notifications";
 
@@ -94,7 +93,6 @@ function formatTimestamp(iso: string): string {
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const { tokenBalance } = useWalletStore();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   

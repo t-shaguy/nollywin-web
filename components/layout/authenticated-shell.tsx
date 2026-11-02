@@ -1,12 +1,10 @@
 "use client";
 import { ReactNode, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Sidebar } from "./sidebar";
 import { TopBar } from "./top-bar";
 import { MobileNav } from "./mobile-nav";
-import { useSubscriptionSync } from "@/hooks/use-subscription-sync";
 import { useNotificationsSync } from "@/hooks/use-notifications-sync";
-import { getPlayerDashboard } from "@/lib/api/auth";
+import { usePlayerDashboard } from "@/hooks/use-player-dashboard";
 
 export function AuthenticatedShell({
   children,
@@ -15,20 +13,11 @@ export function AuthenticatedShell({
 }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   
-  // Sync subscription status with backend on mount
-  useSubscriptionSync();
-  
   // Sync notifications unread count
   const { unreadCount: notificationCount } = useNotificationsSync();
 
-  // Fetch dashboard for tokens
-  const { data: dashboard } = useQuery({
-    queryKey: ["dashboard-shell"],
-    queryFn: getPlayerDashboard,
-    refetchInterval: false, // Disable auto-refresh to prevent hammering
-    staleTime: 5 * 60 * 1000, // Consider fresh for 5 minutes
-    retry: 1, // Only retry once on failure
-  });
+  // Unified dashboard query - shared with all pages
+  const { data: dashboard } = usePlayerDashboard();
 
   const tokensLeft = dashboard?.tokensLeft ?? 0;
   const hasActiveSubscription = dashboard?.hasActiveSubscription ?? false;

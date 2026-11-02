@@ -11,7 +11,12 @@
 
 import { getSharedClientToken, clearSharedClientToken } from "./shared-client-token";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://3.211.19.155/nollywin/core";
+// Browser: use same-origin proxy (no CORS/preflight)
+// Server: use direct URL
+const API_BASE_URL = typeof window !== "undefined"
+  ? "/core-api"
+  : (process.env.NEXT_PUBLIC_API_URL ?? "http://3.211.19.155/nollywin/core");
+
 const REQUEST_TIMEOUT = 15000; // 15 seconds
 
 export class ApiError extends Error {

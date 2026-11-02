@@ -7,7 +7,7 @@ import { GameDetails } from "./game-details";
 import { QuestionView } from "./question-view";
 import { StageCleared } from "./stage-cleared";
 import * as gameApi from "@/lib/api/game";
-import { getPlayerDashboard } from "@/lib/api/auth";
+import { usePlayerDashboard } from "@/hooks/use-player-dashboard";
 import type { ApiError } from "@/lib/api/client";
 import type { GameQuestion } from "@/lib/api/game";
 import type { TriviaQuestion } from "../data/mock-questions";
@@ -51,15 +51,9 @@ export function TriviaFlow() {
   const router = useRouter();
   const queryClient = useQueryClient();
   
-  // Token cost from dashboard API (v37: may be undefined, default to 1)
-  const [tokenCostPerPlay, setTokenCostPerPlay] = useState<number>(1);
-  
-  // Load token cost from dashboard on mount
-  useEffect(() => {
-    getPlayerDashboard()
-      .then((dashboard) => setTokenCostPerPlay(dashboard.tokenCostPerPlay ?? 1))
-      .catch((err) => console.warn("Failed to load dashboard:", err));
-  }, []);
+  // Get token cost from unified dashboard hook
+  const { data: dashboard } = usePlayerDashboard();
+  const tokenCostPerPlay = dashboard?.tokenCostPerPlay ?? 1;
   
   // API-driven state
   const [currentQuestion, setCurrentQuestion] = useState<GameQuestion | null>(null);
@@ -103,7 +97,6 @@ export function TriviaFlow() {
       // V37: Refresh dashboard to update tokensLeft and draw points
       try {
         queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-        queryClient.invalidateQueries({ queryKey: ["dashboard-shell"] });
       } catch (err) {
         console.error("Failed to refresh dashboard after game start:", err);
       }
@@ -153,7 +146,6 @@ export function TriviaFlow() {
         // V37: Refresh dashboard to update tokensLeft and draw points after game end
         try {
           queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-          queryClient.invalidateQueries({ queryKey: ["dashboard-shell"] });
         } catch (err) {
           console.error("[TRIVIA] Failed to refresh dashboard after game end:", err);
         }
@@ -205,7 +197,6 @@ export function TriviaFlow() {
         // V37: Refresh dashboard to update tokensLeft and draw points after timeout
         try {
           queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-          queryClient.invalidateQueries({ queryKey: ["dashboard-shell"] });
         } catch (err) {
           console.error("[TRIVIA] Failed to refresh dashboard after timeout:", err);
         }
@@ -259,7 +250,6 @@ export function TriviaFlow() {
   const backToDashboard = () => {
     // V37: Refresh dashboard to update tokensLeft and draw points after game
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-    queryClient.invalidateQueries({ queryKey: ["dashboard-shell"] });
     router.push("/home");
   };
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getPerformanceTrend } from "@/lib/api/game";
 import { PLACEHOLDER_PERFORMANCE } from "@/lib/placeholder-performance";
 
@@ -14,44 +14,28 @@ interface DataPoint {
  * Maps API response (date/gamesPlayed/pointsEarned) to chart format (label/value).
  * On error, falls back to PLACEHOLDER_PERFORMANCE so the chart still renders its empty state.
  * 
- * @param enabled - Optional flag to control when the fetch should run (for staggering)
+ * @param days - Number of days to fetch (defaults to 7)
  */
-export function usePerformanceTrend(enabled: boolean = true) {
-  const [data, setData] = useState<DataPoint[]>(PLACEHOLDER_PERFORMANCE);
-  const [loading, setLoading] = useState(true);
+export function usePerformanceTrend(days: number = 7) {
+  const { data: rawData, isLoading } = useQuery({
+    queryKey: ["performance-trend", days],
+    queryFn: () => getPerformanceTrend(days),
+    staleTime: 60000, // 60 seconds
+    placeholderData: PLACEHOLDER_PERFORMANCE.map(() => ({ date: "", gamesPlayed: 0, pointsEarned: 0 })),
+  });
 
-  useEffect(() => {
-    if (!enabled) {
-      return;
-    }
-
-    async function fetchTrend() {
-      try {
-        const trend = await getPerformanceTrend(7);
+  // Map to chart format: label = short weekday, value = pointsEarned
+  const data: DataPoint[] = rawData
+    ? rawData.map((point) => {
+        const date = new Date(point.date);
+        const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
         
-        // Map to chart format: label = short weekday, value = pointsEarned
-        const chartData: DataPoint[] = trend.map((point) => {
-          const date = new Date(point.date);
-          const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
-          
-          return {
-            label: weekday,
-            value: point.pointsEarned,
-          };
-        });
+        return {
+          label: weekday,
+          value: point.pointsEarned,
+        };
+      })
+    : PLACEHOLDER_PERFORMANCE;
 
-        setData(chartData);
-      } catch (error) {
-        console.warn("Failed to fetch performance trend:", error);
-        // Fall back to placeholder so chart shows empty state instead of crashing
-        setData(PLACEHOLDER_PERFORMANCE);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchTrend();
-  }, [enabled]);
-
-  return { data, loading };
+  return { data, loading: isLoading };
 }

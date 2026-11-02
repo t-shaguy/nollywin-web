@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { getAvailablePackages, type SubscriptionPackage } from "@/lib/api/subscriptions";
+import { usePlayerDashboard } from "@/hooks/use-player-dashboard";
 import { Button } from "@/components/ui/button";
 
 // Literal hex values matching the Figma
@@ -18,26 +19,13 @@ export default function StorePage() {
     queryFn: getAvailablePackages,
   });
   
+  // Get current subscription from dashboard (no additional API call needed)
+  const { data: dashboard } = usePlayerDashboard();
+  const currentSubscription = dashboard?.subscription?.packageName ?? null;
+  
   const [selected, setSelected] = useState<SubscriptionPackage | null>(null);
   const [view, setView] = useState<View>("browse");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [currentSubscription, setCurrentSubscription] = useState<string | null>(null);
-
-  // Load current active subscription on mount
-  useEffect(() => {
-    async function loadCurrentSubscription() {
-      try {
-        const { getMySubscriptions } = await import("@/lib/api/subscriptions");
-        const subs = await getMySubscriptions("ACTIVE");
-        if (subs.length > 0) {
-          setCurrentSubscription(subs[0].packageName);
-        }
-      } catch (err) {
-        console.warn("Failed to load current subscription:", err);
-      }
-    }
-    loadCurrentSubscription();
-  }, []);
 
   const activePackages = packages.filter((p) => p.active);
   
@@ -67,7 +55,6 @@ export default function StorePage() {
       
       // Invalidate dashboard query before redirecting
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-shell"] });
       
       // Redirect to Paystack authorization URL
       if (response.authorizationUrl) {

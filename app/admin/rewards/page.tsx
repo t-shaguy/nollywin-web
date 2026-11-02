@@ -11,9 +11,7 @@ import {
   getAdminDraws,
   getAdminDraw,
   createDraw,
-  updateDraw,
   closeDraw,
-  cancelDraw,
   getDrawStandings,
   selectDrawWinners,
   getDrawWinners,
@@ -27,7 +25,6 @@ import { cn } from "@/lib/utils";
 type ViewMode = "list" | "detail" | "standings" | "winners";
 
 interface CreateDrawForm {
-  raffleCode: string;
   prizeName: string;
   scheduleLabel: string;
   startsOn: string;
@@ -47,12 +44,13 @@ function formatDrawDate(dateStr: string | null): string {
   if (!dateStr) return "-";
   try {
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return "-";
     const day = date.getUTCDate().toString().padStart(2, "0");
     const month = date.toLocaleString("en-GB", { month: "short", timeZone: "UTC" });
     const year = date.getUTCFullYear();
     return `${day} ${month} ${year}`;
   } catch {
-    return dateStr;
+    return "-";
   }
 }
 
@@ -91,7 +89,6 @@ export default function AdminRewardsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showSelectWinnersDialog, setShowSelectWinnersDialog] = useState(false);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   // Filter
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -114,8 +111,8 @@ export default function AdminRewardsPage() {
 
   // Auto-calculate maxWinners from tiers
   useEffect(() => {
-    if (useTiers && tiers.length > 0) {
-      const sum = tiers.reduce((acc, tier) => acc + (tier.winnersCount || 0), 0);
+    if (useTiers && (tiers ?? []).length > 0) {
+      const sum = (tiers ?? []).reduce((acc, tier) => acc + (tier.winnersCount || 0), 0);
       setValue("maxWinners", sum);
     }
   }, [tiers, useTiers, setValue]);
@@ -128,11 +125,12 @@ export default function AdminRewardsPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await getAdminDraws(0, 100, statusFilter || undefined);
-      setDraws(response.entries);
+      const response = await getAdminDraws(statusFilter || undefined);
+      setDraws(Array.isArray(response) ? response : []);
     } catch (err) {
       console.error("Error loading draws:", err);
       setError(err instanceof Error ? err.message : "Failed to load draws");
+      setDraws([]); // Reset to empty array on error
     } finally {
       setLoading(false);
     }
@@ -157,10 +155,11 @@ export default function AdminRewardsPage() {
       setDetailLoading(true);
       setError(null);
       const data = await getDrawStandings(id);
-      setStandings(data);
+      setStandings(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error loading standings:", err);
       setError(err instanceof Error ? err.message : "Failed to load standings");
+      setStandings([]);
     } finally {
       setDetailLoading(false);
     }
@@ -171,10 +170,11 @@ export default function AdminRewardsPage() {
       setDetailLoading(true);
       setError(null);
       const data = await getDrawWinners(id);
-      setWinners(data);
+      setWinners(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error loading winners:", err);
       setError(err instanceof Error ? err.message : "Failed to load winners");
+      setWinners([]);
     } finally {
       setDetailLoading(false);
     }
@@ -198,14 +198,13 @@ export default function AdminRewardsPage() {
       }
 
       const payload: CreateDrawRequest = {
-        raffleCode: data.raffleCode,
         prizeName: data.prizeName,
         scheduleLabel: data.scheduleLabel,
         startsOn: data.startsOn,
         endsOn: data.endsOn,
         drawDate: data.drawDate,
         maxWinners: data.maxWinners,
-        prizeTiers: data.tiers.length > 0 ? data.tiers : undefined,
+        prizeTiers: (data.tiers ?? []).length > 0 ? data.tiers : undefined,
       };
 
       const response = await createDraw(payload);
@@ -301,32 +300,6 @@ export default function AdminRewardsPage() {
     }
   };
 
-  const handleCancelDraw = async () => {
-    if (!selectedDraw) return;
-    try {
-      setSubmitting(true);
-      setError(null);
-      setSuccessMessage(null);
-      setResultSummary(null);
-
-      const response = await cancelDraw(selectedDraw.id);
-      setSuccessMessage("Draw cancellation request submitted");
-      setResultSummary(response.message || "Awaiting approval");
-      setShowCancelDialog(false);
-      await loadDraws();
-      await loadDrawDetails(selectedDraw.id);
-    } catch (err: unknown) {
-      console.error("Error cancelling draw:", err);
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Failed to cancel draw");
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const backToList = () => {
     setViewMode("list");
     setSelectedDraw(null);
@@ -344,7 +317,7 @@ export default function AdminRewardsPage() {
     setError(null);
   };
 
-  // Action matrix based on V37 FINAL spec
+  // Action matrix based on V37 FINAL spec (ACTIVE/CLOSED only)
   const getActions = (draw: AdminDrawDetails) => {
     const actions: Array<{ label: string; onClick: () => void; variant: "gradient" | "danger"; disabled?: boolean }> = [];
     const today = new Date().toISOString().split("T")[0]; // UTC date
@@ -368,15 +341,6 @@ export default function AdminRewardsPage() {
         onClick: () => setShowSelectWinnersDialog(true),
         variant: "gradient",
         disabled: !allowSelect,
-      });
-    }
-
-    // ACTIVE or UPCOMING → "Cancel draw"
-    if (draw.status === "ACTIVE" || draw.status === "UPCOMING") {
-      actions.push({
-        label: "Cancel Draw",
-        onClick: () => setShowCancelDialog(true),
-        variant: "danger",
       });
     }
 
@@ -426,7 +390,7 @@ export default function AdminRewardsPage() {
 
         {/* Filters */}
         <div className="flex gap-2">
-          {["", "ACTIVE", "UPCOMING", "CLOSED", "COMPLETED", "CANCELLED"].map((status) => (
+          {["", "ACTIVE", "CLOSED"].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
@@ -452,8 +416,8 @@ export default function AdminRewardsPage() {
             No draws found. Create your first draw to get started.
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {draws.map((draw) => (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {(draws ?? []).map((draw) => (
               <div
                 key={draw.id}
                 className="bg-card border border-border rounded-xl p-4 cursor-pointer hover:border-primary transition-colors"
@@ -484,7 +448,7 @@ export default function AdminRewardsPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Entries</span>
-                    <span className="font-medium">{draw.entryCount.toLocaleString()}</span>
+                    <span className="font-medium">{(draw.entryCount ?? 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Winners Selected</span>
@@ -527,10 +491,10 @@ export default function AdminRewardsPage() {
             <ModalSection title="Basic Information">
               <FormGrid>
                 <AdminInput
-                  label="Raffle Code"
-                  {...register("raffleCode", { required: "Raffle code is required" })}
-                  placeholder="NW-202611-0001"
-                  error={errors.raffleCode?.message}
+                  label="Prize Name"
+                  {...register("prizeName", { required: "Prize name is required" })}
+                  placeholder="Samsung Galaxy S24"
+                  error={errors.prizeName?.message}
                 />
                 <AdminInput
                   label="Schedule Label"
@@ -539,12 +503,9 @@ export default function AdminRewardsPage() {
                   error={errors.scheduleLabel?.message}
                 />
               </FormGrid>
-              <AdminInput
-                label="Prize Name"
-                {...register("prizeName", { required: "Prize name is required" })}
-                placeholder="Samsung Galaxy S24"
-                error={errors.prizeName?.message}
-              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Raffle code will be auto-generated by the backend
+              </p>
             </ModalSection>
 
             <ModalSection title="Dates (UTC)">
@@ -733,7 +694,7 @@ export default function AdminRewardsPage() {
                 </div>
                 <div>
                   <div className="text-muted-foreground mb-1">Entry Count</div>
-                  <div className="font-medium">{selectedDraw.entryCount.toLocaleString()}</div>
+                  <div className="font-medium">{(selectedDraw.entryCount ?? 0).toLocaleString()}</div>
                 </div>
                 <div>
                   <div className="text-muted-foreground mb-1">Max Winners</div>
@@ -747,11 +708,11 @@ export default function AdminRewardsPage() {
             </div>
 
             {/* Prize Tiers */}
-            {selectedDraw.prizeTiers && selectedDraw.prizeTiers.length > 0 && (
+            {(selectedDraw.prizeTiers ?? []).length > 0 && (
               <div className="bg-card border border-border rounded-xl p-4">
                 <h3 className="text-sm font-semibold mb-4">Prize Tiers</h3>
                 <div className="space-y-3">
-                  {selectedDraw.prizeTiers
+                  {(selectedDraw.prizeTiers ?? [])
                     .sort((a, b) => a.position - b.position)
                     .map((tier, idx) => (
                       <div key={idx} className="flex items-center justify-between text-[13px] p-2 bg-secondary/30 rounded-lg">
@@ -841,17 +802,6 @@ export default function AdminRewardsPage() {
           variant="primary"
           loading={submitting}
         />
-
-        <ConfirmDialog
-          open={showCancelDialog}
-          onClose={() => setShowCancelDialog(false)}
-          onConfirm={handleCancelDraw}
-          title="Cancel Draw"
-          description="Cancel this draw permanently? This action requires approval."
-          confirmLabel="Cancel Draw"
-          variant="danger"
-          loading={submitting}
-        />
       </div>
     );
   }
@@ -897,9 +847,9 @@ export default function AdminRewardsPage() {
                 </tr>
               </thead>
               <tbody>
-                {standings.map((entry) => {
+                {(standings ?? []).map((entry) => {
                   const isWinningPosition = entry.position <= maxWinners;
-                  const projectedTier = hasTiers ? getProjectedTier(entry.position, selectedDraw.prizeTiers!) : null;
+                  const projectedTier = hasTiers ? getProjectedTier(entry.position, selectedDraw.prizeTiers ?? []) : null;
                   
                   return (
                     <tr 
@@ -970,34 +920,40 @@ export default function AdminRewardsPage() {
             <table className="w-full text-[13px]">
               <thead className="bg-secondary/30">
                 <tr>
-                  <th className="text-left py-3 px-4 font-medium">User ID</th>
+                  <th className="text-left py-3 px-4 font-medium">Rank</th>
                   <th className="text-left py-3 px-4 font-medium">Display Name</th>
                   <th className="text-left py-3 px-4 font-medium">Email</th>
                   <th className="text-left py-3 px-4 font-medium">Phone</th>
-                  <th className="text-left py-3 px-4 font-medium">Points</th>
-                  {winners.some(w => w.tier) && <th className="text-left py-3 px-4 font-medium">Tier</th>}
-                  {winners.some(w => w.prize) && <th className="text-left py-3 px-4 font-medium">Prize</th>}
+                  <th className="text-right py-3 px-4 font-medium">Points</th>
+                  {winners.some(w => w.tier || w.tierName) && <th className="text-left py-3 px-4 font-medium">Tier</th>}
+                  {winners.some(w => w.prize || w.prizeName) && <th className="text-left py-3 px-4 font-medium">Prize</th>}
                   <th className="text-left py-3 px-4 font-medium">Selected At</th>
                 </tr>
               </thead>
               <tbody>
                 {winners.map((winner, idx) => (
                   <tr key={idx} className="border-t border-border hover:bg-secondary/20">
-                    <td className="py-3 px-4 font-mono text-xs text-muted-foreground">{winner.authUserId}</td>
-                    <td className="py-3 px-4 font-medium">{winner.displayName}</td>
-                    <td className="py-3 px-4">{winner.email}</td>
-                    <td className="py-3 px-4 text-muted-foreground">{winner.phoneNumber || "-"}</td>
-                    <td className="py-3 px-4 font-semibold text-primary">{winner.points.toLocaleString()}</td>
-                    {winners.some(w => w.tier) && <td className="py-3 px-4">{winner.tier || "-"}</td>}
-                    {winners.some(w => w.prize) && <td className="py-3 px-4">{winner.prize || "-"}</td>}
+                    <td className="py-3 px-4 font-bold text-primary">
+                      #{winner.rankPosition ?? idx + 1}
+                    </td>
+                    <td className="py-3 px-4 font-medium">{winner.displayName ?? "-"}</td>
+                    <td className="py-3 px-4">{winner.email ?? "-"}</td>
+                    <td className="py-3 px-4 text-muted-foreground">{winner.phoneNumber ?? "-"}</td>
+                    <td className="py-3 px-4 font-semibold text-right">{winner.points?.toLocaleString() ?? "-"}</td>
+                    {winners.some(w => w.tier || w.tierName) && (
+                      <td className="py-3 px-4">{winner.tierName ?? winner.tier ?? "-"}</td>
+                    )}
+                    {winners.some(w => w.prize || w.prizeName) && (
+                      <td className="py-3 px-4">{winner.prizeName ?? winner.prize ?? "-"}</td>
+                    )}
                     <td className="py-3 px-4 text-muted-foreground text-xs">
-                      {new Date(winner.selectedAt).toLocaleString('en-GB', {
+                      {winner.selectedAt ? new Date(winner.selectedAt).toLocaleString('en-GB', {
                         day: '2-digit',
                         month: 'short',
                         year: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit',
-                      })}
+                      }) : "-"}
                     </td>
                   </tr>
                 ))}

@@ -18,11 +18,11 @@ function RankBadge({ rank }: { rank: number }) {
   const colorClass = colors[rank] ?? "bg-secondary text-muted-foreground";
 
   return (
-    <div className="flex items-center gap-2">
-      <span className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${colorClass}`}>
+    <div className="flex items-center gap-1 sm:gap-2">
+      <span className={`h-8 w-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold shrink-0 ${colorClass}`}>
         {rank}
       </span>
-      {rank <= 3 && <Crown size={16} className="text-amber-500" />}
+      {rank <= 3 && <Crown size={14} className="text-amber-500 hidden sm:inline" />}
     </div>
   );
 }
@@ -39,25 +39,42 @@ function getInitials(displayName: string): string {
   return displayName.slice(0, 2).toUpperCase();
 }
 
+/**
+ * Format prize amount for narrow screens
+ * Full format (≥640px): ₦20,000
+ * Compact format (<640px): ₦20k
+ */
+function formatPrize(amount: number, compact: boolean = false): string {
+  if (amount === 0) return "—";
+  
+  if (compact && amount >= 1000) {
+    const k = Math.floor(amount / 1000);
+    return `₦${k}k`;
+  }
+  
+  return `₦${amount.toLocaleString()}`;
+}
+
 function LeaderboardSkeleton() {
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden animate-pulse">
-      <div className="grid grid-cols-[80px_1fr_120px_120px] sm:grid-cols-[100px_1fr_150px_150px] gap-4 px-6 py-4 bg-secondary">
-        <div className="h-4 bg-muted/50 rounded" />
-        <div className="h-4 bg-muted/50 rounded" />
-        <div className="h-4 bg-muted/50 rounded" />
-        <div className="h-4 bg-muted/50 rounded" />
+      {/* Header - responsive grid */}
+      <div className="grid grid-cols-[44px_minmax(0,1fr)_64px_80px] sm:grid-cols-[100px_1fr_150px_150px] gap-2 sm:gap-4 px-3 sm:px-6 py-3 sm:py-4 bg-secondary">
+        <div className="h-3 sm:h-4 bg-muted/50 rounded" />
+        <div className="h-3 sm:h-4 bg-muted/50 rounded" />
+        <div className="h-3 sm:h-4 bg-muted/50 rounded" />
+        <div className="h-3 sm:h-4 bg-muted/50 rounded" />
       </div>
       <div className="divide-y divide-border">
         {[...Array(10)].map((_, i) => (
-          <div key={i} className="grid grid-cols-[80px_1fr_120px_120px] sm:grid-cols-[100px_1fr_150px_150px] gap-4 px-6 py-4">
+          <div key={i} className="grid grid-cols-[44px_minmax(0,1fr)_64px_80px] sm:grid-cols-[100px_1fr_150px_150px] gap-2 sm:gap-4 px-3 sm:px-6 py-3 sm:py-4">
             <div className="h-8 w-8 rounded-full bg-muted/50" />
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-muted/50" />
-              <div className="h-4 w-32 bg-muted/50 rounded" />
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="h-8 w-8 rounded-full bg-muted/50 shrink-0" />
+              <div className="h-3 sm:h-4 w-20 sm:w-32 bg-muted/50 rounded" />
             </div>
-            <div className="h-4 w-16 bg-muted/50 rounded" />
-            <div className="h-4 w-16 bg-muted/50 rounded" />
+            <div className="h-3 sm:h-4 w-12 sm:w-16 bg-muted/50 rounded ml-auto" />
+            <div className="h-3 sm:h-4 w-12 sm:w-16 bg-muted/50 rounded ml-auto" />
           </div>
         ))}
       </div>
@@ -80,11 +97,12 @@ export function LeaderboardTable({
 
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
-      <div className="grid grid-cols-[80px_1fr_120px_120px] sm:grid-cols-[100px_1fr_150px_150px] gap-4 px-6 py-4 bg-secondary text-sm text-muted-foreground font-medium">
+      {/* Header - responsive grid */}
+      <div className="grid grid-cols-[44px_minmax(0,1fr)_64px_80px] sm:grid-cols-[100px_1fr_150px_150px] gap-2 sm:gap-4 px-3 sm:px-6 py-3 sm:py-4 bg-secondary text-xs sm:text-sm text-muted-foreground font-medium">
         <span>Rank</span>
         <span>Player</span>
-        <span>Points</span>
-        <span>Prize</span>
+        <span className="text-right">Points</span>
+        <span className="text-right">Prize</span>
       </div>
       <div className="divide-y divide-border">
         {entries.map((entry) => {
@@ -94,47 +112,52 @@ export function LeaderboardTable({
           return (
             <div
               key={entry.playerId}
-              className={`grid grid-cols-[80px_1fr_120px_120px] sm:grid-cols-[100px_1fr_150px_150px] gap-4 px-6 py-4 items-center transition-colors ${
-                isCurrentUser ? "bg-primary/5 border-l-4 border-l-primary" : ""
+              className={`grid grid-cols-[44px_minmax(0,1fr)_64px_80px] sm:grid-cols-[100px_1fr_150px_150px] gap-2 sm:gap-4 px-3 sm:px-6 py-3 sm:py-4 items-center transition-colors ${
+                isCurrentUser ? "bg-primary/5 border-l-2 sm:border-l-4 border-l-primary" : ""
               }`}
             >
               <RankBadge rank={entry.rank} />
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 {/* Avatar with initials */}
                 <div 
-                  className={`h-8 w-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold ${
+                  className={`h-7 w-7 sm:h-8 sm:w-8 rounded-full shrink-0 flex items-center justify-center text-[10px] sm:text-xs font-bold ${
                     isCurrentUser ? "bg-primary/20 text-primary" : "bg-secondary/50"
                   }`}
                 >
                   {isCurrentUser && initials}
                 </div>
-                <span className={`font-medium truncate ${
+                <span className={`text-xs sm:text-sm font-medium truncate ${
                   isCurrentUser ? "text-primary" : "text-muted-foreground/40"
                 }`}>
                   {isCurrentUser ? (
                     <>
-                      {entry.player}
-                      <span className="ml-2 text-xs text-muted-foreground">(You)</span>
+                      <span className="hidden sm:inline">{entry.player}</span>
+                      <span className="sm:hidden">{entry.player.length > 12 ? entry.player.substring(0, 12) + '...' : entry.player}</span>
+                      <span className="ml-1 sm:ml-2 text-[10px] sm:text-xs text-muted-foreground">(You)</span>
                     </>
                   ) : (
                     "•••"
                   )}
                 </span>
               </div>
-              <span className={`font-mono ${
+              <span className={`text-xs sm:text-sm font-mono text-right ${
                 isCurrentUser ? "text-muted-foreground" : "text-muted-foreground/40"
               }`}>
                 {isCurrentUser ? entry.points.toLocaleString() : "•••"}
               </span>
-              <span className={
+              <span className={`text-xs sm:text-sm text-right ${
                 isCurrentUser 
                   ? entry.prizeAmount > 0 ? "text-primary font-medium" : "text-muted-foreground"
                   : "text-muted-foreground/40"
-              }>
-                {isCurrentUser 
-                  ? entry.prizeAmount > 0 ? `₦${entry.prizeAmount.toLocaleString()}` : "—"
-                  : "•••"
-                }
+              }`}>
+                {isCurrentUser ? (
+                  <>
+                    <span className="hidden sm:inline">{formatPrize(entry.prizeAmount, false)}</span>
+                    <span className="sm:hidden">{formatPrize(entry.prizeAmount, true)}</span>
+                  </>
+                ) : (
+                  "•••"
+                )}
               </span>
             </div>
           );

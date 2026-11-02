@@ -43,6 +43,7 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
                 key={item.href}
                 href={href}
                 onClick={onClose}
+                prefetch={false}
                 className={`flex items-center gap-4 px-5 py-3.5 rounded-xl text-base font-medium transition-colors ${
                   active
                     ? "bg-primary/15 text-primary border border-primary/30"

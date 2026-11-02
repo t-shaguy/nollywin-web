@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { STAGES } from "../data/mock-questions";
 import { getGameSettings, type GameSettings } from "@/lib/api/game";
-import { getPlayerDashboard } from "@/lib/api/auth";
+import { usePlayerDashboard } from "@/hooks/use-player-dashboard";
 
 interface GameDetailsProps {
   tokenCostPerPlay: number;
@@ -14,22 +14,17 @@ interface GameDetailsProps {
 
 export function GameDetails({ tokenCostPerPlay, onStartGame, onBack }: GameDetailsProps) {
   const [settings, setSettings] = useState<GameSettings | null>(null);
-  const [canPlay, setCanPlay] = useState<boolean>(false);
-  const [tokensLeft, setTokensLeft] = useState<number | null>(null);
+  
+  // Get dashboard data from unified hook
+  const { data: dashboard } = usePlayerDashboard();
+  const canPlay = dashboard?.canPlay ?? false;
+  const tokensLeft = dashboard?.tokensLeft ?? null;
 
   useEffect(() => {
     // Fetch game settings
     getGameSettings()
       .then(setSettings)
       .catch((err) => console.warn("Failed to load game settings:", err));
-    
-    // V37: Fetch dashboard to get canPlay and tokensLeft
-    getPlayerDashboard()
-      .then((dashboard) => {
-        setCanPlay(dashboard.canPlay);
-        setTokensLeft(dashboard.tokensLeft);
-      })
-      .catch((err) => console.warn("Failed to load dashboard:", err));
   }, []);
 
   const secondsPerQuestion = settings?.secondsPerQuestion ?? 10; // fallback while loading

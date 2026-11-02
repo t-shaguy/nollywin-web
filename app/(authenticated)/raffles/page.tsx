@@ -5,7 +5,7 @@ import { ActiveDrawCard } from "../../features/raffles/presentation/active-draw-
 import { RaffleHistoryList } from "../../features/raffles/presentation/raffle-history-list";
 import { DrawCountdownModal } from "@/components/ui/draw-countdown-modal";
 import { getActiveDraws } from "@/lib/api/leaderboard";
-import { getPlayerDashboard } from "@/lib/api/auth";
+import { usePlayerDashboard } from "@/hooks/use-player-dashboard";
 
 type TabType = "active" | "history";
 
@@ -16,10 +16,7 @@ export default function RafflesPage() {
   const [hasShownAutoModal, setHasShownAutoModal] = useState(false);
 
   // Fetch dashboard for subscription status and active raffles with points
-  const { data: dashboard } = useQuery({
-    queryKey: ["dashboard"],
-    queryFn: getPlayerDashboard,
-  });
+  const { data: dashboard } = usePlayerDashboard();
 
   // Fetch active draws
   const { data: draws = [], isLoading } = useQuery({
