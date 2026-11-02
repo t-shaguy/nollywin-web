@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminCard } from "@/components/admin/admin-card";
+import { useAdminAuthStore } from "@/store/admin-auth-store";
 import {
   getChangeRequests,
   approveChangeRequest,
@@ -19,6 +20,7 @@ export default function ChangeRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("PENDING");
+  const adminSession = useAdminAuthStore((s) => s.session);
   
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
@@ -28,6 +30,21 @@ export default function ChangeRequestsPage() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Log admin session in dev to check for role field
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && adminSession) {
+      console.debug('[AdminChangeRequests] Admin session:', adminSession);
+    }
+  }, [adminSession]);
+
+  // Check if logged-in admin proposed this request
+  const isOwnRequest = (request: ChangeRequest): boolean => {
+    if (!adminSession?.admin?.email) return false;
+    const loggedInEmail = adminSession.admin.email.trim().toLowerCase();
+    const proposedEmail = request.proposedByEmail.trim().toLowerCase();
+    return loggedInEmail === proposedEmail;
+  };
 
   useEffect(() => {
     async function loadChangeRequests() {
@@ -368,24 +385,35 @@ export default function ChangeRequestsPage() {
 
                 {/* Actions (PENDING only) */}
                 {request.status === "PENDING" && (
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleApprove(request)}
-                      disabled={submitting}
-                      size="sm"
-                      className="flex-1 bg-gradient-to-r from-[#F40289] to-[#FC0D28] text-white hover:opacity-90"
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      onClick={() => handleRejectClick(request)}
-                      disabled={submitting}
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 border-destructive/50 text-destructive hover:bg-destructive/10 hover:border-destructive"
-                    >
-                      Reject
-                    </Button>
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleApprove(request)}
+                        disabled={submitting || isOwnRequest(request)}
+                        size="sm"
+                        className="flex-1 bg-gradient-to-r from-[#F40289] to-[#FC0D28] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={isOwnRequest(request) ? "You proposed this request. A different admin must review it." : undefined}
+                        aria-disabled={isOwnRequest(request)}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        onClick={() => handleRejectClick(request)}
+                        disabled={submitting || isOwnRequest(request)}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 border-destructive/50 text-destructive hover:bg-destructive/10 hover:border-destructive disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                        title={isOwnRequest(request) ? "You proposed this request. A different admin must review it." : undefined}
+                        aria-disabled={isOwnRequest(request)}
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                    {isOwnRequest(request) && (
+                      <p className="text-xs text-muted-foreground italic text-center">
+                        You proposed this request. A different admin must review it.
+                      </p>
+                    )}
                   </div>
                 )}
               </AdminCard>

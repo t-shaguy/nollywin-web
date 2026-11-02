@@ -8,7 +8,7 @@ import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { adminLogin } from "@/lib/api/admin";
+import { adminLogin, adminLoginFallback } from "@/lib/api/admin";
 import { requestAdminMagicLink } from "@/lib/api/admin";
 import { useAdminAuthStore } from "@/store/admin-auth-store";
 
@@ -39,15 +39,64 @@ export function AdminLoginForm() {
   const onSubmit = async (data: AdminLoginInput) => {
     setServerError(null);
     setMagicLinkSent(false);
+    
+    // TEMP: Fallback for checker login until /admin/auth/login accepts AUTH role
     try {
+      // Step 1: Try normal admin login
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[AdminLogin] Attempting maker login via /admin/auth/login');
+      }
+      
       const res = await adminLogin({
         email: data.email,
         password: data.password,
       });
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[AdminLogin] Maker login successful');
+      }
+      
       // REAL API: accessToken (not admin_token), email (not admin object)
       setSession(res.accessToken, { email: res.email });
       router.push("/admin/overview");
-    } catch (err: unknown) {
+      
+    } catch (err: any) {
+      // Step 2: If 401/403, try checker fallback
+      const is401or403 = err?.status === 401 || err?.status === 403;
+      
+      if (is401or403) {
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('[AdminLogin] Maker login failed with 401/403, trying checker fallback');
+        }
+        
+        try {
+          const fallbackRes = await adminLoginFallback({
+            email: data.email,
+            password: data.password,
+          });
+          
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('[AdminLogin] Checker login successful via fallback');
+          }
+          
+          setSession(fallbackRes.accessToken, { email: fallbackRes.email });
+          router.push("/admin/overview");
+          return;
+          
+        } catch (fallbackErr: any) {
+          // If fallback specifically says no admin access, show that
+          if (fallbackErr?.message === "This account doesn't have admin access.") {
+            setServerError(fallbackErr.message);
+            return;
+          }
+          // Otherwise, show original admin login error
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('[AdminLogin] Checker fallback failed, showing original error');
+          }
+        }
+      }
+      
+      // Show original error from admin login attempt
       const errorMessage = err instanceof Error ? err.message : "Couldn't log in. Check your details and try again.";
       setServerError(errorMessage);
     }

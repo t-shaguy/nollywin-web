@@ -307,6 +307,61 @@ export async function adminLogin(data: AdminLoginRequest): Promise<AdminLoginRes
   });
 }
 
+// TEMP: remove when /admin/auth/login accepts AUTH role
+/**
+ * Temporary fallback for checker (AUTH role) login
+ * Uses player auth endpoint but verifies admin access before returning
+ * 
+ * This will be removed once backend /admin/auth/login accepts AUTH role accounts
+ */
+export async function adminLoginFallback(data: AdminLoginRequest): Promise<AdminLoginResponse> {
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[adminLoginFallback] Attempting checker login via /api/v1/auth/login');
+  }
+  
+  // Step 1: Try player auth endpoint
+  const loginResponse = await adminApiClient<{ accessToken: string; email?: string; [key: string]: unknown }>(
+    "/api/v1/auth/login",
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    }
+  );
+
+  if (!loginResponse.accessToken) {
+    throw new Error("No access token returned");
+  }
+
+  // Step 2: Verify admin access by testing change-requests endpoint
+  try {
+    await adminApiClient<unknown>(
+      "/api/v1/admin/change-requests?status=PENDING",
+      {
+        headers: {
+          Authorization: `Bearer ${loginResponse.accessToken}`,
+        },
+      }
+    );
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[adminLoginFallback] Access verified, checker login successful');
+    }
+    
+    // Access verified, return in admin login format
+    return {
+      accessToken: loginResponse.accessToken,
+      email: loginResponse.email || data.email,
+    };
+  } catch (verifyError: any) {
+    // 401/403 means not an admin account
+    if (verifyError?.status === 401 || verifyError?.status === 403) {
+      throw new Error("This account doesn't have admin access.");
+    }
+    // Other errors, re-throw
+    throw verifyError;
+  }
+}
+
 // ============================================================================
 // Dashboard API Functions (REAL BACKEND)
 // ============================================================================
