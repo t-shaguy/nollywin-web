@@ -11,6 +11,7 @@ export function DashboardHeader({
   paymentPending,
   expiresAt,
   isLoading,
+  subscription,
 }: {
   canPlay: boolean;
   tokensLeft: number | null; // 0 = no plan, null = unlimited, N = tokens remaining
@@ -18,6 +19,7 @@ export function DashboardHeader({
   paymentPending: boolean;
   expiresAt?: string | null;
   isLoading?: boolean;
+  subscription?: { packageName: string; expiresAt: string } | null;
 }) {
   const user = useAuthStore((s) => s.user);
   const firstName = user?.firstName ?? "Player";
@@ -33,7 +35,8 @@ export function DashboardHeader({
 
   // Status line text
   let statusText = "";
-  let secondLineText = "";
+  let planLineText = "";
+  let expiryLineText = "";
   
   if (isLoading) {
     // Don't show anything while loading
@@ -49,14 +52,26 @@ export function DashboardHeader({
       statusText = `${tokensLeft} token${tokensLeft === 1 ? '' : 's'} left`;
     }
     
-    // Show expiry date
+    // Show plan name
+    if (subscription?.packageName) {
+      const packageName = subscription.packageName;
+      // Don't duplicate "plan" if it's already in the name
+      if (packageName.toLowerCase().includes('plan')) {
+        planLineText = `${packageName} active`;
+      } else {
+        planLineText = `${packageName} plan active`;
+      }
+    }
+    
+    // Show expiry date (DD MMM YYYY, Africa/Lagos)
     if (expiresAt) {
-      const expiryDate = new Date(expiresAt).toLocaleDateString("en-US", { 
-        month: "short", 
-        day: "numeric",
-        year: "numeric"
+      const expiryDate = new Date(expiresAt).toLocaleDateString("en-GB", { 
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        timeZone: "Africa/Lagos"
       });
-      secondLineText = `Active till ${expiryDate}`;
+      expiryLineText = `Active till ${expiryDate}`;
     }
   }
 
@@ -85,14 +100,24 @@ export function DashboardHeader({
             <p className="text-xs text-muted-foreground">
               {statusText}
             </p>
-            {secondLineText && (
+            {planLineText && (
               <p className="text-xs text-muted-foreground">
-                {secondLineText}
+                {planLineText}
+              </p>
+            )}
+            {expiryLineText && (
+              <p className="text-xs text-muted-foreground">
+                {expiryLineText}
               </p>
             )}
             {noPlan && (
               <Link href="/store" className="text-xs text-primary hover:underline mt-0.5">
                 Browse plans
+              </Link>
+            )}
+            {noTokensLeft && (
+              <Link href="/store" className="text-xs text-primary hover:underline mt-0.5">
+                Buy a new plan
               </Link>
             )}
           </div>

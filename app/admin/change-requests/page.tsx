@@ -227,6 +227,59 @@ export default function ChangeRequestsPage() {
     }
   };
 
+  // Humanize resource type (camelCase → Title Case)
+  const humanizeResourceType = (resourceType: string): string => {
+    return resourceType
+      .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+      .replace(/^./, (str) => str.toUpperCase()) // Capitalize first letter
+      .trim();
+  };
+
+  // Humanize action
+  const humanizeAction = (action: string): string => {
+    switch (action) {
+      case "CREATE": return "Create";
+      case "UPDATE": return "Update";
+      case "DELETE": return "Delete";
+      case "CLOSE": return "Close";
+      case "APPROVE": return "Approve";
+      default: return action.charAt(0) + action.slice(1).toLowerCase();
+    }
+  };
+
+  // Humanize status
+  const humanizeStatus = (status: string): string => {
+    switch (status) {
+      case "PENDING": return "Pending (waiting for a checker)";
+      case "APPROVED": return "Approved";
+      case "REJECTED": return "Rejected";
+      default: return status;
+    }
+  };
+
+  // Humanize field key (camelCase → Title Case)
+  const humanizeKey = (key: string): string => {
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, (str) => str.toUpperCase())
+      .trim();
+  };
+
+  // Format date as DD MMM YYYY in Africa/Lagos
+  const formatDate = (dateStr: string): string => {
+    try {
+      const date = new Date(dateStr);
+      return new Intl.DateTimeFormat('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'Africa/Lagos',
+      }).format(date);
+    } catch {
+      return dateStr;
+    }
+  };
+
   // Get action badge color
   const getActionColor = (action: string) => {
     switch (action) {
@@ -306,95 +359,110 @@ export default function ChangeRequestsPage() {
             
             return (
               <AdminCard key={request.id}>
-                {/* Header */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="flex items-center gap-1.5 bg-secondary/50 px-2.5 py-1 rounded-lg">
-                      <h3 className="font-bold text-sm">{request.resourceType}</h3>
-                      <span className="text-xs text-muted-foreground">·</span>
-                      <span className={`text-xs font-semibold ${
-                        request.action === "CREATE" ? "text-green-600" :
-                        request.action === "UPDATE" ? "text-blue-600" :
-                        request.action === "DELETE" ? "text-red-600" :
-                        "text-muted-foreground"
-                      }`}>
-                        {request.action}
-                      </span>
-                    </div>
-                    {request.financial && (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full border bg-amber-500/10 border-amber-500/30 text-amber-600">
-                        FINANCIAL
-                      </span>
-                    )}
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
-                      request.status === "PENDING"
-                        ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-600"
-                        : request.status === "APPROVED"
-                        ? "bg-green-500/10 border-green-500/30 text-green-600"
-                        : "bg-red-500/10 border-red-500/30 text-red-600"
-                    }`}>
-                      {request.status}
+                {/* Detailed Information List */}
+                <div className="space-y-3">
+                  {/* Item */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                    <span className="text-xs text-muted-foreground min-w-[120px]">Item:</span>
+                    <span className="font-medium text-sm">{humanizeResourceType(request.resourceType)}</span>
+                  </div>
+
+                  {/* Action */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                    <span className="text-xs text-muted-foreground min-w-[120px]">Action:</span>
+                    <span className="font-medium text-sm">{humanizeAction(request.action)}</span>
+                  </div>
+
+                  {/* Approval Type */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                    <span className="text-xs text-muted-foreground min-w-[120px]">Approval type:</span>
+                    <span className="font-medium text-sm">
+                      {request.financial 
+                        ? "Financial (needs an approval note)" 
+                        : "Standard"}
                     </span>
                   </div>
-                </div>
 
-                {/* Metadata */}
-                <div className="text-xs text-muted-foreground mb-3">
-                  <p>
-                    Proposed by <span className="font-medium text-foreground">{request.proposedByEmail}</span> on{" "}
-                    {new Date(request.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-
-                {/* Request Body */}
-                <div className="bg-secondary/30 rounded-lg p-3 mb-3">
-                  <p className="text-xs font-medium mb-1.5">Request Details:</p>
-                  {parsedBody ? (
-                    <div className="space-y-1">
-                      {Object.entries(parsedBody).map(([key, value]) => (
-                        <div key={key} className="flex items-start gap-2 text-xs">
-                          <span className="font-medium text-muted-foreground min-w-[100px]">{key}:</span>
-                          <span className="text-foreground break-all">
-                            {typeof value === "object" ? JSON.stringify(value) : String(value)}
-                          </span>
-                        </div>
-                      ))}
+                  {/* Status */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                    <span className="text-xs text-muted-foreground min-w-[120px]">Status:</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">{humanizeStatus(request.status)}</span>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                        request.status === "PENDING"
+                          ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-600"
+                          : request.status === "APPROVED"
+                          ? "bg-green-500/10 border-green-500/30 text-green-600"
+                          : "bg-red-500/10 border-red-500/30 text-red-600"
+                      }`}>
+                        {request.status}
+                      </span>
                     </div>
-                  ) : (
-                    <pre className="text-xs overflow-auto">{request.requestBody}</pre>
-                  )}
-                </div>
+                  </div>
 
-                {/* Review Info (for non-PENDING) */}
-                {request.status !== "PENDING" && (
-                  <div className="border-t border-border pt-3 mb-3 space-y-1.5 text-xs">
-                    {request.reviewedByEmail && (
-                      <p>
-                        Reviewed by <span className="font-medium">{request.reviewedByEmail}</span>
-                        {request.reviewedAt && ` on ${new Date(request.reviewedAt).toLocaleDateString()}`}
-                      </p>
-                    )}
-                    {request.approvalNote && (
-                      <p className="text-green-600">
-                        <span className="font-medium">Approval Note:</span> {request.approvalNote}
-                      </p>
-                    )}
-                    {request.rejectionReason && (
-                      <p className="text-red-600">
-                        <span className="font-medium">Rejection Reason:</span> {request.rejectionReason}
-                      </p>
-                    )}
-                    {request.resultSummary && (
-                      <p className="text-muted-foreground">
-                        <span className="font-medium">Result:</span> {request.resultSummary}
-                      </p>
+                  {/* Proposed By */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                    <span className="text-xs text-muted-foreground min-w-[120px]">Proposed by:</span>
+                    <span className="font-medium text-sm">
+                      {request.proposedByEmail} on {formatDate(request.createdAt)}
+                    </span>
+                  </div>
+
+                  {/* Review Info (for non-PENDING) */}
+                  {request.status !== "PENDING" && request.reviewedByEmail && (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                      <span className="text-xs text-muted-foreground min-w-[120px]"></span>
+                      <div className="text-sm space-y-1">
+                        <p className="text-muted-foreground">
+                          Reviewed by {request.reviewedByEmail}
+                          {request.reviewedAt && ` on ${formatDate(request.reviewedAt)}`}
+                        </p>
+                        {request.approvalNote && (
+                          <p className="text-green-600">
+                            <span className="font-medium">Note:</span> {request.approvalNote}
+                          </p>
+                        )}
+                        {request.rejectionReason && (
+                          <p className="text-red-600">
+                            <span className="font-medium">Reason:</span> {request.rejectionReason}
+                          </p>
+                        )}
+                        {request.resultSummary && (
+                          <p className="text-muted-foreground">
+                            <span className="font-medium">Result:</span> {request.resultSummary}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Request Details */}
+                  <div className="pt-3 border-t border-border">
+                    <p className="text-xs text-muted-foreground mb-2">Request details:</p>
+                    {parsedBody ? (
+                      <div className="bg-secondary/30 rounded-lg p-3 space-y-1.5">
+                        {Object.entries(parsedBody).map(([key, value]) => (
+                          <div key={key} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 text-xs">
+                            <span className="font-medium text-muted-foreground sm:min-w-[140px]">
+                              {humanizeKey(key)}:
+                            </span>
+                            <span className="text-foreground break-all">
+                              {typeof value === "object" ? JSON.stringify(value) : String(value)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <pre className="bg-secondary/30 rounded-lg p-3 text-xs overflow-auto">
+                        {request.requestBody}
+                      </pre>
                     )}
                   </div>
-                )}
+                </div>
 
                 {/* Actions (PENDING only) */}
                 {request.status === "PENDING" && (
-                  <div className="space-y-2">
+                  <div className="mt-4 pt-4 border-t border-border">
                     <div className="flex gap-2">
                       <Button
                         onClick={() => handleApprove(request)}

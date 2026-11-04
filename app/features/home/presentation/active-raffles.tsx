@@ -1,21 +1,31 @@
 "use client";
-import { useEffect, useState } from "react";
 import { Gift, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { getActiveDraws, type RaffleDraw } from "@/lib/api/leaderboard";
+import { type RaffleDraw } from "@/lib/api/leaderboard";
 import { formatDateRange } from "@/lib/utils/draw-countdown";
+import { usePlayerDashboard } from "@/hooks/use-player-dashboard";
 
-export function ActiveRaffles() {
+interface ActiveRafflesProps {
+  dashboardDraws?: Array<{
+    id: string;
+    raffleCode: string;
+    prizeName: string;
+    startsOn: string | null;
+    endsOn: string | null;
+    drawDate: string | null;
+    myPoints: number | null;
+    entered: boolean;
+    myTickets: number;
+  }>;
+}
+
+export function ActiveRaffles({ dashboardDraws }: ActiveRafflesProps) {
   const router = useRouter();
-  const [draws, setDraws] = useState<RaffleDraw[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: dashboard } = usePlayerDashboard();
 
-  useEffect(() => {
-    getActiveDraws()
-      .then((data) => setDraws(data.slice(0, 3))) // Show max 3
-      .catch((err) => console.error("Failed to load active draws:", err))
-      .finally(() => setLoading(false));
-  }, []);
+  // Use dashboard draws if provided (from parent), otherwise use dashboard hook
+  const draws = dashboardDraws || dashboard?.activeRaffles || [];
+  const loading = !dashboard && !dashboardDraws;
 
   if (loading) {
     return (
@@ -39,18 +49,13 @@ export function ActiveRaffles() {
     );
   }
 
-  // Helper: Determine if a draw has multiple tiers (show tier list)
-  // REAL BACKEND: All draws have tiers. Only show tier list if multiple tiers OR single tier with tierName !== "Winner"
-  const shouldShowTiers = (draw: RaffleDraw) => {
-    if (!draw.prizeTiers || draw.prizeTiers.length === 0) return false; // Legacy draw
-    if (draw.prizeTiers.length > 1) return true; // Multiple tiers
-    return draw.prizeTiers[0].tierName !== "Winner"; // Single tier with custom name
-  };
-
   // Helper: Check if draw is legacy (null dates, ticket-based)
-  const isLegacyDraw = (draw: RaffleDraw) => {
+  const isLegacyDraw = (draw: typeof draws[0]) => {
     return !draw.startsOn || !draw.endsOn || !draw.drawDate;
   };
+  
+  // Show first 3 draws
+  const displayDraws = draws.slice(0, 3);
 
   return (
     <div className="bg-card border border-border rounded-[16px] p-5 space-y-4">
@@ -66,10 +71,9 @@ export function ActiveRaffles() {
       </div>
 
       <div className="space-y-3">
-        {draws.map((draw) => {
+        {displayDraws.map((draw) => {
           const legacy = isLegacyDraw(draw);
           const dateRange = legacy ? null : formatDateRange(draw.startsOn, draw.endsOn);
-          const showTiers = shouldShowTiers(draw);
 
           return (
             <div
@@ -84,24 +88,11 @@ export function ActiveRaffles() {
                 <div className="flex-1 min-w-0">
                   <h3 className="text-[14px] font-semibold line-clamp-1">{draw.prizeName}</h3>
                   <p className="text-[12px] text-muted-foreground mt-0.5">
-                    {legacy ? draw.scheduleLabel : `${draw.scheduleLabel} • ${dateRange || draw.scheduleLabel}`}
+                    {draw.raffleCode}
+                    {dateRange && ` • ${dateRange}`}
                   </p>
                 </div>
               </div>
-
-              {/* Prize Tiers (only show if multiple tiers or single non-Winner tier) */}
-              {showTiers && (
-                <div className="space-y-1.5 pt-1">
-                  {draw.prizeTiers
-                    .sort((a, b) => a.position - b.position)
-                    .map((tier, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-[12px]">
-                        <span className="text-muted-foreground">{tier.tierName}</span>
-                        <span className="font-medium">{tier.prizeName} ({tier.winnersCount})</span>
-                      </div>
-                    ))}
-                </div>
-              )}
 
               {/* User stats: V37 shows points + entered status, legacy shows tickets */}
               <div className="flex items-center justify-between text-[12px] pt-2 border-t border-border/50">
@@ -111,14 +102,16 @@ export function ActiveRaffles() {
                       <span className="text-muted-foreground">You have {draw.myTickets} {draw.myTickets === 1 ? 'entry' : 'entries'}</span>
                     )}
                     {draw.myTickets === undefined && (
-                      <span className="text-muted-foreground">{draw.entryCount} total entries</span>
+                      <span className="text-muted-foreground">Click to view details</span>
                     )}
                   </>
                 ) : (
                   <>
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Your points</span>
-                      <span className="font-bold text-primary">{draw.myPoints ?? 0} pts</span>
+                      <span className="font-bold text-primary">
+                        {draw.myPoints !== null && draw.myPoints !== undefined ? `${draw.myPoints} pts` : "-"}
+                      </span>
                     </div>
                     {draw.entered ? (
                       <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-500/10 text-green-600">

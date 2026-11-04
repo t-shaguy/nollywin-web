@@ -68,8 +68,9 @@ function PaymentCallbackContent() {
             fetchWalletBalance().catch(() => {}),
           ]);
           
-          // Invalidate dashboard query
+          // Invalidate dashboard and draws queries
           queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+          queryClient.invalidateQueries({ queryKey: ["draws", "active"] });
         } else if (normalizedStatus === "PENDING") {
           setStatus("verifying");
           setMessage("Payment is being processed. Please check back in a few minutes.");

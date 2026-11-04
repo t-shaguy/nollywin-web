@@ -6,6 +6,7 @@ import { RaffleHistoryList } from "../../features/raffles/presentation/raffle-hi
 import { DrawCountdownModal } from "@/components/ui/draw-countdown-modal";
 import { getActiveDraws } from "@/lib/api/leaderboard";
 import { usePlayerDashboard } from "@/hooks/use-player-dashboard";
+import { type RaffleDraw } from "@/lib/api/leaderboard";
 
 type TabType = "active" | "history";
 
@@ -22,7 +23,39 @@ export default function RafflesPage() {
   const { data: draws = [], isLoading } = useQuery({
     queryKey: ["draws", "active"],
     queryFn: getActiveDraws,
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: "always", // Refetch when component mounts
   });
+
+  // TEMP DEV LOGGING: Check data sources (remove after verification)
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && dashboard && draws.length > 0) {
+      console.log('[RAFFLES DEBUG] Dashboard activeRaffles:', dashboard.activeRaffles);
+      console.log('[RAFFLES DEBUG] Active draws:', draws);
+      
+      // Find Samsung Test draw in both sources
+      const samsungDashboard = dashboard.activeRaffles?.find(r => r.prizeName.includes('Samsung'));
+      const samsungDraw = draws.find(d => d.prizeName.includes('Samsung'));
+      
+      if (samsungDashboard) {
+        console.log('[RAFFLES DEBUG] Samsung from dashboard:', {
+          id: samsungDashboard.id,
+          myPoints: samsungDashboard.myPoints,
+          entered: samsungDashboard.entered,
+          myTickets: samsungDashboard.myTickets,
+        });
+      }
+      
+      if (samsungDraw) {
+        console.log('[RAFFLES DEBUG] Samsung from /draws/active:', {
+          id: samsungDraw.id,
+          myPoints: samsungDraw.myPoints,
+          entered: samsungDraw.entered,
+          myTickets: samsungDraw.myTickets,
+        });
+      }
+    }
+  }, [dashboard, draws]);
 
   const hasActiveSubscription = dashboard?.hasActiveSubscription ?? false;
   const activeDraws = draws.filter((d) => d.status === "ACTIVE");
@@ -47,12 +80,12 @@ export default function RafflesPage() {
             return currDate < prevDate ? curr : prev;
           });
 
-        // Get user points for this draw
-        const raffleData = dashboard.activeRaffles.find(r => r.raffleCode === nearest.raffleCode);
+        // Get user points for this draw from dashboard (verified source)
+        const raffleData = dashboard.activeRaffles.find(r => r.id === nearest.id);
         
         setSelectedDraw({
           ...nearest,
-          myPoints: raffleData?.myPoints ?? 0,
+          myPoints: raffleData?.myPoints ?? nearest.myPoints ?? 0,
         });
         setShowModal(true);
         setHasShownAutoModal(true);
@@ -64,12 +97,12 @@ export default function RafflesPage() {
     }
   }, [activeDraws, dashboard, hasShownAutoModal]);
 
-  const handleDrawClick = (draw: any) => {
-    // Get user points for this draw
-    const raffleData = dashboard?.activeRaffles?.find(r => r.raffleCode === draw.raffleCode);
+  const handleDrawClick = (draw: RaffleDraw) => {
+    // Get user points for this draw from dashboard (verified source)
+    const raffleData = dashboard?.activeRaffles?.find(r => r.id === draw.id);
     setSelectedDraw({
       ...draw,
-      myPoints: raffleData?.myPoints ?? 0,
+      myPoints: raffleData?.myPoints ?? draw.myPoints ?? 0,
     });
     setShowModal(true);
   };
@@ -120,14 +153,24 @@ export default function RafflesPage() {
           ) : activeDraws.length > 0 ? (
             <div className="space-y-6">
               {activeDraws.map((draw) => {
-                const raffleData = dashboard?.activeRaffles?.find(r => r.raffleCode === draw.raffleCode);
-                const myPoints = raffleData?.myPoints ?? 0;
+                // CRITICAL FIX: Merge dashboard data (verified source for myPoints/entered) with draw data
+                // Dashboard activeRaffles has the user's actual points, /draws/active may not
+                const raffleData = dashboard?.activeRaffles?.find(r => r.id === draw.id);
+                
+                // Create enriched draw with user data from dashboard
+                const enrichedDraw: RaffleDraw = {
+                  ...draw,
+                  // Use dashboard data if available (verified source), fallback to draw data
+                  myPoints: raffleData?.myPoints ?? draw.myPoints ?? null,
+                  entered: raffleData?.entered ?? draw.entered ?? false,
+                  myTickets: raffleData?.myTickets ?? draw.myTickets,
+                };
 
                 return (
                   <ActiveDrawCard
                     key={draw.id}
-                    draw={draw}
-                    onShowCountdown={() => handleDrawClick(draw)}
+                    draw={enrichedDraw}
+                    onShowCountdown={() => handleDrawClick(enrichedDraw)}
                     hasActiveSubscription={hasActiveSubscription}
                   />
                 );

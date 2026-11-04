@@ -511,13 +511,13 @@ export default function AdminRewardsPage() {
             <ModalSection title="Dates (UTC)">
               <FormGrid>
                 <AdminInput
-                  label="Starts On"
+                  label="Start Date"
                   type="date"
                   {...register("startsOn", { required: "Start date is required" })}
                   error={errors.startsOn?.message}
                 />
                 <AdminInput
-                  label="Ends On"
+                  label="End Date"
                   type="date"
                   {...register("endsOn", { required: "End date is required" })}
                   error={errors.endsOn?.message}
@@ -797,7 +797,7 @@ export default function AdminRewardsPage() {
           onClose={() => setShowSelectWinnersDialog(false)}
           onConfirm={handleSelectWinners}
           title="Select Winners"
-          description="Randomly select winners from top qualifying players? This action requires approval."
+          description={`Select the top ${selectedDraw.maxWinners} scorer(s) as winners? Winners are chosen by points. This action requires approval from a checker.`}
           confirmLabel="Select Winners"
           variant="primary"
           loading={submitting}

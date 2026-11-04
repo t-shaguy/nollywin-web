@@ -97,6 +97,7 @@ export function TriviaFlow() {
       // V37: Refresh dashboard to update tokensLeft and draw points
       try {
         queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        queryClient.invalidateQueries({ queryKey: ["draws", "active"] });
       } catch (err) {
         console.error("Failed to refresh dashboard after game start:", err);
       }
@@ -146,6 +147,8 @@ export function TriviaFlow() {
         // V37: Refresh dashboard to update tokensLeft and draw points after game end
         try {
           queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+          queryClient.invalidateQueries({ queryKey: ["draws", "active"] });
+          queryClient.invalidateQueries({ queryKey: ["raffle-history"] });
         } catch (err) {
           console.error("[TRIVIA] Failed to refresh dashboard after game end:", err);
         }
@@ -197,6 +200,8 @@ export function TriviaFlow() {
         // V37: Refresh dashboard to update tokensLeft and draw points after timeout
         try {
           queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+          queryClient.invalidateQueries({ queryKey: ["draws", "active"] });
+          queryClient.invalidateQueries({ queryKey: ["raffle-history"] });
         } catch (err) {
           console.error("[TRIVIA] Failed to refresh dashboard after timeout:", err);
         }
@@ -250,6 +255,8 @@ export function TriviaFlow() {
   const backToDashboard = () => {
     // V37: Refresh dashboard to update tokensLeft and draw points after game
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["draws", "active"] });
+    queryClient.invalidateQueries({ queryKey: ["raffle-history"] });
     router.push("/home");
   };
 

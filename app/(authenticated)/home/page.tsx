@@ -29,6 +29,7 @@ export default function HomePage() {
         hasActiveSubscription={hasActiveSubscription}
         paymentPending={paymentPending}
         expiresAt={dashboard?.subscription?.expiresAt}
+        subscription={dashboard?.subscription}
         isLoading={isLoading}
       />
 

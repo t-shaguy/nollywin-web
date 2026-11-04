@@ -103,26 +103,30 @@ export function ActiveDrawCard({ draw, onShowCountdown }: ActiveDrawCardProps) {
         {isLegacy ? (
           <>
             {draw.myTickets !== undefined && (
-              <div className="bg-secondary/30 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground mb-1">Your Entries</p>
-                <p className="text-xl font-bold">{draw.myTickets}</p>
+              <div className="bg-secondary/30 rounded-lg p-4 border border-border">
+                <p className="text-[13px] font-medium text-foreground/80 mb-1.5">Your Entries</p>
+                <p className="text-[28px] font-bold leading-none">{draw.myTickets}</p>
               </div>
             )}
-            <div className="bg-secondary/30 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground mb-1">Total Entries</p>
-              <p className="text-xl font-bold">{draw.entryCount.toLocaleString()}</p>
+            <div className="bg-secondary/30 rounded-lg p-4 border border-border">
+              <p className="text-[13px] font-medium text-foreground/80 mb-1.5">Total Entries</p>
+              <p className="text-[28px] font-bold leading-none">{draw.entryCount.toLocaleString()}</p>
             </div>
           </>
         ) : (
           <>
-            {/* V37 New Draws: Show points (always) */}
-            <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground mb-1">Your Points</p>
-              <p className="text-xl font-bold text-primary">{draw.myPoints ?? 0}</p>
+            {/* V37 New Draws: Show points (always, but show "-" if data not loaded) */}
+            <div className="bg-primary/10 border-2 border-primary/30 rounded-lg p-4">
+              <p className="text-[13px] font-medium text-foreground/80 mb-1.5">Your points</p>
+              <p className="text-xs text-muted-foreground mb-2">earned in this period</p>
+              <p className="text-[30px] font-bold leading-none text-primary">
+                {draw.myPoints !== null && draw.myPoints !== undefined ? draw.myPoints : "-"}
+              </p>
             </div>
-            <div className="bg-secondary/30 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground mb-1">Total Entries</p>
-              <p className="text-xl font-bold">{draw.entryCount.toLocaleString()}</p>
+            <div className="bg-secondary/50 border-2 border-border rounded-lg p-4">
+              <p className="text-[13px] font-medium text-foreground/80 mb-1.5">Total entries</p>
+              <p className="text-xs text-muted-foreground mb-2">players in this draw</p>
+              <p className="text-[30px] font-bold leading-none">{draw.entryCount.toLocaleString()}</p>
             </div>
           </>
         )}

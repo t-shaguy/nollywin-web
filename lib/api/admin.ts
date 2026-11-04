@@ -1239,7 +1239,7 @@ export async function getDrawStandings(id: string): Promise<DrawStandingsEntry[]
  * Select winners (MAKER-CHECKER)
  * POST /api/v1/admin/rewards/draws/{id}/select-winners
  * 
- * Randomly selects top N players as winners from standings
+ * Selects the top maxWinners players by points from standings as winners
  */
 export async function selectDrawWinners(id: string): Promise<MakerCheckerWriteResponse> {
   return adminApiClient<MakerCheckerWriteResponse>(`/api/v1/admin/rewards/draws/${id}/select-winners`, {

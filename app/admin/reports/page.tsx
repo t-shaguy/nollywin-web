@@ -449,8 +449,8 @@ export default function ReportsPage() {
                     <tr className="border-b border-border">
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">Raffle Code</th>
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">Prize Name</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Starts On</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Ends On</th>
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Start Date</th>
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">End Date</th>
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">Draw Date</th>
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">Max Winners</th>
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">Schedule</th>
