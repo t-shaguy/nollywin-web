@@ -509,6 +509,44 @@ export default function AdminRewardsPage() {
             </ModalSection>
 
             <ModalSection title="Dates (UTC)">
+              {/* Monthly Schedule Helper */}
+              <div className="mb-4 p-4 bg-secondary/30 rounded-lg border border-border">
+                <label className="block text-[13px] font-medium text-foreground mb-2">
+                  Quick-fill: Monthly draw
+                </label>
+                <input
+                  type="month"
+                  className="w-full px-4 py-2.5 text-[13px] rounded-lg border border-border bg-background text-foreground font-medium cursor-pointer hover:border-primary/50 transition-colors [color-scheme:dark]"
+                  onChange={(e) => {
+                    const monthValue = e.target.value; // Format: YYYY-MM
+                    if (!monthValue) return;
+                    
+                    const [year, month] = monthValue.split("-").map(Number);
+                    
+                    // Start date: 1st of the month
+                    const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+                    
+                    // End date: last day of the month (handle 28/29/30/31, leap years)
+                    const lastDay = new Date(year, month, 0).getDate(); // month is 1-indexed, day=0 gives last day of previous month
+                    const endDate = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+                    
+                    // Draw date: 1st of the next month (handle December → January rollover)
+                    const drawMonth = month === 12 ? 1 : month + 1;
+                    const drawYear = month === 12 ? year + 1 : year;
+                    const drawDate = `${drawYear}-${String(drawMonth).padStart(2, "0")}-01`;
+                    
+                    // Fill the form fields
+                    setValue("startsOn", startDate);
+                    setValue("endsOn", endDate);
+                    setValue("drawDate", drawDate);
+                  }}
+                  placeholder="Select a month..."
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Selects a calendar month. Fills Start (1st), End (last day), and Draw Date (1st of next month). All dates remain editable.
+                </p>
+              </div>
+              
               <FormGrid>
                 <AdminInput
                   label="Start Date"
@@ -530,8 +568,18 @@ export default function AdminRewardsPage() {
                 error={errors.drawDate?.message}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Dates are in UTC. Draw date must be ≥ end date, end date must be ≥ start date.
+                Usually the 1st of the next month. You can set the 1st to the 3rd.
               </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Dates are UTC, inclusive. Winners can be selected from the day after the End Date, once the draw is closed.
+              </p>
+              
+              {/* Live summary once all three dates are set */}
+              {watch("startsOn") && watch("endsOn") && watch("drawDate") && (
+                <div className="mt-2 p-2 bg-primary/10 rounded-lg text-xs text-foreground">
+                  <strong>Summary:</strong> Players qualify from {formatDrawDate(watch("startsOn"))} to {formatDrawDate(watch("endsOn"))}. Draw date {formatDrawDate(watch("drawDate"))}.
+                </div>
+              )}
             </ModalSection>
 
             <ModalSection title="Winners">

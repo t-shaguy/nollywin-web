@@ -30,15 +30,15 @@ export function ActiveSubscriptionCard({
   }
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-6 h-full flex flex-col">
-      <h2 className="font-bold mb-4">Active Subscription</h2>
-      <div className="flex-1 flex flex-col items-center justify-center text-center bg-primary/10 border border-primary/20 rounded-xl py-8 px-4">
-        <div className="h-14 w-14 rounded-full bg-primary/20 flex items-center justify-center mb-4">
-          {paymentPending ? <Clock size={24} className="text-primary" /> : <Star size={24} className="text-primary" />}
+    <div className="bg-card border border-border rounded-2xl p-5 md:p-6 h-full flex flex-col">
+      <h2 className="font-bold text-sm md:text-base mb-4">Active Subscription</h2>
+      <div className="flex-1 flex flex-col items-center justify-center text-center bg-primary/10 border border-primary/20 rounded-xl py-6 md:py-8 px-4">
+        <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-primary/20 flex items-center justify-center mb-3 md:mb-4 flex-shrink-0">
+          {paymentPending ? <Clock size={22} className="md:w-6 md:h-6 text-primary" /> : <Star size={22} className="md:w-6 md:h-6 text-primary" />}
         </div>
-        <p className="font-bold text-lg">{statusText}</p>
-        <p className="text-sm text-muted-foreground mt-1">{expiryText}</p>
-        <Link href="/store" className="text-primary text-sm font-medium hover:underline mt-3">
+        <p className="font-bold text-base md:text-lg break-words w-full">{statusText}</p>
+        <p className="text-xs md:text-sm text-muted-foreground mt-1 break-words w-full">{expiryText}</p>
+        <Link href="/store" className="text-primary text-xs md:text-sm font-medium hover:underline mt-3 min-h-[36px] flex items-center">
           {hasActiveSubscription ? "Manage Plan" : "Choose a Plan"}
         </Link>
       </div>

@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { icon: FileBarChart2, label: "Reports", href: "/admin/reports" },
   { icon: Trophy, label: "Rewards", href: "/admin/rewards" },
   { icon: RefreshCw, label: "Client Sync", href: "/admin/client-sync" },
-  { icon: ShieldCheck, label: "Verifications", href: "/admin/change-requests" },
+  { icon: ShieldCheck, label: "Approvals", href: "/admin/change-requests" },
   { icon: Bell, label: "Notifications", href: "/admin/notifications" },
   { icon: CreditCard, label: "Payments", href: "/admin/payment-settings" },
   { icon: FileText, label: "Audit Log", href: "/admin/audit-log" },
@@ -43,7 +43,7 @@ export function AdminSidebar({ onClose }: { onClose?: () => void }) {
     if (onClose) onClose();
   };
   
-  // For checkers, show only Verifications
+  // For checkers, show only Approvals
   const visibleNavItems = isChecker 
     ? NAV_ITEMS.filter(item => item.href === '/admin/change-requests')
     : NAV_ITEMS;

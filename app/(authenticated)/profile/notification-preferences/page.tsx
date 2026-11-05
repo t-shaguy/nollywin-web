@@ -13,39 +13,39 @@ export default function NotificationPreferencesPage() {
   };
 
   return (
-    <div className="max-w-lg mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-5 md:space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <button
             onClick={() => router.back()}
-            className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-secondary text-muted-foreground transition-colors"
+            className="min-h-[44px] min-w-[44px] h-11 w-11 rounded-full flex items-center justify-center hover:bg-secondary text-muted-foreground transition-colors flex-shrink-0"
             aria-label="Go back"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
           </button>
           <div>
-            <h1 className="text-xl font-bold">Notification Preferences</h1>
-            <p className="text-sm text-muted-foreground">Choose what you want to hear about</p>
+            <h1 className="text-lg sm:text-xl font-bold">Notification Preferences</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Choose what you want to hear about</p>
           </div>
         </div>
 
         {/* Games & Raffles Section */}
-        <div className="space-y-3">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+        <div className="space-y-2.5 sm:space-y-3">
+          <h2 className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground">
             GAMES & RAFFLES
           </h2>
           
           {/* Raffle Draw Results */}
-          <div className="bg-card border border-border rounded-lg p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
+          <div className="bg-card border border-border rounded-lg p-3.5 sm:p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
+              <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center shrink-0 ${
                 preferences.raffleDrawResults ? 'bg-[#F40289]' : 'bg-secondary'
               }`}>
-                <Bell size={18} className={preferences.raffleDrawResults ? 'text-white' : 'text-muted-foreground'} />
+                <Bell size={16} className={`sm:w-[18px] sm:h-[18px] ${preferences.raffleDrawResults ? 'text-white' : 'text-muted-foreground'}`} />
               </div>
-              <div>
-                <p className="text-sm font-medium">Raffle Draw Results</p>
-                <p className="text-xs text-muted-foreground">Get notified when draws happen</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium truncate">Raffle Draw Results</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Get notified when draws happen</p>
               </div>
             </div>
             <Switch
@@ -55,16 +55,16 @@ export default function NotificationPreferencesPage() {
           </div>
 
           {/* Game Session Results */}
-          <div className="bg-card border border-border rounded-lg p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
+          <div className="bg-card border border-border rounded-lg p-3.5 sm:p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
+              <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center shrink-0 ${
                 preferences.gameSessionResults ? 'bg-[#F40289]' : 'bg-secondary'
               }`}>
-                <Bell size={18} className={preferences.gameSessionResults ? 'text-white' : 'text-muted-foreground'} />
+                <Bell size={16} className={`sm:w-[18px] sm:h-[18px] ${preferences.gameSessionResults ? 'text-white' : 'text-muted-foreground'}`} />
               </div>
-              <div>
-                <p className="text-sm font-medium">Game Session Results</p>
-                <p className="text-xs text-muted-foreground">Score updates after each game</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium truncate">Game Session Results</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Score updates after each game</p>
               </div>
             </div>
             <Switch
@@ -74,16 +74,16 @@ export default function NotificationPreferencesPage() {
           </div>
 
           {/* Leaderboard Changes */}
-          <div className="bg-card border border-border rounded-lg p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
+          <div className="bg-card border border-border rounded-lg p-3.5 sm:p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
+              <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center shrink-0 ${
                 preferences.leaderboardChanges ? 'bg-[#F40289]' : 'bg-secondary'
               }`}>
-                <Bell size={18} className={preferences.leaderboardChanges ? 'text-white' : 'text-muted-foreground'} />
+                <Bell size={16} className={`sm:w-[18px] sm:h-[18px] ${preferences.leaderboardChanges ? 'text-white' : 'text-muted-foreground'}`} />
               </div>
-              <div>
-                <p className="text-sm font-medium">Leaderboard Changes</p>
-                <p className="text-xs text-muted-foreground">When your rank changes</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium truncate">Leaderboard Changes</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">When your rank changes</p>
               </div>
             </div>
             <Switch
@@ -94,22 +94,22 @@ export default function NotificationPreferencesPage() {
         </div>
 
         {/* Account & Updates Section */}
-        <div className="space-y-3">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+        <div className="space-y-2.5 sm:space-y-3">
+          <h2 className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground">
             ACCOUNT & UPDATES
           </h2>
           
           {/* Subscription Reminders */}
-          <div className="bg-card border border-border rounded-lg p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
+          <div className="bg-card border border-border rounded-lg p-3.5 sm:p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
+              <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center shrink-0 ${
                 preferences.subscriptionReminders ? 'bg-[#F40289]' : 'bg-secondary'
               }`}>
-                <Bell size={18} className={preferences.subscriptionReminders ? 'text-white' : 'text-muted-foreground'} />
+                <Bell size={16} className={`sm:w-[18px] sm:h-[18px] ${preferences.subscriptionReminders ? 'text-white' : 'text-muted-foreground'}`} />
               </div>
-              <div>
-                <p className="text-sm font-medium">Subscription Reminders</p>
-                <p className="text-xs text-muted-foreground">Renewal and expiry alerts</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium truncate">Subscription Reminders</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Renewal and expiry alerts</p>
               </div>
             </div>
             <Switch
@@ -119,16 +119,16 @@ export default function NotificationPreferencesPage() {
           </div>
 
           {/* New Features */}
-          <div className="bg-card border border-border rounded-lg p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
+          <div className="bg-card border border-border rounded-lg p-3.5 sm:p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
+              <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center shrink-0 ${
                 preferences.newFeatures ? 'bg-[#F40289]' : 'bg-secondary'
               }`}>
-                <Bell size={18} className={preferences.newFeatures ? 'text-white' : 'text-muted-foreground'} />
+                <Bell size={16} className={`sm:w-[18px] sm:h-[18px] ${preferences.newFeatures ? 'text-white' : 'text-muted-foreground'}`} />
               </div>
-              <div>
-                <p className="text-sm font-medium">New Features</p>
-                <p className="text-xs text-muted-foreground">Product updates and announcements</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium truncate">New Features</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Product updates and announcements</p>
               </div>
             </div>
             <Switch
@@ -138,16 +138,16 @@ export default function NotificationPreferencesPage() {
           </div>
 
           {/* Weekly Digest */}
-          <div className="bg-card border border-border rounded-lg p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
+          <div className="bg-card border border-border rounded-lg p-3.5 sm:p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
+              <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center shrink-0 ${
                 preferences.weeklyDigest ? 'bg-[#F40289]' : 'bg-secondary'
               }`}>
-                <Bell size={18} className={preferences.weeklyDigest ? 'text-white' : 'text-muted-foreground'} />
+                <Bell size={16} className={`sm:w-[18px] sm:h-[18px] ${preferences.weeklyDigest ? 'text-white' : 'text-muted-foreground'}`} />
               </div>
-              <div>
-                <p className="text-sm font-medium">Weekly Digest</p>
-                <p className="text-xs text-muted-foreground">Weekly summary of your activity</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium truncate">Weekly Digest</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Weekly summary of your activity</p>
               </div>
             </div>
             <Switch

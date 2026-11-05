@@ -19,7 +19,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="hidden md:flex md:flex-col w-72 shrink-0 h-screen min-h-0 border-r border-border px-6 py-8">
+    <aside className="hidden lg:flex lg:flex-col w-72 shrink-0 h-screen min-h-0 border-r border-border px-6 py-8">
       <Link href="/home" className="flex items-center gap-3 px-2 mb-16 shrink-0">
         <Image src="/logo.png" alt="NollyWin" width={220} height={220} className="h-[110px] w-auto object-contain" />
       </Link>

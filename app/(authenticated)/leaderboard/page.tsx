@@ -36,7 +36,6 @@ export default function LeaderboardPage() {
       playerId: entry.authUserId,
       player: entry.displayName,
       points: entry.points,
-      prizeAmount: entry.prizeAmount,
       isCurrentUser,
     };
   }) || [];
@@ -58,16 +57,16 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+    <div className="space-y-5 md:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Monthly Leaderboard</h1>
-            <p className="text-muted-foreground text-sm mt-1">
+            <h1 className="text-xl sm:text-2xl font-bold">Monthly Leaderboard</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm mt-1">
               Top players win cash prizes at the end of the month.
             </p>
           </div>
           {periodEndsAt && (
-            <div className="text-right">
+            <div className="text-left sm:text-right">
               <p className="text-xs text-muted-foreground">Ends in</p>
               <Countdown targetDate={periodEndsAt} />
             </div>
@@ -80,7 +79,7 @@ export default function LeaderboardPage() {
 
         {error && (
           <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-            <p className="text-destructive text-sm">Failed to load leaderboard data</p>
+            <p className="text-destructive text-xs sm:text-sm">Failed to load leaderboard data</p>
           </div>
         )}
 
@@ -89,7 +88,7 @@ export default function LeaderboardPage() {
         )}
 
         {!isLoading && !error && entries.length === 0 && (
-          <div className="bg-card border border-border rounded-2xl p-10 text-center text-sm text-muted-foreground">
+          <div className="bg-card border border-border rounded-2xl p-8 md:p-10 text-center text-xs sm:text-sm text-muted-foreground">
             No ranked players yet this month — be the first to score points.
           </div>
         )}

@@ -22,19 +22,24 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 md:hidden">
+    <div className="fixed inset-0 z-50 lg:hidden">
       <div className="absolute inset-0 bg-black/70" onClick={onClose} />
-      <div className="absolute inset-y-0 left-0 w-72 max-w-[80%] bg-background border-r border-border flex flex-col px-4 py-6">
+      <div className="absolute inset-y-0 left-0 w-72 max-w-[85%] bg-background border-r border-border flex flex-col px-4 py-6">
         <div className="flex items-center justify-between mb-8">
-          <Link href="/home" onClick={onClose} className="flex items-center gap-2 px-2">
+          <Link href="/home" onClick={onClose} className="flex items-center gap-2 px-2 flex-1 min-w-0">
             <Image src="/logo.png" alt="NollyWin" width={200} height={200} className="h-[100px] w-auto object-contain" />
           </Link>
-          <button type="button" onClick={onClose} className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-secondary">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="min-h-[44px] min-w-[44px] h-11 w-11 rounded-full flex items-center justify-center hover:bg-secondary flex-shrink-0"
+            aria-label="Close menu"
+          >
             <X size={18} />
           </button>
         </div>
 
-        <nav className="flex-1 space-y-3.5 overflow-y-auto">
+        <nav className="flex-1 space-y-2 overflow-y-auto">
           {NAV_ITEMS.map((item) => {
             const href = resolveNavHref(item, hasActivePlan);
             const active = pathname === item.href;
@@ -44,14 +49,14 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
                 href={href}
                 onClick={onClose}
                 prefetch={false}
-                className={`flex items-center gap-4 px-5 py-3.5 rounded-xl text-base font-medium transition-colors ${
+                className={`flex items-center gap-4 px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
                   active
                     ? "bg-primary/15 text-primary border border-primary/30"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}
               >
-                <item.icon size={20} />
-                {item.label}
+                <item.icon size={20} className="flex-shrink-0" />
+                <span className="truncate">{item.label}</span>
               </Link>
             );
           })}
@@ -60,9 +65,9 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
         <button
           type="button"
           onClick={handleLogout}
-          className="flex items-center gap-4 px-5 py-3.5 rounded-xl text-base font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+          className="flex items-center gap-4 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors min-h-[44px]"
         >
-          <LogOut size={18} />
+          <LogOut size={20} className="flex-shrink-0" />
           Logout
         </button>
       </div>

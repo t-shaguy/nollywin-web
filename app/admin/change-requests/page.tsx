@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminCard } from "@/components/admin/admin-card";
+import { DetailList } from "@/components/admin/value-renderer";
 import { useAdminAuthStore } from "@/store/admin-auth-store";
 import {
   getChangeRequests,
@@ -21,6 +22,11 @@ export default function ChangeRequestsPage() {
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("PENDING");
   const adminSession = useAdminAuthStore((s) => s.session);
+
+  // Set page title
+  useEffect(() => {
+    document.title = "Approvals | NollyWin Admin";
+  }, []);
   
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
@@ -218,12 +224,13 @@ export default function ChangeRequestsPage() {
     }
   };
 
-  // Parse JSON request body safely
-  const parseRequestBody = (requestBody: string): Record<string, unknown> | null => {
+  // Parse JSON request body safely (for DetailList)
+  const parseRequestBody = (requestBody: string): Record<string, unknown> | string => {
     try {
       return JSON.parse(requestBody);
     } catch {
-      return null;
+      // Return as-is string, DetailList will handle it
+      return requestBody;
     }
   };
 
@@ -297,7 +304,7 @@ export default function ChangeRequestsPage() {
   if (loading && changeRequests.length === 0) {
     return (
       <div className="space-y-4 sm:space-y-5">
-        <AdminPageHeader title="Verifications" description="Review and approve change requests" />
+        <AdminPageHeader title="Approvals" description="Review and approve change requests" />
         <AdminCard>
           <div className="py-8 flex items-center justify-center">
             <div className="text-muted-foreground text-xs">Loading change requests...</div>
@@ -309,7 +316,7 @@ export default function ChangeRequestsPage() {
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      <AdminPageHeader title="Verifications" description="Review and approve change requests" />
+      <AdminPageHeader title="Approvals" description="Review and approve change requests" />
 
       {/* Status Filter */}
       <div className="flex flex-wrap gap-2">
@@ -349,7 +356,7 @@ export default function ChangeRequestsPage() {
           <div className="py-8 text-center text-muted-foreground text-xs">
             {statusFilter === "ALL"
               ? "No change requests yet"
-              : `No ${statusFilter.toLowerCase()} change requests`}
+              : `No ${statusFilter.toLowerCase()} approvals`}
           </div>
         </AdminCard>
       ) : (
@@ -439,24 +446,7 @@ export default function ChangeRequestsPage() {
                   {/* Request Details */}
                   <div className="pt-3 border-t border-border">
                     <p className="text-xs text-muted-foreground mb-2">Request details:</p>
-                    {parsedBody ? (
-                      <div className="bg-secondary/30 rounded-lg p-3 space-y-1.5">
-                        {Object.entries(parsedBody).map(([key, value]) => (
-                          <div key={key} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 text-xs">
-                            <span className="font-medium text-muted-foreground sm:min-w-[140px]">
-                              {humanizeKey(key)}:
-                            </span>
-                            <span className="text-foreground break-all">
-                              {typeof value === "object" ? JSON.stringify(value) : String(value)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <pre className="bg-secondary/30 rounded-lg p-3 text-xs overflow-auto">
-                        {request.requestBody}
-                      </pre>
-                    )}
+                    <DetailList data={parsedBody as Record<string, unknown>} />
                   </div>
                 </div>
 

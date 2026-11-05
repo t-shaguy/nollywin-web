@@ -2,22 +2,20 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
-import { fetchWalletBalance } from "@/store/wallet-store";
-import { fetchSubscriptionStatus } from "@/store/subscription-store";
+import { clearPaymentStarted } from "@/lib/utils/payment-state";
+import { type PlayerDashboard } from "@/lib/api/auth";
 
-type Status = "verifying" | "success" | "failed" | "abandoned";
+type Status = "verifying" | "confirmed" | "still-pending" | "cancelled";
 
 function PaymentCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { showSuccessToast } = useToast();
   const [status, setStatus] = useState<Status>("verifying");
   const [message, setMessage] = useState("");
-  const [amount, setAmount] = useState<string>("");
+  const [checkCount, setCheckCount] = useState(0);
 
   useEffect(() => {
     const verifyPayment = async () => {
@@ -27,9 +25,10 @@ function PaymentCallbackContent() {
         const trxref = searchParams.get("trxref");
         
         // Check if payment was cancelled (Paystack callback param)
-        if (searchParams.get("cancelled") === "true") {
-          setStatus("abandoned");
-          setMessage("You didn't complete the payment — no charge was made");
+        if (searchParams.get("cancelled") === "true" || (!reference && !trxref)) {
+          setStatus("cancelled");
+          setMessage("You cancelled the payment. No charge was made.");
+          clearPaymentStarted();
           return;
         }
 
@@ -37,67 +36,64 @@ function PaymentCallbackContent() {
         const paymentRef = reference || trxref;
 
         if (!paymentRef) {
-          setStatus("failed");
+          setStatus("cancelled");
           setMessage("No payment reference found");
+          clearPaymentStarted();
           return;
         }
 
-        // Verify payment with backend
-        const { verifyPayment } = await import("@/lib/api/payments");
-        const result = await verifyPayment(paymentRef);
+        // Bounded polling: check up to 3 times, 3 seconds apart
+        const MAX_CHECKS = 3;
+        const CHECK_INTERVAL_MS = 3000;
 
-        // Convert amountKobo to Naira for display
-        const amountNaira = (result.amountKobo / 100).toLocaleString();
-        setAmount(`₦${amountNaira}`);
+        const checkPaymentStatus = async (attemptNumber: number) => {
+          setCheckCount(attemptNumber);
 
-        // Normalize status to uppercase for consistent comparison
-        // Backend returns uppercase status values: SUCCESS, PENDING, ABANDONED, FAILED
-        const normalizedStatus = result.status.toUpperCase();
+          // Invalidate and refetch dashboard
+          await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+          await queryClient.refetchQueries({ queryKey: ["dashboard"] });
 
-        // Handle different status values
-        if (normalizedStatus === "SUCCESS") {
-          setStatus("success");
-          setMessage(`Payment of ${amountNaira} ${result.currency} completed successfully!`);
+          // Get updated dashboard data
+          const dashboard = queryClient.getQueryData<PlayerDashboard>(["dashboard"]);
+
+          // Check if payment cleared
+          if (dashboard && !dashboard.subscriptionPaymentPending && dashboard.hasActiveSubscription) {
+            // Success! Payment confirmed and plan is active
+            setStatus("confirmed");
+            setMessage(`Your ${dashboard.subscription?.packageName || "plan"} is now active!`);
+            clearPaymentStarted();
+            
+            // Invalidate other related queries
+            queryClient.invalidateQueries({ queryKey: ["draws", "active"] });
+            queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+            return true;
+          }
+
+          // Still pending after max checks
+          if (attemptNumber >= MAX_CHECKS) {
+            setStatus("still-pending");
+            setMessage("Still confirming. We'll update your plan as soon as it's confirmed.");
+            return false;
+          }
+
+          // Schedule next check
+          setTimeout(() => {
+            checkPaymentStatus(attemptNumber + 1);
+          }, CHECK_INTERVAL_MS);
           
-          // Show success toast
-          showSuccessToast(`Payment successful! ₦${amountNaira} added to your wallet`);
-          
-          // Refresh user data (subscription, wallet, dashboard)
-          await Promise.all([
-            fetchSubscriptionStatus().catch(() => {}),
-            fetchWalletBalance().catch(() => {}),
-          ]);
-          
-          // Invalidate dashboard and draws queries
-          queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-          queryClient.invalidateQueries({ queryKey: ["draws", "active"] });
-        } else if (normalizedStatus === "PENDING") {
-          setStatus("verifying");
-          setMessage("Payment is being processed. Please check back in a few minutes.");
-        } else if (normalizedStatus === "ABANDONED") {
-          setStatus("abandoned");
-          setMessage("You didn't complete the payment — no charge was made");
-        } else {
-          // Treat all other statuses as failed (e.g., FAILED, etc.)
-          setStatus("failed");
-          setMessage(`Payment verification failed (status: ${result.status})`);
-        }
-      } catch (error: any) {
-        setStatus("failed");
-        setMessage(error?.message || "Failed to verify payment");
+          return false;
+        };
+
+        // Start checking
+        await checkPaymentStatus(1);
+      } catch {
+        setStatus("still-pending");
+        setMessage("We're still confirming your payment. Check back in a few minutes.");
       }
     };
 
     verifyPayment();
-  }, [searchParams, showSuccessToast, queryClient]);
-
-  const handleContinue = () => {
-    if (status === "success") {
-      router.push("/home");
-    } else {
-      router.push("/store");
-    }
-  };
+  }, [searchParams, queryClient]);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-background">
@@ -110,38 +106,32 @@ function PaymentCallbackContent() {
             </div>
           )}
 
-          {status === "success" && (
+          {status === "confirmed" && (
             <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
               <CheckCircle2 size={40} className="text-primary" />
             </div>
           )}
 
-          {status === "abandoned" && (
+          {status === "still-pending" && (
             <div className="h-20 w-20 rounded-full bg-orange-500/10 flex items-center justify-center mx-auto">
-              <AlertCircle size={40} className="text-orange-500" />
+              <Clock size={40} className="text-orange-500" />
             </div>
           )}
 
-          {status === "failed" && (
-            <div className="h-20 w-20 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
-              <XCircle size={40} className="text-destructive" />
+          {status === "cancelled" && (
+            <div className="h-20 w-20 rounded-full bg-secondary/50 flex items-center justify-center mx-auto">
+              <XCircle size={40} className="text-muted-foreground" />
             </div>
           )}
 
           {/* Status Text */}
           <div className="space-y-2">
             <h1 className="text-2xl font-bold">
-              {status === "verifying" && "Verifying Payment..."}
-              {status === "success" && "Payment Successful!"}
-              {status === "failed" && "Payment Failed"}
-              {status === "abandoned" && "Payment Not Completed"}
+              {status === "verifying" && "Confirming your payment..."}
+              {status === "confirmed" && "Payment Confirmed!"}
+              {status === "still-pending" && "Still Confirming"}
+              {status === "cancelled" && "Payment Cancelled"}
             </h1>
-
-            {amount && (
-              <p className="text-lg font-semibold text-primary">
-                {amount}
-              </p>
-            )}
 
             {message && (
               <p className="text-sm text-muted-foreground">
@@ -149,9 +139,9 @@ function PaymentCallbackContent() {
               </p>
             )}
 
-            {status === "verifying" && !message && (
-              <p className="text-sm text-muted-foreground">
-                Please wait while we confirm your payment...
+            {status === "verifying" && checkCount > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Check {checkCount} of 3...
               </p>
             )}
           </div>
@@ -159,27 +149,44 @@ function PaymentCallbackContent() {
           {/* Action Buttons */}
           {status !== "verifying" && (
             <div className="space-y-3">
-              {status === "success" ? (
+              {status === "confirmed" ? (
                 <Button 
                   onClick={() => router.push("/home")} 
                   className="w-full justify-center"
                 >
-                  Continue to Dashboard
+                  Go to Home
                 </Button>
-              ) : (
+              ) : status === "still-pending" ? (
                 <>
                   <Button 
                     onClick={() => router.push("/store")} 
                     className="w-full justify-center"
                   >
-                    Try Again
+                    Back to Store
                   </Button>
                   <Button 
                     onClick={() => router.push("/home")} 
                     variant="outline"
                     className="w-full justify-center"
                   >
-                    Go to Dashboard
+                    Go to Home
+                  </Button>
+                </>
+              ) : (
+                // Cancelled
+                <>
+                  <Button 
+                    onClick={() => router.push("/store")} 
+                    className="w-full justify-center"
+                  >
+                    Browse Plans
+                  </Button>
+                  <Button 
+                    onClick={() => router.push("/home")} 
+                    variant="outline"
+                    className="w-full justify-center"
+                  >
+                    Go to Home
                   </Button>
                 </>
               )}

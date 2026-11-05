@@ -10,11 +10,11 @@ interface ColoredStat {
 
 function StatSkeleton() {
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 flex items-center gap-4 animate-pulse">
-      <div className="h-12 w-12 rounded-xl bg-muted/50" />
-      <div className="flex-1 space-y-2">
-        <div className="h-4 w-24 bg-muted/50 rounded" />
-        <div className="h-6 w-16 bg-muted/50 rounded" />
+    <div className="bg-card border border-border rounded-2xl p-4 md:p-5 flex items-center gap-3 md:gap-4 animate-pulse">
+      <div className="h-11 w-11 md:h-12 md:w-12 rounded-xl bg-muted/50 flex-shrink-0" />
+      <div className="flex-1 space-y-2 min-w-0">
+        <div className="h-3 md:h-4 w-20 md:w-24 bg-muted/50 rounded" />
+        <div className="h-5 md:h-6 w-12 md:w-16 bg-muted/50 rounded" />
       </div>
     </div>
   );
@@ -33,7 +33,7 @@ export function DashboardStats({
 }) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
         <StatSkeleton />
         <StatSkeleton />
         <StatSkeleton />
@@ -57,15 +57,15 @@ export function DashboardStats({
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
       {stats.map((stat) => (
-        <div key={stat.label} className="bg-card border border-border rounded-2xl p-5 flex items-center gap-4">
-          <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${stat.iconBg}`}>
-            <stat.icon size={22} className={stat.iconColor} />
+        <div key={stat.label} className="bg-card border border-border rounded-2xl p-4 md:p-5 flex items-center gap-3 md:gap-4 min-w-0">
+          <div className={`h-11 w-11 md:h-12 md:w-12 rounded-xl flex items-center justify-center shrink-0 ${stat.iconBg}`}>
+            <stat.icon size={20} className={`md:w-[22px] md:h-[22px] ${stat.iconColor}`} />
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">{stat.label}</p>
-            <p className="text-2xl font-bold">{stat.value}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs md:text-sm text-muted-foreground truncate">{stat.label}</p>
+            <p className="text-xl md:text-2xl font-bold truncate">{stat.value}</p>
           </div>
         </div>
       ))}

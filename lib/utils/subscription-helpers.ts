@@ -16,7 +16,8 @@ export interface CanBuyPlanResult {
  * Rules (backend/product decision):
  * - One active plan at a time
  * - Can buy when: no plan, plan expired, or plan used up (tokensLeft === 0)
- * - Cannot buy when: payment pending, or active plan with plays left (tokensLeft > 0 or null)
+ * - Payment pending: Allow UI, but show confirm dialog before proceeding
+ * - Cannot buy when: active plan with plays left (tokensLeft > 0 or null)
  * 
  * Source of truth: dashboard (NOT /subscriptions/me which mislabels expired plans)
  */
@@ -25,11 +26,12 @@ export function canBuyPlan(dashboard: PlayerDashboard | undefined | null): CanBu
     return { allowed: true }; // No dashboard data yet, allow UI to show
   }
 
-  // Payment pending - block purchase
+  // Payment pending - ALLOW (show confirm dialog instead of hard-blocking)
+  // This prevents users who closed Paystack from being stuck
   if (dashboard.subscriptionPaymentPending) {
     return {
-      allowed: false,
-      reason: "Your payment is still being confirmed.",
+      allowed: true, // Changed from false to true
+      reason: undefined, // No reason needed since we allow it
     };
   }
 

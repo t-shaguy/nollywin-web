@@ -9,6 +9,7 @@ import { DataTable, Column } from "@/components/admin/data-table";
 import { SkeletonCard, EmptyState, InlineError } from "@/components/admin/loading-states";
 import { AvatarInitials } from "@/components/admin/avatar-initials";
 import { Icon } from "@/components/admin/icon";
+import { DetailValue } from "@/components/admin/value-renderer";
 import { 
   formatNumber, 
   formatRelativeTime, 
@@ -542,20 +543,7 @@ export default function AuditLogPage() {
                 <div className="p-4 space-y-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {additionalFields.map(([key, value]) => (
-                      <div key={key}>
-                        <div className="text-xs text-muted-foreground mb-1 font-medium">
-                          {humanizeResourceType(key)}
-                        </div>
-                        <div className="text-[13px] text-foreground">
-                          {typeof value === 'object' ? (
-                            <pre className="text-xs bg-background p-2 rounded overflow-x-auto">
-                              {JSON.stringify(value, null, 2)}
-                            </pre>
-                          ) : (
-                            <div className="break-words">{String(value)}</div>
-                          )}
-                        </div>
-                      </div>
+                      <DetailValue key={key} label={humanizeResourceType(key)} value={value} compact />
                     ))}
                   </div>
                 </div>

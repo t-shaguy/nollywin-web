@@ -113,17 +113,17 @@ export default function RafflesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 md:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Draws & Rewards</h1>
-        <p className="text-muted-foreground text-sm mt-1">Score points in games to win prizes in our draws.</p>
+        <h1 className="text-xl sm:text-2xl font-bold">Draws & Rewards</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm mt-1">Score points in games to win prizes in our draws.</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-border">
+      <div className="flex gap-2 border-b border-border overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
         <button
           onClick={() => setActiveTab("active")}
-          className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 ${
+          className={`px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap min-h-[44px] ${
             activeTab === "active"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -133,7 +133,7 @@ export default function RafflesPage() {
         </button>
         <button
           onClick={() => setActiveTab("history")}
-          className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 ${
+          className={`px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap min-h-[44px] ${
             activeTab === "history"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -147,11 +147,11 @@ export default function RafflesPage() {
       {activeTab === "active" && (
         <>
           {isLoading ? (
-            <div className="bg-card border border-border rounded-2xl p-10 text-center text-sm text-muted-foreground">
+            <div className="bg-card border border-border rounded-2xl p-8 md:p-10 text-center text-xs sm:text-sm text-muted-foreground">
               Loading draws...
             </div>
           ) : activeDraws.length > 0 ? (
-            <div className="space-y-6">
+            <div className="space-y-5 md:space-y-6">
               {activeDraws.map((draw) => {
                 // CRITICAL FIX: Merge dashboard data (verified source for myPoints/entered) with draw data
                 // Dashboard activeRaffles has the user's actual points, /draws/active may not
@@ -177,7 +177,7 @@ export default function RafflesPage() {
               })}
             </div>
           ) : (
-            <div className="bg-card border border-border rounded-2xl p-10 text-center text-sm text-muted-foreground">
+            <div className="bg-card border border-border rounded-2xl p-8 md:p-10 text-center text-xs sm:text-sm text-muted-foreground">
               No active draws right now — check back soon.
             </div>
           )}

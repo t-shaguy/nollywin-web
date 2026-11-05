@@ -38,24 +38,24 @@ export function PerformanceChart({ data }: { data: DataPoint[] }) {
   const barWidth = data.length > 0 ? Math.min(28, (plotWidth / data.length) * 0.5) : 0;
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2 font-bold">
-          <Flame size={18} className="text-primary" />
-          Performance History
+    <div className="bg-card border border-border rounded-2xl p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2 font-bold text-sm md:text-base">
+          <Flame size={18} className="text-primary flex-shrink-0" />
+          <span>Performance History</span>
         </div>
-        <div className="flex bg-secondary rounded-full p-1 text-xs font-medium">
+        <div className="flex bg-secondary rounded-full p-1 text-xs font-medium self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setView("line")}
-            className={`px-4 py-1.5 rounded-full transition-colors ${view === "line" ? "bg-primary text-white" : "text-muted-foreground"}`}
+            className={`px-3 sm:px-4 py-1.5 rounded-full transition-colors min-h-[36px] ${view === "line" ? "bg-primary text-white" : "text-muted-foreground"}`}
           >
             Line
           </button>
           <button
             type="button"
             onClick={() => setView("bar")}
-            className={`px-4 py-1.5 rounded-full transition-colors ${view === "bar" ? "bg-primary text-white" : "text-muted-foreground"}`}
+            className={`px-3 sm:px-4 py-1.5 rounded-full transition-colors min-h-[36px] ${view === "bar" ? "bg-primary text-white" : "text-muted-foreground"}`}
           >
             Bar
           </button>
@@ -63,14 +63,14 @@ export function PerformanceChart({ data }: { data: DataPoint[] }) {
       </div>
 
       {!hasData ? (
-        <div className="flex items-center justify-center py-16 text-center">
+        <div className="flex items-center justify-center py-12 md:py-16 text-center">
           <div className="space-y-2">
             <Flame size={32} className="text-muted-foreground mx-auto opacity-50" />
-            <p className="text-sm text-muted-foreground">Play a few rounds to see your performance here</p>
+            <p className="text-xs md:text-sm text-muted-foreground px-4">Play a few rounds to see your performance here</p>
           </div>
         </div>
       ) : (
-        <div className="relative overflow-x-auto">
+        <div className="relative overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
           <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="w-full min-w-[500px]" onMouseLeave={() => setHoverIndex(null)}>
             {Y_TICKS.map((tick) => (
               <g key={tick}>

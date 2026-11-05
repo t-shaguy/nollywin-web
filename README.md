@@ -34,3 +34,19 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Code Style Guidelines
+
+### Never Render Raw JSON
+**Important:** Never display `JSON.stringify()` output or raw JSON strings to users in either admin or player UI. Always use the `DetailValue` and `DetailList` components from `components/admin/value-renderer.tsx` to render structured data with proper formatting, humanized keys, and responsive layouts.
+
+Example:
+```tsx
+// ❌ BAD
+<span>{JSON.stringify(data)}</span>
+
+// ✅ GOOD
+import { DetailList } from "@/components/admin/value-renderer";
+<DetailList data={data} />
+```
+

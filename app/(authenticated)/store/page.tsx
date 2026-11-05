@@ -1,12 +1,23 @@
 "use client";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle, RefreshCw } from "lucide-react";
 import { getAvailablePackages, getMySubscriptions, type SubscriptionPackage } from "@/lib/api/subscriptions";
 import { usePlayerDashboard } from "@/hooks/use-player-dashboard";
+import { useAuthStore } from "@/store/auth-store";
 import { Button } from "@/components/ui/button";
 import { canBuyPlan, formatPlanAllowance, formatExpiryDate } from "@/lib/utils/subscription-helpers";
 import { type PlayerDashboard } from "@/lib/api/auth";
+import { AirtimePaymentModal } from "@/app/features/store/presentation/airtime-payment-modal";
+import { PendingPaymentBanner } from "@/components/pending-payment-banner";
+import { getAirtimePlan, isPlanAirtimeEnabled } from "@/lib/airtime/config";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  getPaymentStarted,
+  clearPaymentStarted,
+  savePaymentStarted,
+  formatTimeAgo,
+} from "@/lib/utils/payment-state";
 
 // Literal hex values matching the Figma
 const PINK = "#F40289";
@@ -36,7 +47,6 @@ function CurrentPlanCard({
 
   // Determine start date
   let startDate: string | null = null;
-  let startDateDerived = false;
 
   if (currentSub?.startsAt) {
     // Use actual start date from API
@@ -51,7 +61,6 @@ function CurrentPlanCard({
       const derivedStart = new Date(expiryDate);
       derivedStart.setDate(derivedStart.getDate() - matchingPackage.durationDays);
       startDate = derivedStart.toISOString();
-      startDateDerived = true;
     }
   }
 
@@ -80,43 +89,43 @@ function CurrentPlanCard({
     : null;
 
   return (
-    <div className="border border-border rounded-lg p-5 space-y-3">
-      <h2 className="font-bold text-lg">Your Current Plan</h2>
+    <div className="border border-border rounded-lg p-4 md:p-5 space-y-3">
+      <h2 className="font-bold text-base sm:text-lg">Your Current Plan</h2>
       <div className="space-y-2">
-        <div className="flex justify-between">
-          <span className="text-sm text-muted-foreground">Plan</span>
-          <span className="font-medium">{dashboard.subscription?.packageName}</span>
+        <div className="flex justify-between gap-3">
+          <span className="text-xs sm:text-sm text-muted-foreground">Plan</span>
+          <span className="font-medium text-xs sm:text-sm text-right truncate">{dashboard.subscription?.packageName}</span>
         </div>
         {startDate && (
-          <div className="flex justify-between">
-            <span className="text-sm text-muted-foreground">Subscribed on</span>
-            <span className="font-medium">{formatExpiryDate(startDate)}</span>
+          <div className="flex justify-between gap-3">
+            <span className="text-xs sm:text-sm text-muted-foreground">Subscribed on</span>
+            <span className="font-medium text-xs sm:text-sm whitespace-nowrap">{formatExpiryDate(startDate)}</span>
           </div>
         )}
-        <div className="flex justify-between">
-          <span className="text-sm text-muted-foreground">Tokens left</span>
-          <span className="font-medium">
+        <div className="flex justify-between gap-3">
+          <span className="text-xs sm:text-sm text-muted-foreground">Tokens left</span>
+          <span className="font-medium text-xs sm:text-sm whitespace-nowrap">
             {dashboard.tokensLeft === null 
               ? "Unlimited" 
               : `${dashboard.tokensLeft} token${dashboard.tokensLeft === 1 ? '' : 's'}`
             }
           </span>
         </div>
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">Expires on</span>
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{formatExpiryDate(dashboard.subscription?.expiresAt)}</span>
+        <div className="flex justify-between items-center gap-3">
+          <span className="text-xs sm:text-sm text-muted-foreground">Expires on</span>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="font-medium text-xs sm:text-sm whitespace-nowrap">{formatExpiryDate(dashboard.subscription?.expiresAt)}</span>
             {daysLeft !== null && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                {daysLeft === 0 ? "Expires today" : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`}
+              <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium whitespace-nowrap">
+                {daysLeft === 0 ? "Today" : `${daysLeft} day${daysLeft === 1 ? '' : 's'}`}
               </span>
             )}
           </div>
         </div>
       </div>
       <div className="pt-2 border-t border-border">
-        <p className="text-sm text-muted-foreground">
-          You can buy another plan once you've used all your plays or this plan expires.
+        <p className="text-xs sm:text-sm text-muted-foreground">
+          You can buy another plan once you&apos;ve used all your plays or this plan expires.
         </p>
       </div>
     </div>
@@ -125,6 +134,7 @@ function CurrentPlanCard({
 
 export default function StorePage() {
   const queryClient = useQueryClient();
+  const user = useAuthStore((state) => state.user);
   
   const { data: packages = [], isLoading: loading } = useQuery({
     queryKey: ["subscriptions", "packages"],
@@ -138,6 +148,20 @@ export default function StorePage() {
   const [view, setView] = useState<View>("browse");
   const [isProcessing, setIsProcessing] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"airtime" | "ussd" | "card" | null>(null);
+  
+  // Airtime modal state
+  const [showAirtimeModal, setShowAirtimeModal] = useState(false);
+  
+  // Payment pending state
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmDialogMessage, setConfirmDialogMessage] = useState("");
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [statusCheckCooldown, setStatusCheckCooldown] = useState(false);
+  const [statusCheckMessage, setStatusCheckMessage] = useState<string | null>(null);
+  
+  // Get payment started record
+  const paymentStarted = dashboard?.subscriptionPaymentPending ? getPaymentStarted() : null;
 
   const activePackages = packages.filter((p) => p.active);
   
@@ -154,6 +178,23 @@ export default function StorePage() {
   const handleSelect = (item: SubscriptionPackage) => {
     setSelected(item);
   };
+  
+  const handleAirtimeClick = () => {
+    setShowAirtimeModal(true);
+  };
+  
+  const handleAirtimeSuccess = () => {
+    setShowAirtimeModal(false);
+    // Invalidate queries to refresh subscription status
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+  };
+  
+  const handleRefreshStatus = () => {
+    // Invalidate dashboard and subscriptions to trigger fresh data fetch
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+  };
 
   const handleProceedToPayment = () => {
     if (!selected) return;
@@ -162,26 +203,75 @@ export default function StorePage() {
 
   const handleBackToBrowse = () => {
     setView("browse");
+    setPaymentMethod(null);
   };
 
-  const handleConfirmPayment = async () => {
-    if (!selected) return;
+  const handleCheckStatus = async () => {
+    setIsCheckingStatus(true);
+    setStatusCheckMessage(null);
     
-    // Guard: re-check if user can still buy (stale page, another tab)
-    const recheckBuy = canBuyPlan(dashboard);
-    if (!recheckBuy.allowed) {
-      setBackendError(recheckBuy.reason || "You cannot purchase a plan at this time.");
-      setView("browse");
-      return;
+    // Invalidate and refetch dashboard
+    await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    await queryClient.refetchQueries({ queryKey: ["dashboard"] });
+    
+    setIsCheckingStatus(false);
+    
+    // Check if still pending
+    const updatedDashboard = queryClient.getQueryData<PlayerDashboard>(["dashboard"]);
+    
+    if (!updatedDashboard?.subscriptionPaymentPending) {
+      // Payment cleared! Clear saved record
+      clearPaymentStarted();
+      setStatusCheckMessage(null);
+    } else {
+      // Still pending
+      setStatusCheckMessage("Still pending");
+      
+      // Set cooldown (10 seconds)
+      setStatusCheckCooldown(true);
+      setTimeout(() => {
+        setStatusCheckCooldown(false);
+      }, 10000);
     }
+  };
+
+  const handleStartNewPayment = () => {
+    // Show confirm dialog
+    setShowConfirmDialog(true);
+    setConfirmDialogMessage("");
+  };
+
+  const handleConfirmPayAgain = async () => {
+    await proceedWithPayment();
+  };
+
+  const proceedWithPayment = async () => {
+    if (!selected) return;
     
     setIsProcessing(true);
     setBackendError(null);
+    setConfirmDialogMessage("");
+    setShowConfirmDialog(false);
     
     try {
+      // Save payment-started record before redirecting
+      savePaymentStarted({
+        packageName: selected.name,
+        startedAt: Date.now(),
+      });
+      
       // V37: Purchase subscription only (wallet top-up removed)
       const { purchasePackage } = await import("@/lib/api/subscriptions");
       const response = await purchasePackage({ packageId: selected.id });
+      
+      // Update saved record with reference if available
+      if (response.reference) {
+        savePaymentStarted({
+          packageName: selected.name,
+          startedAt: Date.now(),
+          reference: response.reference,
+        });
+      }
       
       // Invalidate dashboard and draws queries before redirecting
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
@@ -194,103 +284,274 @@ export default function StorePage() {
       }
       
       throw new Error("No authorization URL received from server");
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle backend rejection (4xx response)
-      const errorMessage = error.message || "Payment failed. Please try again.";
-      setBackendError(errorMessage);
+      const errorMessage = (error as Error).message || "Payment failed. Please try again.";
+      
+      // If showing confirm dialog, update its message
+      if (showConfirmDialog) {
+        setConfirmDialogMessage(errorMessage);
+      } else {
+        setBackendError(errorMessage);
+        // Return to browse view
+        setView("browse");
+        setSelected(null);
+      }
       
       // Refresh dashboard to get latest state
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      
-      // Return to browse view
-      setView("browse");
-      setSelected(null);
     } finally {
       setIsProcessing(false);
     }
   };
-
-  const resetCheckout = () => {
-    setSelected(null);
-    setView("browse");
+  
+  const handleConfirmPayment = async () => {
+    if (!selected) return;
+    
+    // If payment is pending, show confirm dialog
+    if (dashboard?.subscriptionPaymentPending) {
+      setShowConfirmDialog(true);
+      setConfirmDialogMessage("");
+      return;
+    }
+    
+    // Proceed with payment
+    await proceedWithPayment();
   };
 
   // ---- CHECKOUT VIEW ----
-  if (view === "checkout" && selected) {
-    return (
-      <div className="space-y-5 max-w-lg mx-auto">
-          <button
-            onClick={handleBackToBrowse}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm"
-          >
-            <ArrowLeft size={16} />
-            Back
-          </button>
+  const airtimePlan = selected ? getAirtimePlan(selected.name) : undefined;
+  const hasAirtime = !!airtimePlan;
+  const airtimeEnabled = selected ? isPlanAirtimeEnabled(selected.name) : false;
+  const showAirtimeOption = hasAirtime && airtimeEnabled;
+  
+  const checkoutView = view === "checkout" && selected ? (
+    <div className="space-y-3 md:space-y-4 max-w-2xl mx-auto">
+      <button
+        onClick={handleBackToBrowse}
+        className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-xs sm:text-sm min-h-[36px]"
+      >
+        <ArrowLeft size={14} />
+        Back
+      </button>
 
-        <h1 className="text-2xl font-bold">Checkout</h1>
-
-        {/* Order Summary */}
-        <div className="border border-border rounded-lg p-4 space-y-3">
-          <h2 className="font-bold">Order Summary</h2>
-          <div className="flex justify-between py-2">
-            <span className="text-sm text-muted-foreground">Package</span>
-            <span className="font-medium">{selected.name}</span>
+      {/* Order Summary */}
+      <div className="border border-border rounded-lg p-3 md:p-4 space-y-2">
+          <h2 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Order Summary</h2>
+          <div className="flex justify-between items-center gap-3">
+            <span className="text-xs text-muted-foreground">Package</span>
+            <span className="text-xs font-medium text-right">{selected.name} ({formatPlanAllowance(selected).toLowerCase()})</span>
           </div>
-          <div className="flex justify-between py-2">
-            <span className="text-sm text-muted-foreground">Details</span>
-            <span className="font-medium text-sm">{formatPlanAllowance(selected)}</span>
-          </div>
-          <div className="h-px bg-border my-2" />
-          <div className="flex justify-between py-2">
-            <span className="font-bold">Total</span>
-            <span className="font-bold text-lg" style={{ color: PINK }}>₦{price.toLocaleString()}</span>
+          <div className="h-px bg-border my-1" />
+          <div className="flex justify-between items-center gap-3">
+            <span className="text-sm font-bold">Total</span>
+            <span className="text-lg font-bold whitespace-nowrap" style={{ color: PINK }}>₦{price.toLocaleString()}</span>
           </div>
         </div>
 
         {/* Payment Method */}
-        <div className="border border-border rounded-lg p-4 space-y-3">
-          <h2 className="font-bold">Payment Method</h2>
-          <p className="text-sm text-muted-foreground">
-            You will be redirected to Paystack to complete your payment securely.
-          </p>
+        <div className="space-y-2">
+          <h2 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Payment Method</h2>
+          
+          {/* Row 1: Airtime (full width) */}
+          {showAirtimeOption && (
+            <button
+              onClick={() => setPaymentMethod("airtime")}
+              className={`w-full rounded-lg p-3 flex items-center gap-3 transition-colors ${
+                paymentMethod === "airtime"
+                  ? "border-2 border-primary bg-primary/5"
+                  : "border border-border hover:border-primary/50"
+              }`}
+            >
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: PINK }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                  <line x1="12" y1="18" x2="12.01" y2="18"/>
+                </svg>
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-bold">Pay with Airtime</p>
+                <p className="text-xs text-muted-foreground">Deducted from your airtime balance</p>
+              </div>
+              {paymentMethod === "airtime" && (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: PINK }}>
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              )}
+            </button>
+          )}
+          
+          {/* Row 2: USSD and Card (2 columns) */}
+          <div className="grid grid-cols-2 gap-2">
+            {/* USSD Code */}
+            <button
+              disabled
+              className="border border-border rounded-lg p-3 flex flex-col items-start gap-2 opacity-50 cursor-not-allowed"
+            >
+              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                  <line x1="12" y1="18" x2="12.01" y2="18"/>
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-bold">USSD Code</p>
+                <p className="text-xs text-muted-foreground">Dial a short code</p>
+              </div>
+            </button>
+            
+            {/* Bank Card */}
+            <button
+              onClick={() => setPaymentMethod("card")}
+              className={`rounded-lg p-3 flex flex-col items-start gap-2 transition-colors ${
+                paymentMethod === "card"
+                  ? "border-2 border-primary bg-primary/5"
+                  : "border border-border hover:border-primary/50"
+              }`}
+            >
+              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                  <line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-bold">Bank Card</p>
+                <p className="text-xs text-muted-foreground">Debit / credit card</p>
+              </div>
+            </button>
+          </div>
         </div>
 
-        {/* Confirm Button */}
-        <Button
-          onClick={handleConfirmPayment}
-          disabled={isProcessing}
-          className="w-full justify-center text-base py-3.5"
-        >
-          {isProcessing ? "Processing..." : "Confirm & Pay"}
-        </Button>
+        {/* Airtime Payment Instructions (shows when airtime selected) */}
+        {paymentMethod === "airtime" && (
+          <div className="border border-border rounded-lg p-3 md:p-4 space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wide">Airtime Payment</h3>
+            
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white" style={{ backgroundColor: PINK }}>1</div>
+                <p className="text-xs">Open your dialer</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white" style={{ backgroundColor: PINK }}>2</div>
+                <p className="text-xs">Dial *20211# and follow prompts</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white" style={{ backgroundColor: PINK }}>3</div>
+                <p className="text-xs">Select NollyWin and confirm amount</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white" style={{ backgroundColor: PINK }}>4</div>
+                <p className="text-xs">Your account is credited instantly</p>
+              </div>
+            </div>
+            
+            <div className="border border-border rounded-lg p-3 text-center">
+              <p className="text-xs text-muted-foreground mb-1">Airtime charge</p>
+              <p className="text-xl font-bold" style={{ color: PINK }}>₦{price.toLocaleString()}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Confirm Payment Button */}
+        {paymentMethod && (
+          <div className="space-y-2">
+            <Button
+              onClick={() => {
+                if (paymentMethod === "airtime") {
+                  handleAirtimeClick();
+                } else if (paymentMethod === "card") {
+                  handleConfirmPayment();
+                }
+              }}
+              disabled={isProcessing}
+              className="w-full justify-center text-sm py-3 min-h-[44px]"
+              style={{ backgroundColor: PINK }}
+            >
+              {isProcessing ? "Processing..." : `Confirm Payment · ₦${price.toLocaleString()}`}
+            </Button>
+            <p className="text-xs text-center text-muted-foreground">
+              Your payment is secured and encrypted
+            </p>
+          </div>
+        )}
       </div>
-    );
-  }
+  ) : null;
 
   // ---- BROWSE VIEW ----
-  return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+  const browseView = (
+    <div className="space-y-5 md:space-y-6 max-w-2xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold">Subscribe to Play</h1>
-        <p className="text-muted-foreground mt-1">Choose a plan to start playing trivia and earning points.</p>
+        <h1 className="text-xl sm:text-2xl font-bold">Subscribe to Play</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm mt-1">Choose a plan to start playing trivia and earning points.</p>
       </div>
 
       {loading && (
         <div className="space-y-2">
           {[1, 2, 3].map(i => (
-            <div key={i} className="h-20 bg-secondary/50 rounded-lg animate-pulse" />
+            <div key={i} className="h-16 sm:h-20 bg-secondary/50 rounded-lg animate-pulse" />
           ))}
         </div>
       )}
 
       {!loading && (
         <>
+        {/* Payment pending card (Paystack payments) */}
+        {dashboard?.subscriptionPaymentPending && (
+          <div className="border border-orange-500/20 bg-orange-500/10 rounded-lg p-4 space-y-3">
+            <h3 className="text-sm font-bold">Payment pending</h3>
+            <p className="text-xs text-muted-foreground">
+              {paymentStarted
+                ? `You started a payment for ${paymentStarted.packageName} ${formatTimeAgo(paymentStarted.startedAt)}. If you've paid, it can take a few minutes to confirm. If you cancelled, you can start a new payment.`
+                : "You have a payment that is still being confirmed. If you've paid, it can take a few minutes to confirm. If you cancelled, you can start a new payment."}
+            </p>
+            {statusCheckMessage && (
+              <p className="text-xs text-orange-600 font-medium">{statusCheckMessage}</p>
+            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                onClick={handleCheckStatus}
+                disabled={isCheckingStatus || statusCheckCooldown}
+                variant="outline"
+                size="sm"
+                className="text-xs"
+              >
+                {isCheckingStatus ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    Checking...
+                  </>
+                ) : statusCheckCooldown ? (
+                  "Check status (wait 10s)"
+                ) : (
+                  <>
+                    <RefreshCw size={14} />
+                    Check status
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={handleStartNewPayment}
+                variant="secondary"
+                size="sm"
+                className="text-xs"
+              >
+                Start a new payment
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Pending airtime payment banner */}
+        <PendingPaymentBanner onRefresh={handleRefreshStatus} />
+        
         {/* Backend error message (4xx rejection) */}
         {backendError && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 flex items-start gap-3">
-            <AlertCircle size={20} className="text-red-600 shrink-0 mt-0.5" />
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 flex items-start gap-2.5 sm:gap-3">
+            <AlertCircle size={18} className="sm:w-5 sm:h-5 text-red-600 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-red-700 dark:text-red-400">
+              <p className="text-xs sm:text-sm font-medium text-red-700 dark:text-red-400">
                 {backendError}
               </p>
             </div>
@@ -307,40 +568,39 @@ export default function StorePage() {
 
         {/* Used up plan note (when allowed but plan exists with 0 plays) */}
         {canBuy && hasUsedUpPlan && dashboard?.subscription && (
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-4 py-3">
-            <p className="text-sm text-blue-700 dark:text-blue-400">
-              You've used all plays in your {dashboard.subscription.packageName} plan.
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3">
+            <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-400">
+              You&apos;ve used all plays in your {dashboard.subscription.packageName} plan.
             </p>
           </div>
         )}
 
         {/* Subscription Plans Section */}
         <div>
-          <h2 className="text-xs font-bold mb-3 uppercase tracking-wider text-muted-foreground">Subscription Plans</h2>
+          <h2 className="text-[10px] sm:text-xs font-bold mb-2 uppercase tracking-wider text-muted-foreground">Subscription Plans</h2>
           <div className="space-y-2">
             {activePackages.map((plan) => {
-              // Determine if this is the best value (most attempts per day)
               const isBestValue = plan.name === "Monthly" || plan.durationDays === 30;
+              const isSelected = selected?.id === plan.id;
               
               return (
                 <button
                   key={plan.id}
                   onClick={() => canBuy && handleSelect(plan)}
                   disabled={!canBuy}
-                  aria-disabled={!canBuy}
-                  className={`w-full flex items-center justify-between px-4 py-3 border rounded-lg transition-all ${
+                  className={`w-full flex items-center justify-between px-3 py-2.5 border rounded-lg transition-all min-h-[60px] gap-3 ${
                     !canBuy 
                       ? "opacity-50 cursor-not-allowed border-border"
-                      : selected?.id === plan.id
-                        ? "border-primary bg-primary/5 hover:border-primary"
-                        : "border-border hover:border-primary"
+                      : isSelected
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
                   }`}
                 >
-                  <div className="flex-1 text-left">
-                    <div className="flex items-center gap-2">
-                      <p className="font-bold text-base">{plan.name}</p>
+                  <div className="flex-1 text-left min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                      <p className="text-sm font-bold">{plan.name}</p>
                       {isBestValue && (
-                        <span style={{ backgroundColor: PINK, color: "#fff" }} className="text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        <span style={{ backgroundColor: PINK, color: "#fff" }} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap">
                           Best value
                         </span>
                       )}
@@ -349,11 +609,11 @@ export default function StorePage() {
                       {formatPlanAllowance(plan)}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-lg" style={{ color: PINK }}>₦{plan.fee.toLocaleString()}</p>
-                    {!canBuy && (
-                      <p className="text-xs text-muted-foreground">Current plan active</p>
-                    )}
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-base font-bold whitespace-nowrap" style={{ color: PINK }}>₦{plan.fee.toLocaleString()}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      per {plan.durationDays === 1 ? 'day' : plan.durationDays === 7 ? 'week' : 'month'}
+                    </p>
                   </div>
                 </button>
               );
@@ -364,24 +624,61 @@ export default function StorePage() {
         {/* Bottom bar */}
         <div className="space-y-2">
           {!canBuy ? (
-            <div className="bg-secondary/50 border border-border rounded-lg px-4 py-3 text-center">
-              <p className="text-sm text-muted-foreground">{blockReason}</p>
+            <div className="bg-secondary/50 border border-border rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-center">
+              <p className="text-xs sm:text-sm text-muted-foreground">{blockReason}</p>
             </div>
           ) : !selected ? (
-            <div className="bg-secondary/50 border border-border rounded-lg px-4 py-3 text-center">
-              <p className="text-sm text-muted-foreground">Select a package first</p>
+            <div className="bg-secondary/50 border border-border rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-center">
+              <p className="text-xs sm:text-sm text-muted-foreground">Select a package first</p>
             </div>
           ) : (
-            <Button onClick={handleProceedToPayment} className="w-full justify-center text-base py-3.5">
+            <Button onClick={handleProceedToPayment} className="w-full justify-center text-sm sm:text-base py-3 sm:py-3.5 min-h-[48px]">
               Proceed to Payment
             </Button>
           )}
-          <p className="text-xs text-center text-muted-foreground">
+          <p className="text-[10px] sm:text-xs text-center text-muted-foreground">
             Secure payment via Paystack
           </p>
         </div>
         </>
       )}
     </div>
+  );
+
+  return (
+    <>
+      {view === "checkout" && selected ? checkoutView : browseView}
+      
+      {/* Airtime Payment Modal - rendered at component level */}
+      {showAirtimeModal && selected && (
+        <AirtimePaymentModal
+          packageId={selected.id}
+          packageName={selected.name}
+          amount={selected.fee}
+          userPhone={user?.phoneNumber}
+          onClose={() => setShowAirtimeModal(false)}
+          onSuccess={handleAirtimeSuccess}
+        />
+      )}
+      
+      {/* Confirm Dialog - payment already pending */}
+      <ConfirmDialog
+        open={showConfirmDialog}
+        onClose={() => {
+          setShowConfirmDialog(false);
+          setConfirmDialogMessage("");
+        }}
+        title="Payment already pending"
+        message={
+          confirmDialogMessage ||
+          "You may already have paid for a plan that is still being confirmed. Check status first."
+        }
+        confirmText="Pay again anyway"
+        cancelText="Check status"
+        onConfirm={handleConfirmPayAgain}
+        onCancel={handleCheckStatus}
+        loading={isProcessing}
+      />
+    </>
   );
 }

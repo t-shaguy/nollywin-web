@@ -47,20 +47,20 @@ export function QuestionView({
   const optionLabels = ["A", "B", "C", "D", "E"];
 
   return (
-    <div className="max-w-lg mx-auto space-y-6">
-      {/* Stage Progress Row */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 flex-1">
+    <div className="max-w-2xl mx-auto px-4 py-6 md:py-10 space-y-5 md:space-y-6">
+      {/* Stage Progress Row - horizontal scroll on very narrow screens */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 overflow-x-auto pb-2 -mb-2">
           {Array.from({ length: totalStages }).map((_, i) => {
             const stageNum = i + 1;
             const stageAnswered = answeredQuestionsPerStage[i];
-            const isCompleted = stageAnswered >= 1; // 1 question per stage
+            const isCompleted = stageAnswered >= 1;
             const isCurrent = stageNum === currentStage;
 
             return (
-              <div key={stageNum} className="flex items-center">
+              <div key={stageNum} className="flex items-center flex-shrink-0">
                 <div
-                  className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
+                  className={`h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition-all ${
                     isCompleted
                       ? "bg-green-500 text-white"
                       : isCurrent
@@ -72,7 +72,7 @@ export function QuestionView({
                 </div>
                 {i < totalStages - 1 && (
                   <div
-                    className={`h-0.5 w-6 ${
+                    className={`h-0.5 w-4 sm:w-6 ${
                       isCompleted ? "bg-green-500" : "bg-border"
                     }`}
                   />
@@ -83,62 +83,61 @@ export function QuestionView({
         </div>
 
         <Badge
-          className={`${difficultyColors[stageDifficulty]} text-xs px-3 py-1 border`}
+          className={`${difficultyColors[stageDifficulty]} text-xs px-2.5 sm:px-3 py-1 border flex-shrink-0`}
         >
           {stageDifficulty}
         </Badge>
       </div>
 
-      {/* Timer and Score Row */}
-      <div className="flex items-center gap-4">
+      {/* Timer and Score Row - stack on very narrow screens */}
+      <div className="flex flex-col min-[400px]:flex-row items-stretch min-[400px]:items-center gap-3 sm:gap-4">
         {/* Circular Countdown */}
-        <div className="relative">
-          <svg className="transform -rotate-90" width="64" height="64">
+        <div className="relative flex-shrink-0 self-center min-[400px]:self-auto">
+          <svg className="transform -rotate-90" width="60" height="60" viewBox="0 0 60 60">
             <circle
-              cx="32"
-              cy="32"
-              r="28"
+              cx="30"
+              cy="30"
+              r="26"
               stroke="currentColor"
               strokeWidth="3"
               fill="none"
               className="text-border"
             />
             <circle
-              cx="32"
-              cy="32"
-              r="28"
+              cx="30"
+              cy="30"
+              r="26"
               stroke="currentColor"
               strokeWidth="3"
               fill="none"
               strokeLinecap="round"
               className="text-primary transition-all duration-1000"
-              strokeDasharray={`${2 * Math.PI * 28}`}
-              strokeDashoffset={`${2 * Math.PI * 28 * (1 - timeLeft / 10)}`}
+              strokeDasharray={`${2 * Math.PI * 26}`}
+              strokeDashoffset={`${2 * Math.PI * 26 * (1 - timeLeft / 10)}`}
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-xl font-bold">{timeLeft}</span>
+            <span className="text-lg sm:text-xl font-bold">{timeLeft}</span>
           </div>
         </div>
 
         {/* Points Display */}
-        <div className="flex-1 bg-secondary/30 rounded-lg px-4 py-3">
-          <p className="text-xs text-muted-foreground">Points this attempt</p>
-          <p className="text-2xl font-bold text-primary">{score} pts</p>
+        <div className="flex-1 bg-secondary/30 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 min-w-0">
+          <p className="text-xs text-muted-foreground truncate">Points this attempt</p>
+          <p className="text-xl sm:text-2xl font-bold text-primary truncate">{score} pts</p>
         </div>
       </div>
 
       {/* Question Text */}
-      <div className="bg-card border border-border rounded-lg p-5">
-        <p className="text-base font-semibold leading-relaxed">{question.question}</p>
+      <div className="bg-card border border-border rounded-lg p-4 md:p-5">
+        <p className="text-sm sm:text-base font-semibold leading-relaxed break-words">{question.question}</p>
       </div>
 
-      {/* Options (A-E) - Same width as feedback banner */}
-      <div className="space-y-2.5">
+      {/* Options (A-D) - Responsive sizing */}
+      <div className="space-y-2 sm:space-y-2.5">
         {question.options.map((option, i) => {
           const isSelected = selectedIndex === i;
           const isCorrectOption = i === question.correctIndex;
-          // On timeout, no option should appear "selected" by user, only correct answer highlighted
           const isWrongAnswer = userSelectedAnswer && isSelected && !isCorrectOption;
           const shouldDim = showResult && !isCorrectOption && !isWrongAnswer;
 
@@ -149,12 +148,10 @@ export function QuestionView({
 
           if (showResult) {
             if (isCorrectOption) {
-              // Correct answer: bright green, fully visible
               stateClass = "border-green-500 bg-green-500/10";
               badgeClass = "bg-green-500 text-white transition-all duration-300";
               textClass = "text-sm font-bold text-white transition-all duration-300";
             } else if (isSelected && userSelectedAnswer) {
-              // Wrong answer selected by user (NOT on timeout)
               stateClass = "border-red-500 bg-red-500/10";
               badgeClass = "bg-red-500 text-white transition-all duration-300";
               textClass = "text-sm font-medium text-red-200 transition-all duration-300";
@@ -162,10 +159,8 @@ export function QuestionView({
           }
 
           if (isWrongAnswer) {
-            // Wrong answer user selected: dimmed but readable (40% opacity, less blur)
             containerClass += " opacity-40";
           } else if (shouldDim) {
-            // Other options or timeout: dimmed (25% opacity, minimal grayscale, NO blur)
             containerClass += " opacity-25 grayscale";
             stateClass = "border-border/30";
             badgeClass = "bg-border/50 text-muted-foreground/40 transition-all duration-300";
@@ -178,28 +173,28 @@ export function QuestionView({
               type="button"
               disabled={selectedIndex !== null}
               onClick={() => onAnswer(i)}
-              className={`w-full text-left px-4 py-3 rounded-lg border bg-card flex items-center gap-3 ${stateClass} ${containerClass}`}
+              className={`w-full text-left px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border bg-card flex items-center gap-2.5 sm:gap-3 min-h-[56px] ${stateClass} ${containerClass}`}
             >
-              <div className={`flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center font-semibold text-xs ${badgeClass}`}>
+              <div className={`flex-shrink-0 h-6 w-6 sm:h-7 sm:w-7 rounded-full flex items-center justify-center font-semibold text-xs ${badgeClass}`}>
                 {optionLabels[i]}
               </div>
-              <span className={`flex-1 ${textClass}`}>{option}</span>
+              <span className={`flex-1 break-words ${textClass}`}>{option}</span>
             </button>
           );
         })}
       </div>
 
-      {/* Answer Feedback Banner */}
+      {/* Answer Feedback Banner - responsive text */}
       {showResult && (
         <button
           onClick={onNext}
-          className={`w-full rounded-lg px-4 py-3 text-center transition-all ${
+          className={`w-full rounded-lg px-3 sm:px-4 py-3 text-center transition-all min-h-[64px] ${
             isCorrect
               ? "bg-green-500/10 border border-green-500 hover:bg-green-500/20"
               : "bg-muted/50 border border-border hover:bg-muted/70"
           }`}
         >
-          <p className={`font-semibold text-base ${
+          <p className={`font-semibold text-sm sm:text-base ${
             isCorrect 
               ? "text-green-500" 
               : isTimeout 
@@ -212,7 +207,7 @@ export function QuestionView({
                 ? "⏰ Time's up! +0 pts" 
                 : "Wrong answer. +0 pts"}
           </p>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 break-words">
             {isCorrect
               ? isLastQuestionInStage
                 ? "Tap to see result"

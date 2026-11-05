@@ -20,24 +20,24 @@ export function RaffleHistoryList() {
 
   if (loading) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-6 text-center">
-        <p className="text-sm text-muted-foreground">Loading history...</p>
+      <div className="bg-card border border-border rounded-2xl p-5 md:p-6 text-center">
+        <p className="text-xs sm:text-sm text-muted-foreground">Loading history...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-6 text-center">
-        <p className="text-sm text-destructive">{error}</p>
+      <div className="bg-card border border-border rounded-2xl p-5 md:p-6 text-center">
+        <p className="text-xs sm:text-sm text-destructive">{error}</p>
       </div>
     );
   }
 
   if (history.length === 0) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-6 text-center">
-        <p className="text-sm text-muted-foreground">No past draws yet</p>
+      <div className="bg-card border border-border rounded-2xl p-5 md:p-6 text-center">
+        <p className="text-xs sm:text-sm text-muted-foreground">No past draws yet</p>
       </div>
     );
   }
@@ -72,29 +72,29 @@ export function RaffleHistoryList() {
         return (
           <div
             key={entry.drawId}
-            className="bg-card border border-border rounded-2xl p-4 space-y-3"
+            className="bg-card border border-border rounded-2xl p-3.5 sm:p-4 space-y-2.5 sm:space-y-3"
           >
             {/* Header */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3 flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2 sm:gap-3">
+              <div className="flex items-start gap-2.5 sm:gap-3 flex-1 min-w-0">
                 <div
-                  className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${
+                  className={`h-10 w-10 sm:h-11 sm:w-11 rounded-xl flex items-center justify-center shrink-0 ${
                     winStatus.isWinner
                       ? "bg-primary/10"
                       : "bg-secondary"
                   }`}
                 >
-                  <Trophy size={18} className={winStatus.isWinner ? "text-primary" : "text-muted-foreground"} />
+                  <Trophy size={16} className={`sm:w-[18px] sm:h-[18px] ${winStatus.isWinner ? "text-primary" : "text-muted-foreground"}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate">{entry.prizeName}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{entry.raffleCode}</p>
+                  <p className="font-semibold text-xs sm:text-sm truncate">{entry.prizeName}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{entry.raffleCode}</p>
                 </div>
               </div>
 
               {/* Status Badge */}
               <span
-                className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${
+                className={`text-[10px] sm:text-xs font-medium px-2 sm:px-2.5 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${
                   entry.drawStatus === "ACTIVE"
                     ? "bg-green-500/10 text-green-600"
                     : entry.drawStatus === "UPCOMING"
@@ -110,27 +110,27 @@ export function RaffleHistoryList() {
 
             {/* Win Status */}
             <div
-              className={`p-3 rounded-lg text-sm ${
+              className={`p-2.5 sm:p-3 rounded-lg text-xs sm:text-sm ${
                 winStatus.isWinner
                   ? "bg-primary/5 border border-primary/20"
                   : "bg-secondary/50 border border-border"
               }`}
             >
-              <p className={winStatus.isWinner ? "text-primary font-medium" : "text-muted-foreground"}>
+              <p className={`break-words ${winStatus.isWinner ? "text-primary font-medium" : "text-muted-foreground"}`}>
                 {winStatus.text}
               </p>
             </div>
 
             {/* Legacy: Show ticket count if present */}
             {hasTickets && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1 border-t border-border">
-                <Ticket size={14} />
+              <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground pt-1 border-t border-border">
+                <Ticket size={12} className="sm:w-[14px] sm:h-[14px]" />
                 <span>You had {entry.myTickets} {entry.myTickets === 1 ? 'entry' : 'entries'}</span>
               </div>
             )}
 
             {/* Created date */}
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
               Entered {new Date(entry.createdAt).toLocaleDateString('en-GB', {
                 day: '2-digit',
                 month: 'short',

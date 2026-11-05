@@ -22,7 +22,7 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
       const isAllowedPath = allowedPaths.some(path => pathname === path || pathname?.startsWith(path + '/'));
       
       if (!isAllowedPath) {
-        // Redirect checker to verifications if accessing unauthorized page
+        // Redirect checker to approvals if accessing unauthorized page
         router.replace("/admin/change-requests");
       }
     }

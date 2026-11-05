@@ -278,18 +278,18 @@ export function TriviaFlow() {
   // Error view
   if (step === "error" || error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6">
-        <div className="max-w-md w-full bg-card border border-border rounded-lg p-6 text-center space-y-4">
-          <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
-            <span className="text-2xl">⚠️</span>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] md:min-h-screen px-4 py-8">
+        <div className="max-w-md w-full bg-card border border-border rounded-lg p-5 md:p-6 text-center space-y-4">
+          <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+            <span className="text-2xl sm:text-3xl">⚠️</span>
           </div>
           <div>
-            <h3 className="text-xl font-bold">Error</h3>
-            <p className="text-sm text-muted-foreground mt-2">{error}</p>
+            <h3 className="text-lg sm:text-xl font-bold">Error</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2 break-words">{error}</p>
           </div>
           <button
             onClick={restartGame}
-            className="w-full bg-primary text-white rounded-lg py-3 font-medium hover:opacity-90"
+            className="w-full bg-primary text-white rounded-lg py-3 font-medium hover:opacity-90 min-h-[48px] text-sm sm:text-base"
           >
             Try Again
           </button>
@@ -328,8 +328,8 @@ export function TriviaFlow() {
   // Playing view
   if (!currentQuestion) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Loading question...</p>
+      <div className="flex items-center justify-center min-h-[60vh] md:min-h-screen px-4">
+        <p className="text-sm md:text-base text-muted-foreground">Loading question...</p>
       </div>
     );
   }
