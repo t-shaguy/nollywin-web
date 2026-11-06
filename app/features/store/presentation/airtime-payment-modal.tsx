@@ -3,10 +3,11 @@ import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Smartphone, ArrowRight, CheckCircle, Info } from "lucide-react";
 import { startAirtimeSubscription } from "@/lib/api/airtime";
 import { normalizeNigerianPhone, validateNigerianPhone } from "@/lib/airtime/phone-utils";
-import { AIRTIME_NETWORKS } from "@/lib/airtime/config";
+
+const PINK = "#F40289";
 
 interface AirtimePaymentModalProps {
   packageId: string; // UUID from packages API
@@ -82,11 +83,27 @@ export function AirtimePaymentModal({
       };
       sessionStorage.setItem("nollywin:airtime-pending", JSON.stringify(pendingPayment));
 
+      // Log redirect URL for debugging
+      if (process.env.NODE_ENV === "development") {
+        console.log("[Airtime Modal] Redirecting to:", response.redirectUrl);
+      }
+
       // Redirect to MTN secure page (use exact URL as returned, do not rewrite http to https)
       if (response.redirectUrl) {
-        // Call onSuccess before redirect
-        onSuccess();
-        window.location.assign(response.redirectUrl);
+        // Validate URL before redirecting
+        try {
+          const url = new URL(response.redirectUrl);
+          if (url.protocol === "http:" || url.protocol === "https:") {
+            // Call onSuccess before redirect
+            onSuccess();
+            window.location.assign(response.redirectUrl);
+          } else {
+            throw new Error("Invalid redirect URL received");
+          }
+        } catch (urlError) {
+          console.error("[Airtime Modal] Invalid URL:", response.redirectUrl, urlError);
+          throw new Error("Invalid payment URL received. Please try again or contact support.");
+        }
       } else {
         throw new Error("No redirect URL received from server");
       }
@@ -104,103 +121,142 @@ export function AirtimePaymentModal({
   };
 
   return (
-    <Modal open={true} onClose={submitting ? () => {} : handleClose} title="Pay with airtime">
-      <div className="space-y-4 sm:space-y-5">
-        <p className="text-xs sm:text-sm text-muted-foreground">
-          The amount is deducted from your MTN airtime balance.
-        </p>
-
-        {/* Summary Box */}
-        <div className="bg-secondary/30 rounded-lg p-3 sm:p-4 space-y-2">
-          <div className="flex justify-between gap-3">
-            <span className="text-xs text-muted-foreground">Plan</span>
-            <span className="font-medium text-xs">{packageName}</span>
+    <Modal open={true} onClose={submitting ? () => {} : handleClose} title="">
+      <div className="space-y-5">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <div 
+            className="w-16 h-16 rounded-full mx-auto flex items-center justify-center"
+            style={{ backgroundColor: `${PINK}15` }}
+          >
+            <Smartphone size={32} style={{ color: PINK }} />
           </div>
-          <div className="h-px bg-border my-2" />
-          <div className="flex justify-between gap-3">
-            <span className="font-bold text-sm">Price</span>
-            <span className="font-bold text-base text-primary">
+          <h2 className="text-xl font-bold">Pay with MTN Airtime</h2>
+          <p className="text-sm text-muted-foreground">
+            Amount will be deducted from your airtime balance
+          </p>
+        </div>
+
+        {/* Plan Summary Card */}
+        <div className="border border-border rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Subscription Plan</span>
+            <span className="font-semibold text-sm">{packageName}</span>
+          </div>
+          <div className="h-px bg-border" />
+          <div className="flex items-center justify-between">
+            <span className="text-base font-bold">Amount to Pay</span>
+            <span className="text-2xl font-bold" style={{ color: PINK }}>
               ₦{amount.toLocaleString()}
             </span>
           </div>
         </div>
 
-        {/* Network Selection */}
-        <div>
-          <label className="block text-xs sm:text-sm font-medium mb-2">Network</label>
-          <div className="flex gap-2">
-            {AIRTIME_NETWORKS.map((network) => (
-              <button
-                key={network}
-                disabled
-                className="flex-1 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border-2 border-primary bg-primary/10 text-primary cursor-default"
-              >
-                {network}
-              </button>
-            ))}
-            <button
-              disabled
-              className="flex-1 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border border-border bg-secondary/30 text-muted-foreground cursor-not-allowed"
-            >
-              Others (Coming soon)
-            </button>
+        {/* Network Badge */}
+        <div className="flex items-center justify-center">
+          <div 
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border-2"
+            style={{ borderColor: PINK, backgroundColor: `${PINK}10` }}
+          >
+            <div 
+              className="w-2 h-2 rounded-full"
+              style={{ backgroundColor: PINK }}
+            />
+            <span className="font-semibold text-sm" style={{ color: PINK }}>
+              MTN Network Only
+            </span>
           </div>
         </div>
 
         {/* Phone Number Input */}
-        <div>
-          <label htmlFor="airtime-phone" className="block text-xs sm:text-sm font-medium mb-2">
-            MTN phone number
+        <div className="space-y-2">
+          <label htmlFor="airtime-phone" className="block text-sm font-semibold">
+            Enter Your MTN Number
           </label>
-          <Input
-            id="airtime-phone"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            placeholder="0803 653 3888"
-            value={phone}
-            onChange={(e) => handlePhoneChange(e.target.value)}
-            onBlur={handlePhoneBlur}
-            disabled={submitting}
-            className={phoneError ? "border-red-500" : ""}
-          />
+          <div className="relative">
+            <Input
+              id="airtime-phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="e.g., 0803 123 4567"
+              value={phone}
+              onChange={(e) => handlePhoneChange(e.target.value)}
+              onBlur={handlePhoneBlur}
+              disabled={submitting}
+              className={`pl-10 h-12 text-base ${phoneError ? "border-red-500" : ""}`}
+            />
+            <Smartphone 
+              size={18} 
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+          </div>
           {phoneError && (
-            <p className="text-xs text-red-600 mt-1.5">{phoneError}</p>
+            <div className="flex items-start gap-2">
+              <AlertCircle size={14} className="text-red-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-red-600">{phoneError}</p>
+            </div>
           )}
-          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1.5">
-            Use the MTN number you want to pay with.
+          <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+            <Info size={12} className="shrink-0 mt-0.5" />
+            <span>This must be the MTN line you want to use for payment</span>
           </p>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-2">
-            <AlertCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-red-700 dark:text-red-400">{error}</p>
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-2.5">
+            <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-red-700 dark:text-red-400">Payment Error</p>
+              <p className="text-xs text-red-600 dark:text-red-500 mt-0.5">{error}</p>
+            </div>
           </div>
         )}
 
-        {/* Note */}
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-          <p className="text-xs text-blue-700 dark:text-blue-400">
-            You&apos;ll be taken to MTN&apos;s secure page to confirm. Enter your MTN number again and make sure the {packageName} pack (₦{amount.toLocaleString()}) is selected. Your plan starts after the payment is confirmed.
-          </p>
+        {/* Info Box */}
+        <div 
+          className="rounded-lg p-4 space-y-2 border"
+          style={{ 
+            backgroundColor: `${PINK}08`,
+            borderColor: `${PINK}30`
+          }}
+        >
+          <div className="flex items-start gap-2">
+            <CheckCircle size={16} style={{ color: PINK }} className="shrink-0 mt-0.5" />
+            <p className="text-xs" style={{ color: PINK }}>
+              You&apos;ll be redirected to MTN&apos;s secure payment page
+            </p>
+          </div>
+          <div className="flex items-start gap-2">
+            <CheckCircle size={16} style={{ color: PINK }} className="shrink-0 mt-0.5" />
+            <p className="text-xs" style={{ color: PINK }}>
+              Confirm the {packageName} plan for ₦{amount.toLocaleString()}
+            </p>
+          </div>
+          <div className="flex items-start gap-2">
+            <CheckCircle size={16} style={{ color: PINK }} className="shrink-0 mt-0.5" />
+            <p className="text-xs" style={{ color: PINK }}>
+              Your subscription activates instantly after payment
+            </p>
+          </div>
         </div>
 
         {/* Buttons */}
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        <div className="flex gap-3 pt-2">
           <Button
             variant="outline"
             onClick={handleClose}
             disabled={submitting}
-            className="flex-1 justify-center min-h-[44px]"
+            className="flex-1 h-12 text-sm"
           >
             Cancel
           </Button>
           <Button
             onClick={handleContinue}
-            disabled={submitting || !phone.trim()}
-            className="flex-1 justify-center min-h-[44px]"
+            disabled={submitting || !phone.trim() || !!phoneError}
+            className="flex-1 h-12 text-sm font-semibold"
+            style={{ backgroundColor: PINK }}
           >
             {submitting ? (
               <span className="flex items-center gap-2">
@@ -208,7 +264,10 @@ export function AirtimePaymentModal({
                 Processing...
               </span>
             ) : (
-              "Continue"
+              <span className="flex items-center gap-2">
+                Continue to Payment
+                <ArrowRight size={18} />
+              </span>
             )}
           </Button>
         </div>
