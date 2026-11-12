@@ -52,7 +52,7 @@ export function DashboardStats({
       iconBg: "bg-amber-500/15",
       iconColor: "text-amber-500",
     },
-    { icon: Star, label: "Total Points", value: totalPoints.toLocaleString(), iconBg: "bg-primary/15", iconColor: "text-primary" },
+    { icon: Star, label: "Total Monthly Points", value: totalPoints.toLocaleString(), iconBg: "bg-primary/15", iconColor: "text-primary" },
     { icon: Coins, label: "Tokens Left", value: tokensDisplay, iconBg: "bg-destructive/15", iconColor: "text-destructive" },
   ];
 

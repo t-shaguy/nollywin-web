@@ -1,11 +1,15 @@
 "use client";
-import { useState, useEffect } from "react";
-import { CheckCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { CheckCircle, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminCard } from "@/components/admin/admin-card";
 import { DetailList } from "@/components/admin/value-renderer";
+import { DownloadMenu } from "@/components/admin/download-menu";
+import { PrintView } from "@/components/admin/print-view";
+import { ApprovalsPreviewDrawer } from "@/components/admin/approvals-preview-drawer";
+import { getReportConfig } from "@/lib/export/report-config";
 import { useAdminAuthStore } from "@/store/admin-auth-store";
 import {
   getChangeRequests,
@@ -21,6 +25,7 @@ export default function ChangeRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("PENDING");
+  const [showPrintView, setShowPrintView] = useState(false);
   const adminSession = useAdminAuthStore((s) => s.session);
 
   // Set page title
@@ -36,6 +41,10 @@ export default function ChangeRequestsPage() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  
+  // Preview drawer state
+  const [showPreviewDrawer, setShowPreviewDrawer] = useState(false);
+  const requestRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Role-based permissions: only CHECKER (AUTH) can approve/reject
   const isChecker = adminSession?.role === 'AUTH';
@@ -224,8 +233,28 @@ export default function ChangeRequestsPage() {
     }
   };
 
+  // Handle request click from preview drawer
+  const handlePreviewRequestClick = (request: ChangeRequest) => {
+    setShowPreviewDrawer(false);
+    
+    // Scroll to the request card
+    const element = requestRefs.current.get(request.id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Highlight effect
+      element.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+      setTimeout(() => {
+        element.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+      }, 2000);
+    }
+  };
+
+  // Get only pending requests for preview
+  const pendingRequests = changeRequests.filter(r => r.status === 'PENDING');
+
   // Parse JSON request body safely (for DetailList)
-  const parseRequestBody = (requestBody: string): Record<string, unknown> | string => {
+  const parseRequestBody = (requestBody: string | null): Record<string, unknown> | string => {
+    if (!requestBody) return {};
     try {
       return JSON.parse(requestBody);
     } catch {
@@ -314,9 +343,34 @@ export default function ChangeRequestsPage() {
     );
   }
 
+  // Print view
+  if (showPrintView) {
+    const config = getReportConfig("change-requests");
+    if (!config) return null;
+
+    return (
+      <PrintView
+        title="Change Requests"
+        filters={{
+          "Status": statusFilter === "ALL" ? "All" : statusFilter,
+        }}
+        columns={config.columns}
+        data={changeRequests}
+        onClose={() => setShowPrintView(false)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4 sm:space-y-5">
-      <AdminPageHeader title="Approvals" description="Review and approve change requests" />
+      <div className="flex items-start justify-between gap-4">
+        <AdminPageHeader title="Approvals" description="Review and approve change requests" />
+        <DownloadMenu
+          reportKey="change-requests"
+          filters={{ status: statusFilter === "ALL" ? undefined : statusFilter }}
+          onPrintClick={() => setShowPrintView(true)}
+        />
+      </div>
 
       {/* Status Filter */}
       <div className="flex flex-wrap gap-2">
@@ -365,7 +419,18 @@ export default function ChangeRequestsPage() {
             const parsedBody = parseRequestBody(request.requestBody);
             
             return (
-              <AdminCard key={request.id}>
+              <div
+                key={request.id}
+                ref={(el) => {
+                  if (el) {
+                    requestRefs.current.set(request.id, el);
+                  } else {
+                    requestRefs.current.delete(request.id);
+                  }
+                }}
+                className="transition-all duration-300 rounded-xl"
+              >
+                <AdminCard>
                 {/* Detailed Information List */}
                 <div className="space-y-3">
                   {/* Item */}
@@ -497,10 +562,32 @@ export default function ChangeRequestsPage() {
                   </div>
                 )}
               </AdminCard>
+              </div>
             );
           })}
         </div>
       )}
+
+      {/* Floating Preview Button - Only show when there are pending requests */}
+      {pendingRequests.length > 0 && (
+        <button
+          onClick={() => setShowPreviewDrawer(true)}
+          className="fixed bottom-6 right-6 z-30 bg-gradient-to-r from-[#F40289] to-[#FC0D28] text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+          aria-label="Open approvals preview"
+        >
+          <List size={20} />
+          <span className="text-sm font-medium pr-1">{pendingRequests.length}</span>
+        </button>
+      )}
+
+      {/* Preview Drawer */}
+      <ApprovalsPreviewDrawer
+        open={showPreviewDrawer}
+        onClose={() => setShowPreviewDrawer(false)}
+        requests={pendingRequests}
+        onRequestClick={handlePreviewRequestClick}
+        loading={loading}
+      />
 
       {/* Approval Modal (for financial requests) */}
       <Modal

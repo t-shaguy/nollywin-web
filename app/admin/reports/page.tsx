@@ -4,6 +4,9 @@ import { FileBarChart2, Calendar, Filter, Gift, CreditCard, Smartphone, Users } 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { DownloadMenu } from "@/components/admin/download-menu";
+import { PrintView } from "@/components/admin/print-view";
+import { getReportConfig } from "@/lib/export/report-config";
 import {
   getSubscriptionReportSummary,
   getSubscriptionReportList,
@@ -17,6 +20,7 @@ type ReportTab = "subscriptions" | "raffles" | "income";
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<ReportTab>("subscriptions");
+  const [showPrintView, setShowPrintView] = useState(false);
   
   // Subscription report state
   const [summary, setSummary] = useState<SubscriptionReportSummary | null>(null);
@@ -121,10 +125,12 @@ export default function ReportsPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <AdminPageHeader 
-          title="Reports" 
-          description="View platform analytics and reports" 
-        />
+        <div className="flex items-start justify-between gap-4">
+          <AdminPageHeader 
+            title="Reports" 
+            description="View platform analytics and reports" 
+          />
+        </div>
         <div className="bg-card border border-border rounded p-12 flex items-center justify-center">
           <div className="text-muted-foreground text-sm">Loading reports...</div>
         </div>
@@ -132,12 +138,44 @@ export default function ReportsPage() {
     );
   }
 
+  // Print view for raffles
+  if (showPrintView && activeTab === "raffles" && raffleData) {
+    const config = getReportConfig("raffles");
+    if (!config) return null;
+
+    return (
+      <PrintView
+        title="Draws Report"
+        filters={{
+          "From": raffleFilters.from || "Any",
+          "To": raffleFilters.to || "Any",
+          "Status": raffleFilters.status || "All",
+          "Draw ID": raffleFilters.raffleId || "Any",
+          "Email": raffleFilters.email || "Any",
+          "Phone": raffleFilters.phone || "Any",
+        }}
+        columns={config.columns}
+        data={raffleData.entries as Record<string, unknown>[]}
+        onClose={() => setShowPrintView(false)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <AdminPageHeader 
-        title="Reports" 
-        description="View platform analytics and reports" 
-      />
+      <div className="flex items-start justify-between gap-4">
+        <AdminPageHeader 
+          title="Reports" 
+          description="View platform analytics and reports" 
+        />
+        {activeTab === "raffles" && raffleData && raffleData.entries.length > 0 && (
+          <DownloadMenu
+            reportKey="raffles"
+            filters={raffleFilters}
+            onPrintClick={() => setShowPrintView(true)}
+          />
+        )}
+      </div>
 
       {/* Tab Navigation */}
       <div className="flex gap-1 border-b border-border">
@@ -159,7 +197,7 @@ export default function ReportsPage() {
               : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
           }`}
         >
-          Raffles
+          Draws
         </button>
         <button
           onClick={() => setActiveTab("income")}
@@ -384,12 +422,12 @@ export default function ReportsPage() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium mb-1.5 block">Raffle ID</label>
+                <label className="text-xs font-medium mb-1.5 block">Draw ID</label>
                 <input
                   type="text"
                   value={raffleFilters.raffleId}
                   onChange={(e) => setRaffleFilters({ ...raffleFilters, raffleId: e.target.value })}
-                  placeholder="Enter raffle ID"
+                  placeholder="Enter draw ID"
                   className="w-full px-3 h-8 text-[13px] rounded border border-border bg-background"
                 />
               </div>
@@ -438,7 +476,7 @@ export default function ReportsPage() {
           {!raffleLoading && raffleData && raffleData.entries && raffleData.entries.length > 0 && (
             <div className="bg-card border border-border rounded p-4">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold">Raffle Draws</h2>
+                <h2 className="text-sm font-semibold">Draws</h2>
                 <span className="text-xs text-muted-foreground">
                   {raffleData.total} total entries
                 </span>
@@ -447,7 +485,7 @@ export default function ReportsPage() {
                 <table className="w-full text-[13px]">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Raffle Code</th>
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Draw Code</th>
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">Prize Name</th>
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">Start Date</th>
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">End Date</th>
@@ -508,7 +546,7 @@ export default function ReportsPage() {
           {!raffleLoading && raffleData && raffleData.entries.length === 0 && (
             <div className="bg-card border border-border rounded p-12 text-center">
               <Gift size={32} className="mx-auto text-muted-foreground mb-3" />
-              <p className="text-muted-foreground text-sm">No raffle draws found matching your filters.</p>
+              <p className="text-muted-foreground text-sm">No draws found matching your filters.</p>
             </div>
           )}
         </>

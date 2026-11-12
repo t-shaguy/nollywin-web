@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { STAGES } from "../data/mock-questions";
 import { getGameSettings, type GameSettings } from "@/lib/api/game";
 import { usePlayerDashboard } from "@/hooks/use-player-dashboard";
 
@@ -68,7 +67,7 @@ export function GameDetails({ tokenCostPerPlay, onStartGame, onBack }: GameDetai
           <div className="h-px bg-border" />
           <div className="flex items-center justify-between gap-3">
             <span className="text-foreground">Balance after play</span>
-            <span className="font-bold text-[#F40289] whitespace-nowrap">
+            <span className="font-bold text-[var(--color-brand)] whitespace-nowrap">
               {balanceAfterPlay === null ? 'Unlimited' : `${balanceAfterPlay} tokens`}
             </span>
           </div>
@@ -80,26 +79,8 @@ export function GameDetails({ tokenCostPerPlay, onStartGame, onBack }: GameDetai
         <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
           GAME STRUCTURE
         </h2>
-        <div className="space-y-2.5 md:space-y-3">
-          {STAGES.map((stage) => (
-            <div key={stage.stage} className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 md:gap-3 flex-1 min-w-0">
-                <div className={`h-2.5 w-2.5 rounded-full ${stage.color} shrink-0`} />
-                <div className="text-xs sm:text-sm min-w-0">
-                  <span className="font-medium">{stage.title}</span>
-                  <span className="text-muted-foreground ml-1.5 sm:ml-2 whitespace-nowrap">
-                    {stage.difficulty} · {secondsPerQuestion}s
-                  </span>
-                </div>
-              </div>
-              <span className="text-xs sm:text-sm font-medium text-[#F40289] whitespace-nowrap flex-shrink-0">
-                +{pointsPerCorrect} pts
-              </span>
-            </div>
-          ))}
-        </div>
         
-        <div className="pt-2 space-y-1 text-xs sm:text-sm text-muted-foreground">
+        <div className="space-y-1 text-xs sm:text-sm text-muted-foreground">
           <p>Correct answer → advance to next stage</p>
           <p>Wrong answer or timeout → attempt ends</p>
         </div>
@@ -111,7 +92,7 @@ export function GameDetails({ tokenCostPerPlay, onStartGame, onBack }: GameDetai
         disabled={!canPlay}
         className={`w-full justify-center text-sm sm:text-base font-medium py-3 sm:py-3.5 min-h-[48px] ${
           canPlay
-            ? 'bg-gradient-to-r from-[#F40289] to-[#FC0D28] text-white hover:opacity-90'
+            ? 'bg-brand-gradient text-white hover:opacity-90'
             : 'bg-secondary/50 text-muted-foreground cursor-not-allowed'
         }`}
       >
@@ -120,7 +101,7 @@ export function GameDetails({ tokenCostPerPlay, onStartGame, onBack }: GameDetai
 
       {!canPlay && (
         <p className="text-destructive text-xs sm:text-sm text-center break-words px-4">
-          You need an active subscription with tokens to play. Visit the Store to get a plan.
+          You need an active subscription with tokens to play. Visit Packages to get a plan.
         </p>
       )}
     </div>

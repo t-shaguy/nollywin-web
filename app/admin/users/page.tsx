@@ -6,11 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getUsers, type AdminUserListItem } from "@/lib/api/admin";
 import { Icon } from "@/components/admin/icon";
+import { DownloadMenu } from "@/components/admin/download-menu";
+import { PrintView } from "@/components/admin/print-view";
+import { getReportConfig } from "@/lib/export/report-config";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<AdminUserListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showPrintView, setShowPrintView] = useState(false);
   
   // Filter state
   const [searchTerm, setSearchTerm] = useState("");
@@ -109,12 +113,39 @@ export default function UsersPage() {
     );
   }
 
+  // Print view
+  if (showPrintView) {
+    const config = getReportConfig("users");
+    if (!config) return null;
+
+    return (
+      <PrintView
+        title="Users"
+        filters={{
+          "Plan": planFilter === "all" ? "All" : planFilter,
+          "Status": statusFilter === "all" ? "All" : statusFilter,
+          "Search": searchTerm || "None",
+        }}
+        columns={config.columns}
+        data={filteredUsers}
+        onClose={() => setShowPrintView(false)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-[20px] font-semibold text-foreground mb-1">Users</h1>
-        <p className="text-[13px] text-muted-foreground">Manage user accounts and subscriptions</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[20px] font-semibold text-foreground mb-1">Users</h1>
+          <p className="text-[13px] text-muted-foreground">Manage user accounts and subscriptions</p>
+        </div>
+        <DownloadMenu
+          reportKey="users"
+          filters={{}}
+          onPrintClick={() => setShowPrintView(true)}
+        />
       </div>
 
       {/* Stat Cards */}

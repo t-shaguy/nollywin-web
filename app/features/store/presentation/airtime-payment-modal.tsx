@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input";
 import { AlertCircle, Smartphone, ArrowRight, CheckCircle, Info } from "lucide-react";
 import { startAirtimeSubscription } from "@/lib/api/airtime";
 import { normalizeNigerianPhone, validateNigerianPhone } from "@/lib/airtime/phone-utils";
-
-const PINK = "#F40289";
+import { usePlayerDashboard } from "@/hooks/use-player-dashboard";
 
 interface AirtimePaymentModalProps {
   packageId: string; // UUID from packages API
@@ -30,6 +29,9 @@ export function AirtimePaymentModal({
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Get current dashboard for baseline
+  const { data: dashboard } = usePlayerDashboard();
 
   const resetState = () => {
     setPhoneError(null);
@@ -74,12 +76,17 @@ export function AirtimePaymentModal({
         msisdn: normalizedPhone,
       });
 
-      // Store pending payment in sessionStorage (including subTransId and tid from upstream)
+      // Store pending payment in sessionStorage with baseline
       const pendingPayment = {
         transactionId: response.transactionId,
         tid: response.tid,
         packageName,
         startedAt: new Date().toISOString(),
+        baseline: {
+          expiresAt: dashboard?.subscription?.expiresAt || null,
+          tokensLeft: dashboard?.tokensLeft ?? null,
+          packageName: dashboard?.subscription?.packageName || null,
+        },
       };
       sessionStorage.setItem("nollywin:airtime-pending", JSON.stringify(pendingPayment));
 
@@ -126,10 +133,9 @@ export function AirtimePaymentModal({
         {/* Header */}
         <div className="text-center space-y-2">
           <div 
-            className="w-16 h-16 rounded-full mx-auto flex items-center justify-center"
-            style={{ backgroundColor: `${PINK}15` }}
+            className="w-16 h-16 rounded-full mx-auto flex items-center justify-center bg-[var(--color-brand-soft)]"
           >
-            <Smartphone size={32} style={{ color: PINK }} />
+            <Smartphone size={32} className="text-[var(--color-brand)]" />
           </div>
           <h2 className="text-xl font-bold">Pay with MTN Airtime</h2>
           <p className="text-sm text-muted-foreground">
@@ -143,10 +149,18 @@ export function AirtimePaymentModal({
             <span className="text-sm text-muted-foreground">Subscription Plan</span>
             <span className="font-semibold text-sm">{packageName}</span>
           </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Entries</span>
+            <span className="font-medium text-sm">
+              {packageName.toLowerCase() === "daily" && "1 entry a day"}
+              {packageName.toLowerCase() === "weekly" && "3 entries a week"}
+              {packageName.toLowerCase() === "monthly" && "7 entries a month"}
+            </span>
+          </div>
           <div className="h-px bg-border" />
           <div className="flex items-center justify-between">
             <span className="text-base font-bold">Amount to Pay</span>
-            <span className="text-2xl font-bold" style={{ color: PINK }}>
+            <span className="text-2xl font-bold text-[var(--color-brand)]">
               ₦{amount.toLocaleString()}
             </span>
           </div>
@@ -155,14 +169,12 @@ export function AirtimePaymentModal({
         {/* Network Badge */}
         <div className="flex items-center justify-center">
           <div 
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border-2"
-            style={{ borderColor: PINK, backgroundColor: `${PINK}10` }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 border-[var(--color-brand-border)] bg-[var(--color-brand-soft)]"
           >
             <div 
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: PINK }}
+              className="w-2 h-2 rounded-full bg-[var(--color-brand)]"
             />
-            <span className="font-semibold text-sm" style={{ color: PINK }}>
+            <span className="font-semibold text-sm text-[var(--color-brand)]">
               MTN Network Only
             </span>
           </div>
@@ -216,27 +228,23 @@ export function AirtimePaymentModal({
 
         {/* Info Box */}
         <div 
-          className="rounded-lg p-4 space-y-2 border"
-          style={{ 
-            backgroundColor: `${PINK}08`,
-            borderColor: `${PINK}30`
-          }}
+          className="rounded-lg p-4 space-y-2 border bg-[var(--color-brand-soft)] border-[var(--color-brand-border)]"
         >
           <div className="flex items-start gap-2">
-            <CheckCircle size={16} style={{ color: PINK }} className="shrink-0 mt-0.5" />
-            <p className="text-xs" style={{ color: PINK }}>
+            <CheckCircle size={16} className="text-[var(--color-brand)] shrink-0 mt-0.5" />
+            <p className="text-xs text-[var(--color-brand)]">
               You&apos;ll be redirected to MTN&apos;s secure payment page
             </p>
           </div>
           <div className="flex items-start gap-2">
-            <CheckCircle size={16} style={{ color: PINK }} className="shrink-0 mt-0.5" />
-            <p className="text-xs" style={{ color: PINK }}>
+            <CheckCircle size={16} className="text-[var(--color-brand)] shrink-0 mt-0.5" />
+            <p className="text-xs text-[var(--color-brand)]">
               Confirm the {packageName} plan for ₦{amount.toLocaleString()}
             </p>
           </div>
           <div className="flex items-start gap-2">
-            <CheckCircle size={16} style={{ color: PINK }} className="shrink-0 mt-0.5" />
-            <p className="text-xs" style={{ color: PINK }}>
+            <CheckCircle size={16} className="text-[var(--color-brand)] shrink-0 mt-0.5" />
+            <p className="text-xs text-[var(--color-brand)]">
               Your subscription activates instantly after payment
             </p>
           </div>
@@ -255,8 +263,7 @@ export function AirtimePaymentModal({
           <Button
             onClick={handleContinue}
             disabled={submitting || !phone.trim() || !!phoneError}
-            className="flex-1 h-12 text-sm font-semibold"
-            style={{ backgroundColor: PINK }}
+            className="flex-1 h-12 text-sm font-semibold bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)]"
           >
             {submitting ? (
               <span className="flex items-center gap-2">

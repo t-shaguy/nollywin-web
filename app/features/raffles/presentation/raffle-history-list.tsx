@@ -37,7 +37,7 @@ export function RaffleHistoryList() {
   if (history.length === 0) {
     return (
       <div className="bg-card border border-border rounded-2xl p-5 md:p-6 text-center">
-        <p className="text-xs sm:text-sm text-muted-foreground">No past draws yet</p>
+        <p className="text-xs sm:text-sm text-muted-foreground">No draw history yet</p>
       </div>
     );
   }
@@ -88,7 +88,6 @@ export function RaffleHistoryList() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-xs sm:text-sm truncate">{entry.prizeName}</p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{entry.raffleCode}</p>
                 </div>
               </div>
 

@@ -22,6 +22,13 @@ export const AIRTIME_API_URL =
 /**
  * Plan mapping: our package name → hello-spin plan config
  * Keys match package names from GET /api/v1/subscriptions/packages (case-insensitive)
+ * 
+ * Provider data (confirmed):
+ * - Daily: planId 57, amount "100.00", 1 entry a day
+ * - Weekly: planId 58, amount "300.00" (provider bills 300), 3 entries a week
+ * - Monthly: planId 59, amount "500.00" (provider bills 500), 7 entries a month
+ * 
+ * Note: Provider ignores the amount we send and bills its own price per planId
  */
 export const AIRTIME_PLANS: Record<string, AirtimePlanConfig> = {
   daily: {
@@ -34,28 +41,33 @@ export const AIRTIME_PLANS: Record<string, AirtimePlanConfig> = {
     planId: 58,
     planDesc: "WEEKLY ONE TIME",
     duration: "7",
-    amount: "300.00", // UNCONFIRMED: MTN checkout shows ₦200, needs verification
+    amount: "300.00", // Provider bills 300 (3 entries a week)
   },
   monthly: {
     planId: 59,
     planDesc: "MONTHLY ONE TIME",
     duration: "30",
-    amount: "500.00", // Provider bills 500.00 regardless of amount sent (confirmed by test)
+    amount: "500.00", // Provider bills 500 (7 entries a month)
   },
 };
 
 /**
  * Per-plan feature flags
  * Set NEXT_PUBLIC_AIRTIME_{PLAN}_ENABLED in .env to control availability
+ * 
+ * Current status (provider checkout page availability):
+ * - Daily: Working (planId 57, /508/ checkout URL)
+ * - Weekly: BROKEN at provider (/509/ returns "page not found") - disable until fixed
+ * - Monthly: BROKEN at provider (/510/ returns "page not found") - disable until fixed
  */
 export const AIRTIME_DAILY_ENABLED = 
   process.env.NEXT_PUBLIC_AIRTIME_DAILY_ENABLED !== "false"; // Default true
 
 export const AIRTIME_WEEKLY_ENABLED = 
-  process.env.NEXT_PUBLIC_AIRTIME_WEEKLY_ENABLED === "true"; // Default false (amount unconfirmed)
+  process.env.NEXT_PUBLIC_AIRTIME_WEEKLY_ENABLED === "true"; // Default false (provider checkout broken)
 
 export const AIRTIME_MONTHLY_ENABLED = 
-  process.env.NEXT_PUBLIC_AIRTIME_MONTHLY_ENABLED !== "false"; // Default true
+  process.env.NEXT_PUBLIC_AIRTIME_MONTHLY_ENABLED === "true"; // Default false (provider checkout broken)
 
 /**
  * Supported networks (only MTN is documented)

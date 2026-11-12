@@ -4,6 +4,9 @@ import { useForm } from "react-hook-form";
 import { Send, Bell, CheckCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { DownloadMenu } from "@/components/admin/download-menu";
+import { PrintView } from "@/components/admin/print-view";
+import { getReportConfig } from "@/lib/export/report-config";
 import {
   broadcastNotification,
   sendNotification,
@@ -30,6 +33,7 @@ export default function NotificationsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showPrintView, setShowPrintView] = useState(false);
 
   // Sent notifications state
   const [sentNotifications, setSentNotifications] = useState<Record<string, unknown>[]>([]);
@@ -106,11 +110,40 @@ export default function NotificationsPage() {
     }
   };
 
+  // Print view for sent notifications
+  if (showPrintView && activeTab === "sent" && sentNotifications.length > 0) {
+    const config = getReportConfig("notifications");
+    if (!config) return null;
+
+    return (
+      <PrintView
+        title="Sent Notifications"
+        filters={{
+          "Type": sentFilters.type || "All",
+          "From": sentFilters.startDate || "Any",
+          "To": sentFilters.endDate || "Any",
+        }}
+        columns={config.columns}
+        data={sentNotifications}
+        onClose={() => setShowPrintView(false)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold">Notifications</h1>
-        <p className="text-muted-foreground mt-1 text-[13px]">Broadcast or send targeted notifications to users</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold">Notifications</h1>
+          <p className="text-muted-foreground mt-1 text-[13px]">Broadcast or send targeted notifications to users</p>
+        </div>
+        {activeTab === "sent" && sentNotifications.length > 0 && (
+          <DownloadMenu
+            reportKey="notifications"
+            filters={sentFilters}
+            onPrintClick={() => setShowPrintView(true)}
+          />
+        )}
       </div>
 
       {/* Tab Navigation */}

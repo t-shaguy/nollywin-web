@@ -7,24 +7,26 @@ import { DrawCountdownModal } from "@/components/ui/draw-countdown-modal";
 import { getActiveDraws } from "@/lib/api/leaderboard";
 import { usePlayerDashboard } from "@/hooks/use-player-dashboard";
 import { type RaffleDraw } from "@/lib/api/leaderboard";
+import { SHOW_ACTIVE_DRAWS } from "@/lib/config/features";
 
 type TabType = "active" | "history";
 
 export default function RafflesPage() {
-  const [activeTab, setActiveTab] = useState<TabType>("active");
-  const [selectedDraw, setSelectedDraw] = useState<any | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>(SHOW_ACTIVE_DRAWS ? "active" : "history");
+  const [selectedDraw, setSelectedDraw] = useState<RaffleDraw | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [hasShownAutoModal, setHasShownAutoModal] = useState(false);
 
   // Fetch dashboard for subscription status and active raffles with points
   const { data: dashboard } = usePlayerDashboard();
 
-  // Fetch active draws
+  // Fetch active draws (only if feature enabled)
   const { data: draws = [], isLoading } = useQuery({
     queryKey: ["draws", "active"],
     queryFn: getActiveDraws,
     staleTime: 0, // Always fetch fresh data
     refetchOnMount: "always", // Refetch when component mounts
+    enabled: SHOW_ACTIVE_DRAWS, // Only fetch when feature is enabled
   });
 
   // TEMP DEV LOGGING: Check data sources (remove after verification)
@@ -60,9 +62,9 @@ export default function RafflesPage() {
   const hasActiveSubscription = dashboard?.hasActiveSubscription ?? false;
   const activeDraws = draws.filter((d) => d.status === "ACTIVE");
 
-  // Auto-show modal for nearest draw (once per session)
+  // Auto-show modal for nearest draw (once per session) - only if feature enabled
   useEffect(() => {
-    if (hasShownAutoModal || activeDraws.length === 0 || !dashboard?.activeRaffles) return;
+    if (!SHOW_ACTIVE_DRAWS || hasShownAutoModal || activeDraws.length === 0 || !dashboard?.activeRaffles) return;
 
     try {
       const sessionKey = "nollywin-draw-modal-shown";
@@ -83,12 +85,19 @@ export default function RafflesPage() {
         // Get user points for this draw from dashboard (verified source)
         const raffleData = dashboard.activeRaffles.find(r => r.id === nearest.id);
         
-        setSelectedDraw({
+        // Prepare draw with points
+        const drawWithPoints: RaffleDraw = {
           ...nearest,
           myPoints: raffleData?.myPoints ?? nearest.myPoints ?? 0,
-        });
-        setShowModal(true);
-        setHasShownAutoModal(true);
+        };
+        
+        // Use setTimeout to avoid cascading renders
+        setTimeout(() => {
+          setSelectedDraw(drawWithPoints);
+          setShowModal(true);
+          setHasShownAutoModal(true);
+        }, 0);
+        
         sessionStorage.setItem(sessionKey, "true");
       }
     } catch (err) {
@@ -115,36 +124,38 @@ export default function RafflesPage() {
   return (
     <div className="space-y-5 md:space-y-6">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold">Draws & Rewards</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">Draws</h1>
         <p className="text-muted-foreground text-xs sm:text-sm mt-1">Score points in games to win prizes in our draws.</p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-border overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-        <button
-          onClick={() => setActiveTab("active")}
-          className={`px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap min-h-[44px] ${
-            activeTab === "active"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Active Draws
-        </button>
-        <button
-          onClick={() => setActiveTab("history")}
-          className={`px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap min-h-[44px] ${
-            activeTab === "history"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          History
-        </button>
-      </div>
+      {/* Tabs - only show if feature enabled */}
+      {SHOW_ACTIVE_DRAWS && (
+        <div className="flex gap-2 border-b border-border overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+          <button
+            onClick={() => setActiveTab("active")}
+            className={`px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap min-h-[44px] ${
+              activeTab === "active"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Active Draws
+          </button>
+          <button
+            onClick={() => setActiveTab("history")}
+            className={`px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap min-h-[44px] ${
+              activeTab === "history"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            History
+          </button>
+        </div>
+      )}
 
       {/* Tab Content */}
-      {activeTab === "active" && (
+      {SHOW_ACTIVE_DRAWS && activeTab === "active" && (
         <>
           {isLoading ? (
             <div className="bg-card border border-border rounded-2xl p-8 md:p-10 text-center text-xs sm:text-sm text-muted-foreground">
@@ -172,6 +183,7 @@ export default function RafflesPage() {
                     draw={enrichedDraw}
                     onShowCountdown={() => handleDrawClick(enrichedDraw)}
                     hasActiveSubscription={hasActiveSubscription}
+                    tokensLeft={dashboard?.tokensLeft ?? null}
                   />
                 );
               })}
@@ -184,10 +196,18 @@ export default function RafflesPage() {
         </>
       )}
 
-      {activeTab === "history" && <RaffleHistoryList />}
+      {(!SHOW_ACTIVE_DRAWS || activeTab === "history") && (
+        <>
+          <div className="space-y-1">
+            <h2 className="text-base sm:text-lg font-bold">History</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">Draws you've taken part in</p>
+          </div>
+          <RaffleHistoryList />
+        </>
+      )}
 
-      {/* Countdown Modal */}
-      {selectedDraw && (
+      {/* Countdown Modal - only if feature enabled */}
+      {SHOW_ACTIVE_DRAWS && selectedDraw && selectedDraw.drawDate && selectedDraw.startsOn && selectedDraw.endsOn && (
         <DrawCountdownModal
           isOpen={showModal}
           onClose={handleCloseModal}
@@ -195,8 +215,7 @@ export default function RafflesPage() {
           prizeName={selectedDraw.prizeName}
           startsOn={selectedDraw.startsOn}
           endsOn={selectedDraw.endsOn}
-          myPoints={selectedDraw.myPoints}
-          raffleCode={selectedDraw.raffleCode}
+          myPoints={selectedDraw.myPoints ?? 0}
         />
       )}
     </div>

@@ -59,7 +59,7 @@ export function InsufficientTokensModal({
 
         <div className="space-y-3">
           <Button onClick={() => router.push("/store")} className="w-full justify-center">
-            Go to Store
+            Get a Package
           </Button>
           <Button variant="outline" onClick={onClose} className="w-full justify-center">
             Cancel

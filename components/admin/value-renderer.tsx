@@ -36,7 +36,7 @@ const KEY_LABELS: Record<string, string> = {
   tierName: "Tier",
   displayName: "Display name",
   authUserId: "User ID",
-  raffleCode: "Raffle code",
+  raffleCode: "Draw code",
   requestBody: "Request body",
   pathParams: "Path parameters",
   resultSummary: "Result summary",

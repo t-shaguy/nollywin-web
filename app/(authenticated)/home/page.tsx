@@ -4,6 +4,7 @@ import { DashboardHeader } from "../../features/home/presentation/dashboard-head
 import { DashboardStats } from "../../features/home/presentation/dashboard-stats";
 import { PerformanceChart } from "../../features/home/presentation/performance-chart";
 import { ActiveSubscriptionCard } from "../../features/home/presentation/active-subscription-card";
+import { HowToPlay } from "@/components/how-to-play";
 import { usePlayerDashboard } from "@/hooks/use-player-dashboard";
 import { usePerformanceTrend } from "../../features/home/hooks/use-performance-trend";
 import { PendingPaymentBanner } from "@/components/pending-payment-banner";
@@ -44,6 +45,9 @@ export default function HomePage() {
         subscription={dashboard?.subscription}
         isLoading={isLoading}
       />
+
+      {/* How to Play section */}
+      <HowToPlay hasActiveSubscription={hasActiveSubscription} />
 
       <DashboardStats
         monthlyRank={rank}

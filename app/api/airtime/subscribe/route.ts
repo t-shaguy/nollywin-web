@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
   // 7. Check if plan is enabled (per-plan flag)
   if (!isAirtimeAvailable(packageName)) {
     return NextResponse.json(
-      { message: "This payment method is not yet available for this plan" },
+      { message: "Airtime isn't available for this plan yet" },
       { status: 400 }
     );
   }

@@ -45,11 +45,11 @@ export interface MakerCheckerWriteResponse {
 export interface ChangeRequest {
   id: string; // UUID
   resourceType: string;
-  action: string; // "CREATE" | "UPDATE" | "DELETE"
+  action: string; // "CREATE" | "UPDATE" | "DELETE" | "REDEEM" | "FULFIL"
   httpMethod: string;
   resourcePath: string;
-  pathParams: Record<string, unknown> | null;
-  requestBody: string; // JSON-encoded string — must JSON.parse before display
+  pathParams: string | null; // JSON string, must JSON.parse defensively: "{\"id\":\"fa93...\"}"
+  requestBody: string | null; // JSON string, must JSON.parse defensively
   hasFile: boolean;
   proposedByEmail: string;
   proposedByRoles: string;
@@ -717,18 +717,80 @@ export async function closeRewardDraw(drawId: string): Promise<{ message: string
 /**
  * Get subscription report summary
  * GET /api/v1/admin/reports/subscriptions/summary
+ * 
+ * Optionally supports from/to date filters (Lagos time with +01:00 offset)
  */
-export async function getSubscriptionReportSummary(): Promise<SubscriptionReportSummary> {
-  const response = await adminApiClient<SubscriptionReportSummary>("/api/v1/admin/reports/subscriptions/summary");
+export async function getSubscriptionReportSummary(filters?: {
+  from?: string;
+  to?: string;
+}): Promise<SubscriptionReportSummary> {
+  let url = "/api/v1/admin/reports/subscriptions/summary";
+  
+  if (filters && (filters.from || filters.to)) {
+    const params = new URLSearchParams();
+    if (filters.from) params.append("from", encodeURIComponent(filters.from));
+    if (filters.to) params.append("to", encodeURIComponent(filters.to));
+    url += `?${params.toString()}`;
+  }
+  
+  const response = await adminApiClient<SubscriptionReportSummary>(url);
   // TODO(tartor): Remove this console.log once field names are confirmed
-  console.log("[getSubscriptionReportSummary] Raw response:", JSON.stringify(response));
+  if (process.env.NODE_ENV === 'development') {
+    console.log("[getSubscriptionReportSummary] Raw response:", JSON.stringify(response));
+  }
   return response;
 }
 
 /**
- * Get subscription report list (paginated)
- * GET /api/v1/admin/reports/subscriptions?page={page}&size={size}
+ * Get subscription entries report with filters (V39)
+ * GET /api/v1/admin/reports/subscriptions
  * 
+ * Filters:
+ * - from/to: Date or date-time with timezone offset (e.g., 2024-01-01T00:00:00+01:00)
+ * - search: Email or phone number (any format)
+ * - packageId: Package ID (from packages list)
+ * - status: ACTIVE, EXPIRED, etc. (values found in data)
+ * - page/size: Pagination
+ */
+export async function getSubscriptionReport(filters?: {
+  from?: string;
+  to?: string;
+  search?: string;
+  packageId?: string;
+  status?: string;
+  page?: number;
+  size?: number;
+}): Promise<{ page: number; entries: unknown[]; size: number; total: number }> {
+  const params = new URLSearchParams();
+  
+  if (filters?.from) params.append("from", encodeURIComponent(filters.from));
+  if (filters?.to) params.append("to", encodeURIComponent(filters.to));
+  if (filters?.search) params.append("search", filters.search);
+  if (filters?.packageId) params.append("packageId", filters.packageId);
+  if (filters?.status) params.append("status", filters.status);
+  
+  params.append("page", (filters?.page ?? 0).toString());
+  params.append("size", (filters?.size ?? 50).toString());
+  
+  const response = await adminApiClient<{ page: number; entries: unknown[]; size: number; total: number }>(
+    `/api/v1/admin/reports/subscriptions?${params.toString()}`
+  );
+  
+  // Defensive: handle both paginated and plain array responses
+  if (Array.isArray(response)) {
+    return {
+      page: 0,
+      entries: response,
+      size: response.length,
+      total: response.length,
+    };
+  }
+  
+  return response;
+}
+
+/**
+ * @deprecated Use getSubscriptionReport with filters instead
  * TODO(backend): This endpoint returns 404, handle gracefully in UI
  */
 export async function getSubscriptionReportList(page: number = 0, size: number = 50): Promise<AdminJson> {
@@ -969,12 +1031,21 @@ export async function getAuditLogSummary(): Promise<AuditLogSummary> {
 // ============================================================================
 
 /**
- * Get change requests, optionally filtered by status.
- * GET /api/v1/admin/change-requests?status=PENDING
+ * Get change requests, optionally filtered by status and resourceType.
+ * GET /api/v1/admin/change-requests?status=PENDING&resourceType=RaffleDraw
+ * 
+ * V39: Added resourceType filter for Draws and Winners
  */
-export async function getChangeRequests(status?: "PENDING" | "APPROVED" | "REJECTED"): Promise<ChangeRequest[]> {
-  const query = status ? `?status=${status}` : "";
-  return adminApiClient<ChangeRequest[]>(`/api/v1/admin/change-requests${query}`);
+export async function getChangeRequests(
+  status?: "PENDING" | "APPROVED" | "REJECTED",
+  resourceType?: string
+): Promise<ChangeRequest[]> {
+  const params = new URLSearchParams();
+  if (status) params.append("status", status);
+  if (resourceType) params.append("resourceType", resourceType);
+  
+  const query = params.toString();
+  return adminApiClient<ChangeRequest[]>(`/api/v1/admin/change-requests${query ? `?${query}` : ''}`);
 }
 
 /**
@@ -997,6 +1068,41 @@ export async function rejectChangeRequest(id: string, rejectionReason: string): 
     method: "POST",
     body: JSON.stringify({ reason: rejectionReason }),
   });
+}
+
+/**
+ * Get attached file for a change request (V39)
+ * GET /api/v1/admin/change-requests/{id}/file
+ * 
+ * Returns: Binary blob (image or PDF)
+ * Requires: hasFile: true on the change request
+ */
+export async function getChangeRequestFile(id: string): Promise<Blob> {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_CORE_API_BASE_URL || ''}/api/v1/admin/change-requests/${id}/file`, {
+    method: 'GET',
+    headers: {
+      'X-Client-Token': process.env.NEXT_PUBLIC_CLIENT_TOKEN || '',
+      'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('admin_access_token') : ''}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let errorMessage = `Failed to fetch file: ${response.status} ${response.statusText}`;
+    
+    try {
+      const errorJson = JSON.parse(errorText);
+      if (errorJson.message) {
+        errorMessage = errorJson.message;
+      }
+    } catch {
+      // Not JSON, use default message
+    }
+    
+    throw new Error(errorMessage);
+  }
+
+  return response.blob();
 }
 
 // ============================================================================
@@ -1079,6 +1185,7 @@ export async function enableSyncedClient(email: string): Promise<MakerCheckerWri
 
 /**
  * V37 Draw Types (REAL BACKEND - verified against Postman)
+ * V39: Added prizeType and cashAmount support
  */
 export interface CreateDrawRequest {
   // raffleCode is generated by backend, NOT sent in request
@@ -1088,11 +1195,15 @@ export interface CreateDrawRequest {
   endsOn: string; // YYYY-MM-DD
   drawDate: string; // YYYY-MM-DD (when winners are drawn, can equal endsOn)
   maxWinners: number;
+  prizeType?: "CASH" | "ITEM"; // V39: For single-prize draws (no tiers)
+  cashAmount?: number; // V39: Required when prizeType is CASH (Naira)
   prizeTiers?: {
     position: number; // Sort order
     tierName: string;
     prizeName: string;
     winnersCount: number;
+    prizeType?: "CASH" | "ITEM"; // V39: defaults to ITEM
+    cashAmount?: number; // V39: Required when prizeType is CASH (Naira)
   }[];
 }
 
@@ -1105,11 +1216,15 @@ export interface AdminDrawDetails {
   endsOn: string | null; // null for legacy draws
   drawDate: string | null; // null for legacy draws
   maxWinners: number;
+  prizeType?: "CASH" | "ITEM"; // V39: For single-prize draws, optional (legacy = ITEM)
+  cashAmount?: number | null; // V39: Cash amount in Naira
   prizeTiers: {
     position: number; // Sort order
     tierName: string;
     prizeName: string;
     winnersCount: number;
+    prizeType?: "CASH" | "ITEM"; // V39: optional (legacy = ITEM)
+    cashAmount?: number | null; // V39: Cash amount in Naira
   }[];
   status: "ACTIVE" | "CLOSED" | string; // Backend only uses ACTIVE/CLOSED, others are guessed
   entryCount: number;

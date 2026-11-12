@@ -53,7 +53,7 @@ export function TopBar({
             text-xs sm:text-sm font-medium px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors
             min-h-[44px] whitespace-nowrap flex-shrink-0
             ${statusLabel.variant === "subscribe" 
-              ? "bg-gradient-to-r from-[#F40289] to-[#FC0D28] text-white hover:opacity-90" 
+              ? "bg-brand-gradient text-white hover:opacity-90" 
               : statusLabel.variant === "pending"
               ? "bg-orange-500/10 text-orange-600 border border-orange-500/20"
               : statusLabel.variant === "enabled"
@@ -73,7 +73,7 @@ export function TopBar({
         >
           <Bell size={20} />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-[#F40289] text-white text-xs font-bold flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-[var(--color-brand)] text-white text-xs font-bold flex items-center justify-center">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}

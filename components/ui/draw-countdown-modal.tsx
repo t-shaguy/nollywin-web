@@ -13,7 +13,6 @@ interface DrawCountdownModalProps {
   startsOn: string;
   endsOn: string;
   myPoints: number;
-  raffleCode: string;
 }
 
 export function DrawCountdownModal({
@@ -24,7 +23,6 @@ export function DrawCountdownModal({
   startsOn,
   endsOn,
   myPoints,
-  raffleCode,
 }: DrawCountdownModalProps) {
   const [mounted, setMounted] = React.useState(false);
 
@@ -96,7 +94,6 @@ export function DrawCountdownModal({
           <div className="px-2">
             <p className="text-xs sm:text-sm text-muted-foreground mb-1">Draw Prize</p>
             <h3 className="text-base sm:text-lg font-bold break-words">{prizeName}</h3>
-            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">{raffleCode}</p>
           </div>
 
           {/* Draw date */}

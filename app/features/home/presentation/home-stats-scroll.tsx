@@ -16,7 +16,7 @@ export function HomeStatsScroll({
   monthlyRank: number;
 }) {
   const stats: HomeStat[] = [
-    { icon: Star, label: "Total Points", value: totalPoints.toLocaleString() },
+    { icon: Star, label: "Total Monthly Points", value: totalPoints.toLocaleString() },
     { icon: Coins, label: "Tokens Left", value: tokensLeft },
     { icon: TrendingUp, label: "Monthly Rank", value: `#${monthlyRank}` },
   ];

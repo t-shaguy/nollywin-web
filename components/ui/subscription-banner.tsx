@@ -37,7 +37,7 @@ export function SubscriptionRequiredBanner({
         </p>
         {showCta && (
           <Link href="/store" className="inline-block mt-4">
-            <Button>Go to Store</Button>
+            <Button>Get a Package</Button>
           </Link>
         )}
       </div>

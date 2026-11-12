@@ -60,7 +60,7 @@ export function ActiveRaffles({ dashboardDraws }: ActiveRafflesProps) {
   return (
     <div className="bg-card border border-border rounded-[16px] p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-[15px] font-bold">Active Raffles</h2>
+        <h2 className="text-[15px] font-bold">Active Draws</h2>
         <button
           onClick={() => router.push("/raffles")}
           className="text-[13px] text-primary font-medium hover:underline flex items-center gap-1"
@@ -87,10 +87,9 @@ export function ActiveRaffles({ dashboardDraws }: ActiveRafflesProps) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-[14px] font-semibold line-clamp-1">{draw.prizeName}</h3>
-                  <p className="text-[12px] text-muted-foreground mt-0.5">
-                    {draw.raffleCode}
-                    {dateRange && ` • ${dateRange}`}
-                  </p>
+                  {dateRange && (
+                    <p className="text-[12px] text-muted-foreground mt-0.5">{dateRange}</p>
+                  )}
                 </div>
               </div>
 

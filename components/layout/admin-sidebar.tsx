@@ -2,18 +2,18 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, BarChart3, Upload, CreditCard, Users, FileBarChart2, Trophy, ShieldCheck, Settings, Coins, Bell, FileText, X, RefreshCw } from "lucide-react";
+import { LogOut, BarChart3, Upload, CreditCard, Users, FileBarChart2, Trophy, ShieldCheck, Settings, Bell, FileText, X, RefreshCw, Award } from "lucide-react";
 import { useAdminAuthStore } from "@/store/admin-auth-store";
 
-const NAV_ITEMS = [
+const NAV_ITEMS: Array<{ icon: any; label: string; href: string; makerOnly?: boolean }> = [
   { icon: BarChart3, label: "Overview", href: "/admin/overview" },
   { icon: Upload, label: "Trivia Setup", href: "/admin/trivia-setup" },
   { icon: Settings, label: "Game Settings", href: "/admin/game-settings" },
   { icon: CreditCard, label: "Packages", href: "/admin/packages" },
-  { icon: Coins, label: "Token Rate", href: "/admin/token-rate" },
   { icon: Users, label: "Users", href: "/admin/users" },
   { icon: FileBarChart2, label: "Reports", href: "/admin/reports" },
   { icon: Trophy, label: "Rewards", href: "/admin/rewards" },
+  { icon: Award, label: "Winners", href: "/admin/winners", makerOnly: true },
   { icon: RefreshCw, label: "Client Sync", href: "/admin/client-sync" },
   { icon: ShieldCheck, label: "Approvals", href: "/admin/change-requests" },
   { icon: Bell, label: "Notifications", href: "/admin/notifications" },
@@ -44,9 +44,11 @@ export function AdminSidebar({ onClose }: { onClose?: () => void }) {
   };
   
   // For checkers, show only Approvals
+  // For makers/admins, show all items except makerOnly items for non-makers
+  // Note: AdminRole has "ADMIN" (maker) and "AUTH" (checker), no "MAKER" type
   const visibleNavItems = isChecker 
     ? NAV_ITEMS.filter(item => item.href === '/admin/change-requests')
-    : NAV_ITEMS;
+    : NAV_ITEMS.filter(item => !item.makerOnly || (session?.role && session.role === 'ADMIN'));
   
   // Logo link depends on role
   const logoHref = isChecker ? '/admin/change-requests' : '/admin/overview';

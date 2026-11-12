@@ -162,7 +162,7 @@ function PaymentCallbackContent() {
                     onClick={() => router.push("/store")} 
                     className="w-full justify-center"
                   >
-                    Back to Store
+                    Back to Packages
                   </Button>
                   <Button 
                     onClick={() => router.push("/home")} 

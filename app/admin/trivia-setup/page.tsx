@@ -10,19 +10,15 @@ import { AdminCard } from "@/components/admin/admin-card";
 import {
   getTriviaCategories,
   getTriviaStages,
-  getTriviaPrizes,
   createTriviaCategory,
   createTriviaStage,
-  createTriviaPrize,
   createTriviaQuestion,
   downloadTriviaQuestionsCsvTemplate,
   bulkUploadTriviaQuestions,
   type TriviaCategory,
   type TriviaStage,
-  type TriviaPrize,
   type CreateCategoryRequest,
   type CreateStageRequest,
-  type CreatePrizeRequest,
   type CreateQuestionRequest,
 } from "@/lib/api/admin";
 
@@ -36,12 +32,6 @@ interface StageFormData {
   sortOrder: number;
   active: boolean;
   difficultyLabel?: string;
-}
-
-interface PrizeFormData {
-  stageName: string;
-  period: "WEEKLY" | "MONTHLY";
-  description: string;
 }
 
 interface QuestionFormData {
@@ -58,14 +48,11 @@ interface QuestionFormData {
 export default function TriviaSetupPage() {
   const [categories, setCategories] = useState<TriviaCategory[]>([]);
   const [stages, setStages] = useState<TriviaStage[]>([]);
-  const [prizes, setPrizes] = useState<TriviaPrize[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [prizesError, setPrizesError] = useState<string | null>(null);
   
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showStageModal, setShowStageModal] = useState(false);
-  const [showPrizeModal, setShowPrizeModal] = useState(false);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -75,7 +62,6 @@ export default function TriviaSetupPage() {
 
   const { register: registerCat, handleSubmit: handleSubmitCat, reset: resetCat, formState: { errors: errorsCat } } = useForm<CategoryFormData>();
   const { register: registerStage, handleSubmit: handleSubmitStage, reset: resetStage, formState: { errors: errorsStage } } = useForm<StageFormData>();
-  const { register: registerPrize, handleSubmit: handleSubmitPrize, reset: resetPrize, formState: { errors: errorsPrize } } = useForm<PrizeFormData>();
   const { register: registerQuestion, handleSubmit: handleSubmitQuestion, reset: resetQuestion, formState: { errors: errorsQuestion } } = useForm<QuestionFormData>();
 
   useEffect(() => {
@@ -83,21 +69,14 @@ export default function TriviaSetupPage() {
       try {
         setLoading(true);
         setError(null);
-        setPrizesError(null);
         
-        const [categoriesResult, stagesResult, prizesResult] = await Promise.allSettled([
+        const [categoriesResult, stagesResult] = await Promise.allSettled([
           getTriviaCategories(),
           getTriviaStages(),
-          getTriviaPrizes(),
         ]);
         
         if (categoriesResult.status === "fulfilled") setCategories(categoriesResult.value);
         if (stagesResult.status === "fulfilled") setStages(stagesResult.value);
-        if (prizesResult.status === "fulfilled") {
-          setPrizes(prizesResult.value);
-        } else {
-          setPrizesError(prizesResult.reason instanceof Error ? prizesResult.reason.message : "Failed to load prizes");
-        }
       } catch (err) {
         console.error("Error loading trivia data:", err);
         setError(err instanceof Error ? err.message : "Failed to load trivia data");
@@ -154,30 +133,6 @@ export default function TriviaSetupPage() {
     } catch (err) {
       console.error("Error saving stage:", err);
       setError(err instanceof Error ? err.message : "Failed to save stage");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const onSubmitPrize = async (data: PrizeFormData) => {
-    try {
-      setSubmitting(true);
-      setError(null);
-      setSuccessMessage(null);
-
-      const payload: CreatePrizeRequest = {
-        stageName: data.stageName,
-        period: data.period,
-        description: data.description,
-      };
-
-      const response = await createTriviaPrize(payload);
-      setSuccessMessage(response.message || "Prize created and submitted for approval");
-      setShowPrizeModal(false);
-      resetPrize();
-    } catch (err) {
-      console.error("Error creating prize:", err);
-      setError(err instanceof Error ? err.message : "Failed to create prize");
     } finally {
       setSubmitting(false);
     }
@@ -354,51 +309,6 @@ export default function TriviaSetupPage() {
         </AdminCard>
       </div>
 
-      {/* Prizes Section (Read-only) */}
-      <AdminCard
-        title="Trivia Prizes"
-        action={
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              resetPrize({ stageName: "", period: "WEEKLY", description: "" });
-              setShowPrizeModal(true);
-            }}
-            className="gap-1.5 text-xs h-8 px-2.5"
-          >
-            <Plus size={14} />
-            <span>Add Prize</span>
-          </Button>
-        }
-      >
-        {/* Prizes Error Banner */}
-        {prizesError && (
-          <div className="bg-muted/50 border border-border rounded p-3 mb-3 text-xs">
-            <p className="font-medium text-muted-foreground">Note: {prizesError}</p>
-            <p className="text-muted-foreground mt-0.5">This is a known server-side issue. You can still create new prizes above.</p>
-          </div>
-        )}
-        
-        <div className="space-y-2">
-          {prizes.length > 0 ? (
-            prizes.map((prize) => (
-              <div key={prize.id} className="flex items-center justify-between p-2.5 bg-secondary/30 rounded-lg">
-                <div>
-                  <p className="font-medium text-xs">{prize.stageName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {prize.period}: {prize.description}
-                  </p>
-                </div>
-              </div>
-            ))
-          ) : prizesError ? (
-            <p className="text-xs text-muted-foreground text-center py-4">Unable to load prizes due to error above</p>
-          ) : (
-            <p className="text-xs text-muted-foreground text-center py-4">No prizes configured</p>
-          )}
-        </div>
-      </AdminCard>
-
       {/* Questions Section */}
       <AdminCard title="Trivia Questions">
         <div className="flex flex-col sm:flex-row gap-2 mb-4">
@@ -526,51 +436,6 @@ export default function TriviaSetupPage() {
             <label htmlFor="stage-active" className="text-xs font-medium cursor-pointer">
               Active (visible to users)
             </label>
-          </div>
-          <Button type="submit" variant="gradient" className="w-full justify-center h-9 text-sm !rounded" disabled={submitting}>
-            {submitting ? "Submitting..." : "Submit for Approval"}
-          </Button>
-        </form>
-      </Modal>
-
-      {/* Prize Modal */}
-      <Modal
-        open={showPrizeModal}
-        onClose={() => {
-          setShowPrizeModal(false);
-          setError(null);
-        }}
-        title="Add Prize"
-      >
-        <form onSubmit={handleSubmitPrize(onSubmitPrize)} className="space-y-4">
-          <div>
-            <label className="text-xs font-medium mb-1.5 block">Stage Name</label>
-            <select 
-              {...registerPrize("stageName", { required: "Stage is required" })}
-              className="w-full px-3 py-2 bg-background border border-border rounded h-9 text-sm"
-            >
-              <option value="">Select a stage</option>
-              {stages.filter(s => s.active).map(stage => (
-                <option key={stage.id} value={stage.name}>{stage.name}</option>
-              ))}
-            </select>
-            {errorsPrize.stageName && <p className="text-destructive text-xs mt-1">{errorsPrize.stageName.message}</p>}
-          </div>
-          <div>
-            <label className="text-xs font-medium mb-1.5 block">Period</label>
-            <select 
-              {...registerPrize("period", { required: "Period is required" })}
-              className="w-full px-3 py-2 bg-background border border-border rounded h-9 text-sm"
-            >
-              <option value="WEEKLY">Weekly</option>
-              <option value="MONTHLY">Monthly</option>
-            </select>
-            {errorsPrize.period && <p className="text-destructive text-xs mt-1">{errorsPrize.period.message}</p>}
-          </div>
-          <div>
-            <label className="text-xs font-medium mb-1.5 block">Description</label>
-            <Input {...registerPrize("description", { required: "Description is required" })} placeholder="Top performer prize for this stage" className="h-9 text-sm" />
-            {errorsPrize.description && <p className="text-destructive text-xs mt-1">{errorsPrize.description.message}</p>}
           </div>
           <Button type="submit" variant="gradient" className="w-full justify-center h-9 text-sm !rounded" disabled={submitting}>
             {submitting ? "Submitting..." : "Submit for Approval"}

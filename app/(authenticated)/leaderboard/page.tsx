@@ -61,9 +61,6 @@ export default function LeaderboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold">Monthly Leaderboard</h1>
-            <p className="text-muted-foreground text-xs sm:text-sm mt-1">
-              Top players win cash prizes at the end of the month.
-            </p>
           </div>
           {periodEndsAt && (
             <div className="text-left sm:text-right">

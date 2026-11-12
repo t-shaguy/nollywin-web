@@ -29,22 +29,22 @@ export default function NotificationPreferencesPage() {
           </div>
         </div>
 
-        {/* Games & Raffles Section */}
+        {/* Games & Draws Section */}
         <div className="space-y-2.5 sm:space-y-3">
           <h2 className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            GAMES & RAFFLES
+            GAMES & DRAWS
           </h2>
           
-          {/* Raffle Draw Results */}
+          {/* Draw Results */}
           <div className="bg-card border border-border rounded-lg p-3.5 sm:p-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
               <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center shrink-0 ${
-                preferences.raffleDrawResults ? 'bg-[#F40289]' : 'bg-secondary'
+                preferences.raffleDrawResults ? 'bg-[var(--color-brand)]' : 'bg-secondary'
               }`}>
                 <Bell size={16} className={`sm:w-[18px] sm:h-[18px] ${preferences.raffleDrawResults ? 'text-white' : 'text-muted-foreground'}`} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium truncate">Raffle Draw Results</p>
+                <p className="text-xs sm:text-sm font-medium truncate">Draw Results</p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Get notified when draws happen</p>
               </div>
             </div>
@@ -58,7 +58,7 @@ export default function NotificationPreferencesPage() {
           <div className="bg-card border border-border rounded-lg p-3.5 sm:p-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
               <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center shrink-0 ${
-                preferences.gameSessionResults ? 'bg-[#F40289]' : 'bg-secondary'
+                preferences.gameSessionResults ? 'bg-[var(--color-brand)]' : 'bg-secondary'
               }`}>
                 <Bell size={16} className={`sm:w-[18px] sm:h-[18px] ${preferences.gameSessionResults ? 'text-white' : 'text-muted-foreground'}`} />
               </div>
@@ -77,7 +77,7 @@ export default function NotificationPreferencesPage() {
           <div className="bg-card border border-border rounded-lg p-3.5 sm:p-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
               <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center shrink-0 ${
-                preferences.leaderboardChanges ? 'bg-[#F40289]' : 'bg-secondary'
+                preferences.leaderboardChanges ? 'bg-[var(--color-brand)]' : 'bg-secondary'
               }`}>
                 <Bell size={16} className={`sm:w-[18px] sm:h-[18px] ${preferences.leaderboardChanges ? 'text-white' : 'text-muted-foreground'}`} />
               </div>
@@ -103,7 +103,7 @@ export default function NotificationPreferencesPage() {
           <div className="bg-card border border-border rounded-lg p-3.5 sm:p-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
               <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center shrink-0 ${
-                preferences.subscriptionReminders ? 'bg-[#F40289]' : 'bg-secondary'
+                preferences.subscriptionReminders ? 'bg-[var(--color-brand)]' : 'bg-secondary'
               }`}>
                 <Bell size={16} className={`sm:w-[18px] sm:h-[18px] ${preferences.subscriptionReminders ? 'text-white' : 'text-muted-foreground'}`} />
               </div>
@@ -122,7 +122,7 @@ export default function NotificationPreferencesPage() {
           <div className="bg-card border border-border rounded-lg p-3.5 sm:p-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
               <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center shrink-0 ${
-                preferences.newFeatures ? 'bg-[#F40289]' : 'bg-secondary'
+                preferences.newFeatures ? 'bg-[var(--color-brand)]' : 'bg-secondary'
               }`}>
                 <Bell size={16} className={`sm:w-[18px] sm:h-[18px] ${preferences.newFeatures ? 'text-white' : 'text-muted-foreground'}`} />
               </div>
@@ -141,7 +141,7 @@ export default function NotificationPreferencesPage() {
           <div className="bg-card border border-border rounded-lg p-3.5 sm:p-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
               <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center shrink-0 ${
-                preferences.weeklyDigest ? 'bg-[#F40289]' : 'bg-secondary'
+                preferences.weeklyDigest ? 'bg-[var(--color-brand)]' : 'bg-secondary'
               }`}>
                 <Bell size={16} className={`sm:w-[18px] sm:h-[18px] ${preferences.weeklyDigest ? 'text-white' : 'text-muted-foreground'}`} />
               </div>

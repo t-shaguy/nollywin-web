@@ -19,9 +19,6 @@ import {
   formatTimeAgo,
 } from "@/lib/utils/payment-state";
 
-// Literal hex values matching the Figma
-const PINK = "#F40289";
-
 type View = "browse" | "checkout";
 
 // Current Plan Card Component
@@ -163,7 +160,9 @@ export default function StorePage() {
   // Get payment started record
   const paymentStarted = dashboard?.subscriptionPaymentPending ? getPaymentStarted() : null;
 
-  const activePackages = packages.filter((p) => p.active);
+  const activePackages = packages
+    .filter((p) => p.active)
+    .sort((a, b) => a.durationDays - b.durationDays); // Sequential: Daily → Weekly → Monthly
   
   const price = selected?.fee ?? 0;
   
@@ -345,7 +344,7 @@ export default function StorePage() {
           <div className="h-px bg-border my-1" />
           <div className="flex justify-between items-center gap-3">
             <span className="text-sm font-bold">Total</span>
-            <span className="text-lg font-bold whitespace-nowrap" style={{ color: PINK }}>₦{price.toLocaleString()}</span>
+            <span className="text-lg font-bold whitespace-nowrap text-[var(--color-brand)]">₦{price.toLocaleString()}</span>
           </div>
         </div>
 
@@ -354,7 +353,7 @@ export default function StorePage() {
           <h2 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Payment Method</h2>
           
           {/* Row 1: Airtime (full width) */}
-          {showAirtimeOption && (
+          {showAirtimeOption ? (
             <button
               onClick={() => setPaymentMethod("airtime")}
               className={`w-full rounded-lg p-3 flex items-center gap-3 transition-colors ${
@@ -363,7 +362,7 @@ export default function StorePage() {
                   : "border border-border hover:border-primary/50"
               }`}
             >
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: PINK }}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-[var(--color-brand)]">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                   <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
                   <line x1="12" y1="18" x2="12.01" y2="18"/>
@@ -374,12 +373,28 @@ export default function StorePage() {
                 <p className="text-xs text-muted-foreground">Deducted from your airtime balance</p>
               </div>
               {paymentMethod === "airtime" && (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: PINK }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--color-brand)]">
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
               )}
             </button>
-          )}
+          ) : hasAirtime ? (
+            <button
+              disabled
+              className="w-full rounded-lg p-3 flex items-center gap-3 border border-border bg-secondary/30 opacity-50 cursor-not-allowed"
+            >
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-secondary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                  <line x1="12" y1="18" x2="12.01" y2="18"/>
+                </svg>
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-bold">Pay with Airtime</p>
+                <p className="text-xs text-muted-foreground">Coming soon</p>
+              </div>
+            </button>
+          ) : null}
           
           {/* Row 2: USSD and Card (2 columns) */}
           <div className="grid grid-cols-2 gap-2">
@@ -430,26 +445,26 @@ export default function StorePage() {
             
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white" style={{ backgroundColor: PINK }}>1</div>
+                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white bg-[var(--color-brand)]">1</div>
                 <p className="text-xs">Open your dialer</p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white" style={{ backgroundColor: PINK }}>2</div>
+                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white bg-[var(--color-brand)]">2</div>
                 <p className="text-xs">Dial *20211# and follow prompts</p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white" style={{ backgroundColor: PINK }}>3</div>
+                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white bg-[var(--color-brand)]">3</div>
                 <p className="text-xs">Select NollyWin and confirm amount</p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white" style={{ backgroundColor: PINK }}>4</div>
+                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white bg-[var(--color-brand)]">4</div>
                 <p className="text-xs">Your account is credited instantly</p>
               </div>
             </div>
             
             <div className="border border-border rounded-lg p-3 text-center">
               <p className="text-xs text-muted-foreground mb-1">Airtime charge</p>
-              <p className="text-xl font-bold" style={{ color: PINK }}>₦{price.toLocaleString()}</p>
+              <p className="text-xl font-bold text-[var(--color-brand)]">₦{price.toLocaleString()}</p>
             </div>
           </div>
         )}
@@ -466,8 +481,7 @@ export default function StorePage() {
                 }
               }}
               disabled={isProcessing}
-              className="w-full justify-center text-sm py-3 min-h-[44px]"
-              style={{ backgroundColor: PINK }}
+              className="w-full justify-center text-sm py-3 min-h-[44px] bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)]"
             >
               {isProcessing ? "Processing..." : `Confirm Payment · ₦${price.toLocaleString()}`}
             </Button>
@@ -483,9 +497,19 @@ export default function StorePage() {
   const browseView = (
     <div className="space-y-5 md:space-y-6 max-w-2xl mx-auto">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold">Subscribe to Play</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">Packages</h1>
         <p className="text-muted-foreground text-xs sm:text-sm mt-1">Choose a plan to start playing trivia and earning points.</p>
       </div>
+
+      {/* New user explainer - show when no active subscription */}
+      {!dashboard?.hasActiveSubscription && !loading && (
+        <div className="border border-primary/20 bg-primary/5 rounded-lg p-4 space-y-2">
+          <h3 className="text-sm font-bold">Welcome to NollyWin!</h3>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Subscribe to a package to unlock trivia games. Answer questions correctly to earn points, climb the leaderboard, and win cash prizes every month. The more you play, the more you earn!
+          </p>
+        </div>
+      )}
 
       {loading && (
         <div className="space-y-2">
@@ -600,7 +624,7 @@ export default function StorePage() {
                     <div className="flex items-center gap-2 flex-wrap mb-0.5">
                       <p className="text-sm font-bold">{plan.name}</p>
                       {isBestValue && (
-                        <span style={{ backgroundColor: PINK, color: "#fff" }} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                        <span className="bg-[var(--color-brand)] text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap">
                           Best value
                         </span>
                       )}
@@ -610,7 +634,7 @@ export default function StorePage() {
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-base font-bold whitespace-nowrap" style={{ color: PINK }}>₦{plan.fee.toLocaleString()}</p>
+                    <p className="text-base font-bold whitespace-nowrap text-[var(--color-brand)]">₦{plan.fee.toLocaleString()}</p>
                     <p className="text-[10px] text-muted-foreground">
                       per {plan.durationDays === 1 ? 'day' : plan.durationDays === 7 ? 'week' : 'month'}
                     </p>

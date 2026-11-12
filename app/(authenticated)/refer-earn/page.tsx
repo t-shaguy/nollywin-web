@@ -113,8 +113,8 @@ export default function ReferEarnPage() {
       <div className="bg-card border border-border rounded-2xl p-8 text-center space-y-6">
         {/* Mail Icon */}
         <div className="relative inline-block">
-          <div className="h-24 w-24 rounded-2xl bg-gradient-to-br from-[#F40289]/20 to-[#FC0D28]/20 flex items-center justify-center mx-auto relative">
-            <div className="h-20 w-20 rounded-xl bg-gradient-to-br from-[#F40289] to-[#FC0D28] flex items-center justify-center">
+          <div className="h-24 w-24 rounded-2xl bg-[var(--color-brand-soft)] flex items-center justify-center mx-auto relative">
+            <div className="h-20 w-20 rounded-xl bg-brand-gradient flex items-center justify-center">
               <Mail size={40} className="text-white" />
             </div>
           </div>

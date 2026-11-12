@@ -9,7 +9,6 @@ import { useReferralStore, fetchReferralData } from "@/store/referral-store";
 import { AvatarUpload } from "@/app/features/profile/presentation/avatar-upload";
 import { Button } from "@/components/ui/button";
 import { getProfile, updateProfile } from "@/lib/api/profile";
-import { toInternationalPhone } from "@/lib/utils/phone";
 
 function ProfileContent() {
   const searchParams = useSearchParams();
@@ -25,11 +24,6 @@ function ProfileContent() {
   const [savingName, setSavingName] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
 
-  // Edit state for Phone Number
-  const [editingPhone, setEditingPhone] = useState(false);
-  const [phoneInput, setPhoneInput] = useState(user?.phoneNumber ?? "");
-  const [savingPhone, setSavingPhone] = useState(false);
-  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [showPhonePrompt, setShowPhonePrompt] = useState(false);
 
   // Fetch fresh profile data on mount (rehydrates totalPoints, gamesPlayed, bestScore)
@@ -79,19 +73,11 @@ function ProfileContent() {
     if (user) {
       setFirstNameInput(user.firstName ?? "");
       setLastNameInput(user.lastName ?? "");
-      setPhoneInput(user.phoneNumber ?? "");
     }
   }, [user]);
 
-  // TASK 1: Post-Google-signup phone nudge
-  // Check if redirected from Google sign-in with missing phone number
-  useEffect(() => {
-    const promptPhone = searchParams.get("prompt") === "phone";
-    if (promptPhone && (!user?.phoneNumber || user.phoneNumber.trim() === "")) {
-      setShowPhonePrompt(true);
-      setEditingPhone(true);
-    }
-  }, [searchParams, user]);
+  // TASK 1: Post-Google-signup phone nudge - REMOVED (phone is now read-only)
+  // Note: Phone number can no longer be edited by users
 
   const handleSaveName = async () => {
     if (!firstNameInput.trim() || !lastNameInput.trim()) {
@@ -124,42 +110,6 @@ function ProfileContent() {
     setLastNameInput(user?.lastName ?? "");
     setNameError(null);
     setEditingName(false);
-  };
-
-  const handleSavePhone = async () => {
-    // Convert to international format using shared helper
-    const internationalPhone = toInternationalPhone(phoneInput);
-    
-    if (!/^\+234\d{10}$/.test(internationalPhone)) {
-      setPhoneError("Enter a valid 10-digit Nigerian number");
-      return;
-    }
-    try {
-      setSavingPhone(true);
-      setPhoneError(null);
-      // Send the update
-      await updateProfile({
-        firstName: user?.firstName ?? "",
-        lastName: user?.lastName ?? "",
-        phoneNumber: internationalPhone,
-        alias: user?.alias ?? "",
-      });
-      // Re-fetch fresh profile data to ensure UI matches backend state
-      const freshProfile = await getProfile();
-      updateUser(freshProfile);
-      setEditingPhone(false);
-      setShowPhonePrompt(false); // Hide the "Complete Your Profile" banner
-    } catch (err) {
-      setPhoneError(err instanceof Error ? err.message : "Failed to update phone number");
-    } finally {
-      setSavingPhone(false);
-    }
-  };
-
-  const handleCancelPhone = () => {
-    setPhoneInput(user?.phoneNumber ?? "");
-    setPhoneError(null);
-    setEditingPhone(false);
   };
 
   const fullName = user 
@@ -210,15 +160,7 @@ function ProfileContent() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-5 md:space-y-6">
-        {/* Phone Number Prompt Banner */}
-        {showPhonePrompt && (
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3.5 sm:p-4">
-            <h3 className="text-xs sm:text-sm font-semibold text-yellow-500 mb-1">Complete Your Profile</h3>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">
-              Please add your phone number to complete your account setup.
-            </p>
-          </div>
-        )}
+        {/* Phone Number Prompt Banner - REMOVED (phone is now read-only) */}
 
         {/* Header with Avatar */}
         <div className="flex flex-col items-center text-center gap-2.5 sm:gap-3">
@@ -239,11 +181,11 @@ function ProfileContent() {
         {/* Stat Cards */}
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <div className="bg-card border border-border rounded-lg p-3 sm:p-4 text-center">
-            <p className="text-2xl sm:text-3xl font-bold" style={{ color: "#F40289" }}>{totalPoints}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-[var(--color-brand)]">{totalPoints}</p>
             <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Points</p>
           </div>
           <div className="bg-card border border-border rounded-lg p-3 sm:p-4 text-center">
-            <p className="text-2xl sm:text-3xl font-bold" style={{ color: "#FC0D28" }}>{gamesPlayed}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-[var(--color-brand-hover)]">{gamesPlayed}</p>
             <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Games</p>
           </div>
           <div className="bg-card border border-border rounded-lg p-3 sm:p-4 text-center">
@@ -321,8 +263,7 @@ function ProfileContent() {
               </div>
               <button 
                 onClick={() => setEditingName(true)}
-                className="text-xs sm:text-sm font-medium flex-shrink-0 min-h-[36px] px-2" 
-                style={{ color: "#F40289" }}
+                className="text-xs sm:text-sm font-medium flex-shrink-0 min-h-[36px] px-2 text-[var(--color-brand)]" 
               >
                 Edit
               </button>
@@ -340,83 +281,25 @@ function ProfileContent() {
             </div>
           </div>
 
-          {/* Phone Number Row */}
-          {editingPhone ? (
-            <div className="bg-card border border-border rounded-lg p-3.5 sm:p-4 space-y-3">
-              <div className="flex flex-col items-center gap-2.5 sm:gap-3">
-                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-                  <Phone size={16} className="sm:w-[18px] sm:h-[18px] text-muted-foreground" />
-                </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground font-semibold text-center">EDIT PHONE NUMBER</p>
-              </div>
-              
-              <div className="flex flex-col items-center">
-                <div className="flex gap-2 w-full max-w-xs">
-                  <div className="px-2.5 sm:px-3 py-2 rounded-lg border border-border bg-secondary text-xs sm:text-sm font-medium text-muted-foreground shrink-0">
-                    NG +234
-                  </div>
-                  <input
-                    type="tel"
-                    value={phoneInput}
-                    onChange={(e) => {
-                      const digits = e.target.value.replace(/\D/g, "");
-                      setPhoneInput(digits.slice(0, 10));
-                    }}
-                    placeholder="8012345678"
-                    className="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-xs sm:text-sm min-h-[44px]"
-                    disabled={savingPhone}
-                    maxLength={10}
-                  />
-                </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground mt-2 text-center">Enter your 10-digit number</p>
-              </div>
-
-              {phoneError && (
-                <p className="text-[10px] sm:text-xs text-destructive text-center">{phoneError}</p>
-              )}
-
-              <div className="flex gap-2 justify-center">
-                <Button
-                  onClick={handleSavePhone}
-                  disabled={savingPhone}
-                  className="py-2 text-xs sm:text-sm bg-primary hover:bg-primary/90 text-white min-h-[44px]"
-                >
-                  {savingPhone ? "Saving..." : "Save"}
-                </Button>
-                <Button
-                  onClick={handleCancelPhone}
-                  disabled={savingPhone}
-                  variant="outline"
-                  className="py-2 text-xs sm:text-sm min-h-[44px]"
-                >
-                  Cancel
-                </Button>
-              </div>
+          {/* Phone Number Row - Read-only */}
+          <div className="bg-card border border-border rounded-lg p-3.5 sm:p-4 flex items-center gap-2.5 sm:gap-3">
+            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+              <Phone size={16} className="sm:w-[18px] sm:h-[18px] text-muted-foreground" />
             </div>
-          ) : (
-            <div className="bg-card border border-border rounded-lg p-3.5 sm:p-4 flex items-center gap-2.5 sm:gap-3">
-              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-                <Phone size={16} className="sm:w-[18px] sm:h-[18px] text-muted-foreground" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">PHONE NUMBER</p>
+                <Lock size={10} className="sm:w-3 sm:h-3 text-muted-foreground" aria-hidden="true" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">PHONE NUMBER</p>
-                <p className="text-xs sm:text-sm font-medium truncate">{phoneNumber}</p>
-              </div>
-              <button 
-                onClick={() => setEditingPhone(true)}
-                className="text-xs sm:text-sm font-medium flex-shrink-0 min-h-[36px] px-2" 
-                style={{ color: "#F40289" }}
-              >
-                Edit
-              </button>
+              <p className="text-xs sm:text-sm font-medium truncate">{phoneNumber}</p>
             </div>
-          )}
+          </div>
         </section>
 
         {/* Invite Friends Section */}
         <section className="bg-card border border-border rounded-lg p-4 md:p-5 space-y-3.5 md:space-y-4">
           <div className="flex items-start gap-2.5 sm:gap-3">
-            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: "#F40289" }}>
+            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center shrink-0 bg-[var(--color-brand)]">
               <UserPlus size={16} className="sm:w-[18px] sm:h-[18px] text-white" />
             </div>
             <div className="flex-1 min-w-0">
@@ -431,8 +314,7 @@ function ProfileContent() {
             <button 
               onClick={handleCopy}
               disabled={!referralLink}
-              className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-md shrink-0 disabled:opacity-50 min-h-[36px]"
-              style={{ backgroundColor: "#F40289", color: "white" }}
+              className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-md shrink-0 disabled:opacity-50 min-h-[36px] bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-hover)]"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="sm:w-[14px] sm:h-[14px]">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>

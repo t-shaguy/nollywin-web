@@ -10,6 +10,8 @@ import { SkeletonCard, EmptyState, InlineError } from "@/components/admin/loadin
 import { AvatarInitials } from "@/components/admin/avatar-initials";
 import { Icon } from "@/components/admin/icon";
 import { DetailValue } from "@/components/admin/value-renderer";
+import { DownloadMenu } from "@/components/admin/download-menu";
+import { PrintView } from "@/components/admin/print-view";
 import { 
   formatNumber, 
   formatRelativeTime, 
@@ -17,6 +19,7 @@ import {
   formatDate 
 } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
+import { getReportConfig } from "@/lib/export/report-config";
 
 interface AuditLogEntry {
   id?: string;
@@ -40,6 +43,9 @@ export default function AuditLogPage() {
   const [loading, setLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Print view state
+  const [showPrintView, setShowPrintView] = useState(false);
   
   // Simple filter state
   const [filters, setFilters] = useState({
@@ -247,6 +253,27 @@ export default function AuditLogPage() {
     },
   ];
 
+  // Print view with current filters
+  if (showPrintView) {
+    const config = getReportConfig("audit-log");
+    if (!config) return null;
+
+    return (
+      <PrintView
+        title="Audit Log"
+        filters={{
+          "Resource Type": filters.resourceType || "All",
+          "Admin": filters.actorEmail || "All",
+          "Status": filters.status || "All",
+          "Action": filters.description || "Any",
+        }}
+        columns={config.columns}
+        data={entries}
+        onClose={() => setShowPrintView(false)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -257,15 +284,27 @@ export default function AuditLogPage() {
             Track all administrative actions and system events
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="md"
-          icon={<RefreshCw size={16} strokeWidth={1.5} className={loading || summaryLoading ? "animate-spin" : ""} />}
-          onClick={handleRefresh}
-          disabled={loading || summaryLoading}
-        >
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <DownloadMenu
+            reportKey="audit-log"
+            filters={{
+              resourceType: filters.resourceType || undefined,
+              actorEmail: filters.actorEmail || undefined,
+              description: filters.description || undefined,
+              success: filters.status ? filters.status === "success" : undefined,
+            }}
+            onPrintClick={() => setShowPrintView(true)}
+          />
+          <Button
+            variant="ghost"
+            size="md"
+            icon={<RefreshCw size={16} strokeWidth={1.5} className={loading || summaryLoading ? "animate-spin" : ""} />}
+            onClick={handleRefresh}
+            disabled={loading || summaryLoading}
+          >
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
