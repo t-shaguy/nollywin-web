@@ -273,16 +273,15 @@ export async function fetchProofBlob(
   winnerId: string,
   proofId: string
 ): Promise<{ blob: Blob; contentType: string; fileName: string }> {
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_CORE_API_BASE_URL || ''}/api/v1/admin/rewards/winners/${winnerId}/proofs/${proofId}`,
-    {
-      method: 'GET',
-      headers: {
-        'X-Client-Token': process.env.NEXT_PUBLIC_CLIENT_TOKEN || '',
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('admin_access_token') : ''}`,
-      },
-    }
-  );
+  const url = `${process.env.NEXT_PUBLIC_CORE_API_BASE_URL || ''}/api/v1/admin/rewards/winners/${winnerId}/proofs/${proofId}`;
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'X-Client-Token': process.env.NEXT_PUBLIC_CLIENT_TOKEN || '',
+      'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('admin_access_token') : ''}`,
+    },
+  });
 
   if (!response.ok) {
     const errorText = await response.text();

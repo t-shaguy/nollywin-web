@@ -11,6 +11,8 @@ import { PrintView } from "@/components/admin/print-view";
 import { ApprovalsPreviewDrawer } from "@/components/admin/approvals-preview-drawer";
 import { getReportConfig } from "@/lib/export/report-config";
 import { useAdminAuthStore } from "@/store/admin-auth-store";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { formatDateTime } from "@/lib/utils/date-format";
 import {
   getChangeRequests,
   approveChangeRequest,
@@ -301,34 +303,9 @@ export default function ChangeRequestsPage() {
       .trim();
   };
 
-  // Format date as DD MMM YYYY in Africa/Lagos
-  const formatDate = (dateStr: string): string => {
-    try {
-      const date = new Date(dateStr);
-      return new Intl.DateTimeFormat('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        timeZone: 'Africa/Lagos',
-      }).format(date);
-    } catch {
-      return dateStr;
-    }
-  };
+  // No longer need local formatDate - using shared formatDateTime
 
-  // Get action badge color
-  const getActionColor = (action: string) => {
-    switch (action) {
-      case "CREATE":
-        return "bg-green-500/10 border-green-500/30 text-green-600";
-      case "UPDATE":
-        return "bg-blue-500/10 border-blue-500/30 text-blue-600";
-      case "DELETE":
-        return "bg-red-500/10 border-red-500/30 text-red-600";
-      default:
-        return "bg-gray-500/10 border-gray-500/30 text-gray-600";
-    }
-  };
+  // No longer need getActionColor - using StatusBadge
 
   if (loading && changeRequests.length === 0) {
     return (
@@ -460,15 +437,7 @@ export default function ChangeRequestsPage() {
                     <span className="text-xs text-muted-foreground min-w-[120px]">Status:</span>
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm">{humanizeStatus(request.status)}</span>
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
-                        request.status === "PENDING"
-                          ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-600"
-                          : request.status === "APPROVED"
-                          ? "bg-green-500/10 border-green-500/30 text-green-600"
-                          : "bg-red-500/10 border-red-500/30 text-red-600"
-                      }`}>
-                        {request.status}
-                      </span>
+                      <StatusBadge status={request.status as "PENDING" | "APPROVED" | "REJECTED"} />
                     </div>
                   </div>
 
@@ -476,7 +445,7 @@ export default function ChangeRequestsPage() {
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
                     <span className="text-xs text-muted-foreground min-w-[120px]">Proposed by:</span>
                     <span className="font-medium text-sm">
-                      {request.proposedByEmail} on {formatDate(request.createdAt)}
+                      {request.proposedByEmail} on {formatDateTime(request.createdAt)}
                     </span>
                   </div>
 
@@ -487,7 +456,7 @@ export default function ChangeRequestsPage() {
                       <div className="text-sm space-y-1">
                         <p className="text-muted-foreground">
                           Reviewed by {request.reviewedByEmail}
-                          {request.reviewedAt && ` on ${formatDate(request.reviewedAt)}`}
+                          {request.reviewedAt && ` on ${formatDateTime(request.reviewedAt)}`}
                         </p>
                         {request.approvalNote && (
                           <p className="text-green-600">

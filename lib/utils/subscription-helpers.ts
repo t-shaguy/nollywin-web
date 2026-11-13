@@ -64,18 +64,18 @@ export function canBuyPlan(dashboard: PlayerDashboard | undefined | null): CanBu
 /**
  * Format plan allowance text for display
  * 
- * Shows: "{n} play(s) or {durationDays} day(s), whichever comes first"
- * When attemptsIncluded is null, shows only duration (not confirmed as unlimited)
- * 
- * This is a one-line change later if backend confirms null means unlimited.
+ * Shows simple, consumer-friendly text:
+ * - Daily: "1 play • Valid for 1 day"
+ * - Weekly: "3 plays • Valid for 7 days"  
+ * - Monthly: "7 plays • Valid for 30 days"
  */
 export function formatPlanAllowance(pkg: SubscriptionPackage): string {
   if (pkg.attemptsIncluded === null) {
-    // Don't claim "Unlimited" - show only duration
-    return `${pkg.durationDays} day${pkg.durationDays === 1 ? '' : 's'}`;
+    // Duration only
+    return `Valid for ${pkg.durationDays} day${pkg.durationDays === 1 ? '' : 's'}`;
   }
 
-  return `${pkg.attemptsIncluded} play${pkg.attemptsIncluded === 1 ? '' : 's'} or ${pkg.durationDays} day${pkg.durationDays === 1 ? '' : 's'}, whichever comes first`;
+  return `${pkg.attemptsIncluded} play${pkg.attemptsIncluded === 1 ? '' : 's'} • Valid for ${pkg.durationDays} day${pkg.durationDays === 1 ? '' : 's'}`;
 }
 
 /**

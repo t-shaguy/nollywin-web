@@ -1,9 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Search, Filter, Trophy, ChevronLeft, ChevronRight, Eye, AlertCircle } from "lucide-react";
+import { Search, Filter, Trophy, ChevronLeft, ChevronRight, Eye, AlertCircle, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { DownloadMenu } from "@/components/admin/download-menu";
 import { PrintView } from "@/components/admin/print-view";
@@ -21,6 +20,19 @@ import {
   type WinnerRow, 
   type RedemptionRow 
 } from "@/lib/api/admin-winners";
+import {
+  DataTableContainer,
+  DataTableHeader,
+  DataTableBody,
+  DataTableRow,
+  DataTableHead,
+  DataTableCell,
+  DataTableCellStack,
+  DataTableEmpty,
+  DataTableSkeleton,
+} from "@/components/ui/data-table";
+import { StatusBadge, AwaitingApprovalBadge, TypeBadge } from "@/components/ui/status-badge";
+import { formatDate, formatDateTime } from "@/lib/utils/date-format";
 
 type TabType = "winners" | "redemptions";
 
@@ -191,50 +203,6 @@ export default function WinnersPage() {
   const applyRedemptionsFilters = () => {
     setRedemptionsPage(0);
     loadRedemptions();
-  };
-
-  // Format date
-  const formatDate = (isoString: string | null) => {
-    if (!isoString) return "—";
-    return new Date(isoString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  // Format date with time
-  const formatDateTime = (isoString: string | null) => {
-    if (!isoString) return "—";
-    return new Date(isoString).toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  // Get status badge color
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "SELECTED":
-        return "bg-blue-500/10 border-blue-500/30 text-blue-600";
-      case "REDEEMED":
-        return "bg-amber-500/10 border-amber-500/30 text-amber-600";
-      case "DISBURSED":
-        return "bg-green-500/10 border-green-500/30 text-green-600";
-      default:
-        return "bg-secondary border-border text-muted-foreground";
-    }
-  };
-
-  // Get prize type badge
-  const getPrizeTypeBadge = (prizeType: string) => {
-    if (prizeType === "CASH") {
-      return "bg-green-500/10 border-green-500/30 text-green-600";
-    }
-    return "bg-blue-500/10 border-blue-500/30 text-blue-600";
   };
 
   // Get redemption summary stats
@@ -449,112 +417,95 @@ export default function WinnersPage() {
           {/* Winners Table */}
           {!winnersLoading && winners.length > 0 && (
             <>
-              <div className="bg-card border border-border rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-[13px]">
-                    <thead className="bg-secondary/50 border-b border-border">
-                      <tr>
-                        <th className="text-left px-4 py-3 font-semibold">Winner</th>
-                        <th className="text-left px-4 py-3 font-semibold">Draw</th>
-                        <th className="text-left px-4 py-3 font-semibold">Prize</th>
-                        <th className="text-left px-4 py-3 font-semibold">Tier</th>
-                        <th className="text-left px-4 py-3 font-semibold">Plan</th>
-                        <th className="text-left px-4 py-3 font-semibold">Type</th>
-                        <th className="text-left px-4 py-3 font-semibold">Amount</th>
-                        <th className="text-left px-4 py-3 font-semibold">Status</th>
-                        <th className="text-left px-4 py-3 font-semibold">Selected At</th>
-                        <th className="text-left px-4 py-3 font-semibold">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {winners.map((winner) => {
-                        const prizeName = winner.prizeName ?? winner.drawName;
-                        const tierName = winner.tierName ?? "—";
-                        const plan = winner.subscriptionPackage
-                          ? `${winner.subscriptionPackage}${
-                              winner.subscriptionStatus
-                                ? ` (${winner.subscriptionStatus})`
-                                : ""
-                            }`
-                          : "—";
+              <DataTableContainer stickyFirstColumn>
+                <DataTableHeader>
+                  <DataTableRow>
+                    <DataTableHead sticky>Winner</DataTableHead>
+                    <DataTableHead>Phone</DataTableHead>
+                    <DataTableHead>Draw</DataTableHead>
+                    <DataTableHead>Prize</DataTableHead>
+                    <DataTableHead>Type</DataTableHead>
+                    <DataTableHead align="right">Amount</DataTableHead>
+                    <DataTableHead>Plan</DataTableHead>
+                    <DataTableHead>Rank / Points</DataTableHead>
+                    <DataTableHead>Status</DataTableHead>
+                    <DataTableHead>Awaiting approval</DataTableHead>
+                    <DataTableHead>Selected on</DataTableHead>
+                    <DataTableHead align="right"><span className="sr-only">Actions</span></DataTableHead>
+                  </DataTableRow>
+                </DataTableHeader>
+                <DataTableBody>
+                  {winners.map((winner) => {
+                    const prizeName = winner.prizeName ?? winner.drawName;
+                    const tierLabel = winner.tierName ? `Tier: ${winner.tierName}` : "No tier";
+                    const planWithStatus = winner.subscriptionPackage
+                      ? `${winner.subscriptionPackage}${winner.subscriptionStatus ? ` · ${winner.subscriptionStatus}` : ""}`
+                      : "—";
+                    const rankPoints = (winner.rankPosition && winner.points)
+                      ? `${winner.rankPosition} · ${winner.points} pts`
+                      : "—";
 
-                        return (
-                          <tr
-                            key={winner.id}
-                            className="border-b border-border last:border-0 hover:bg-secondary/30 transition-colors"
-                          >
-                            <td className="px-4 py-3">
-                              <div>
-                                <p className="font-medium">{winner.subscriberName}</p>
-                                <p className="text-xs text-muted-foreground truncate max-w-[180px]">
-                                  {winner.email}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {winner.phoneNumber}
-                                </p>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div>
-                                <p className="font-medium">{winner.drawName}</p>
-                                <p className="text-xs text-muted-foreground font-mono">
-                                  {winner.raffleCode}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {formatDate(winner.drawDate)}
-                                </p>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 font-medium">{prizeName}</td>
-                            <td className="px-4 py-3 text-muted-foreground">{tierName}</td>
-                            <td className="px-4 py-3 text-muted-foreground text-xs">{plan}</td>
-                            <td className="px-4 py-3">
-                              <Badge className={getPrizeTypeBadge(winner.prizeType)}>
-                                {winner.prizeType}
-                              </Badge>
-                            </td>
-                            <td className="px-4 py-3 tabular-nums font-medium">
-                              {winner.prizeType === "CASH" && winner.cashAmount
-                                ? `₦${winner.cashAmount.toLocaleString()}`
-                                : "—"}
-                            </td>
-                            <td className="px-4 py-3">
-                              <Badge className={getStatusBadge(winner.status)}>
-                                {winner.status}
-                              </Badge>
-                              {winner.pendingAction && (
-                                <div className="mt-1">
-                                  <Badge className="bg-yellow-500/10 border-yellow-500/30 text-yellow-600 text-xs">
-                                    {winner.pendingAction} pending
-                                  </Badge>
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground text-xs">
-                              {formatDateTime(winner.selectedAt)}
-                            </td>
-                            <td className="px-4 py-3">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewWinner(winner.id)}
-                              >
-                                <Eye size={14} className="mr-1" />
-                                View
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                    return (
+                      <DataTableRow key={winner.id} onClick={() => handleViewWinner(winner.id)}>
+                        <DataTableCell sticky>
+                          <DataTableCellStack
+                            primary={winner.subscriberName}
+                            secondary={winner.email}
+                          />
+                        </DataTableCell>
+                        <DataTableCell>{winner.phoneNumber}</DataTableCell>
+                        <DataTableCell>
+                          <DataTableCellStack
+                            primary={winner.drawName}
+                            secondary={<span className="font-mono" title="Draw code">{winner.raffleCode}</span>}
+                          />
+                        </DataTableCell>
+                        <DataTableCell>
+                          <DataTableCellStack
+                            primary={prizeName}
+                            secondary={tierLabel}
+                          />
+                        </DataTableCell>
+                        <DataTableCell>
+                          <TypeBadge type={winner.prizeType} />
+                        </DataTableCell>
+                        <DataTableCell align="right" className="tabular-nums font-medium">
+                          {winner.prizeType === "CASH" && winner.cashAmount
+                            ? `₦${winner.cashAmount.toLocaleString()}`
+                            : "—"}
+                        </DataTableCell>
+                        <DataTableCell className="text-muted-foreground">
+                          {planWithStatus}
+                        </DataTableCell>
+                        <DataTableCell className="text-muted-foreground">
+                          {rankPoints}
+                        </DataTableCell>
+                        <DataTableCell>
+                          <StatusBadge status={winner.status as any} prizeType={winner.prizeType} />
+                        </DataTableCell>
+                        <DataTableCell>
+                          {winner.pendingAction ? (
+                            <AwaitingApprovalBadge action={winner.pendingAction} />
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </DataTableCell>
+                        <DataTableCell className="text-muted-foreground">
+                          {formatDateTime(winner.selectedAt)}
+                        </DataTableCell>
+                        <DataTableCell align="right">
+                          <ChevronDown size={16} className="text-muted-foreground" />
+                        </DataTableCell>
+                      </DataTableRow>
+                    );
+                  })}
+                </DataTableBody>
+              </DataTableContainer>
 
               {/* Pagination */}
               {winnersTotalPages > 1 && (
                 <div className="flex items-center justify-between">
-                  <p className="text-[13px] text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Page {winnersPage + 1} of {winnersTotalPages} • {winnersTotal.toLocaleString()}{" "}
                     total
                   </p>
@@ -565,7 +516,7 @@ export default function WinnersPage() {
                       variant="outline"
                       size="sm"
                     >
-                      <ChevronLeft size={14} className="mr-1" />
+                      <ChevronLeft size={16} />
                       Previous
                     </Button>
                     <Button
@@ -577,7 +528,7 @@ export default function WinnersPage() {
                       size="sm"
                     >
                       Next
-                      <ChevronRight size={14} className="ml-1" />
+                      <ChevronRight size={16} />
                     </Button>
                   </div>
                 </div>
@@ -587,13 +538,14 @@ export default function WinnersPage() {
 
           {/* Empty State */}
           {!winnersLoading && winners.length === 0 && (
-            <div className="bg-card border border-border rounded-xl p-12 text-center">
-              <Trophy size={32} className="mx-auto text-muted-foreground mb-3" />
-              <p className="text-muted-foreground text-sm">
-                No winners found matching your filters.
-              </p>
-            </div>
+            <DataTableEmpty
+              message="No winners found matching your filters."
+              icon={<Trophy size={32} className="text-muted-foreground" />}
+            />
           )}
+
+          {/* Loading State */}
+          {winnersLoading && <DataTableSkeleton rows={5} columns={12} />}
         </>
       )}
 
@@ -735,81 +687,62 @@ export default function WinnersPage() {
           {/* Redemptions Table */}
           {!redemptionsLoading && redemptions.length > 0 && (
             <>
-              <div className="bg-card border border-border rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-[13px]">
-                    <thead className="bg-secondary/50 border-b border-border">
-                      <tr>
-                        <th className="text-left px-4 py-3 font-semibold">Winner</th>
-                        <th className="text-left px-4 py-3 font-semibold">Draw</th>
-                        <th className="text-left px-4 py-3 font-semibold">Prize</th>
-                        <th className="text-left px-4 py-3 font-semibold">Type</th>
-                        <th className="text-left px-4 py-3 font-semibold">Amount</th>
-                        <th className="text-left px-4 py-3 font-semibold">Status</th>
-                        <th className="text-left px-4 py-3 font-semibold">Redeemed At</th>
-                        <th className="text-left px-4 py-3 font-semibold">Fulfilled At</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {redemptions.map((redemption) => {
-                        const prizeName = redemption.prizeName ?? redemption.drawName;
+              <DataTableContainer>
+                <DataTableHeader>
+                  <DataTableRow>
+                    <DataTableHead>Winner</DataTableHead>
+                    <DataTableHead>Phone</DataTableHead>
+                    <DataTableHead>Draw</DataTableHead>
+                    <DataTableHead>Prize</DataTableHead>
+                    <DataTableHead>Type</DataTableHead>
+                    <DataTableHead align="right">Amount</DataTableHead>
+                    <DataTableHead>Status</DataTableHead>
+                    <DataTableHead>Redeemed on</DataTableHead>
+                    <DataTableHead>Paid/Collected on</DataTableHead>
+                  </DataTableRow>
+                </DataTableHeader>
+                <DataTableBody>
+                  {redemptions.map((redemption) => {
+                    const prizeName = redemption.prizeName ?? redemption.drawName;
 
-                        return (
-                          <tr
-                            key={redemption.winnerId}
-                            className="border-b border-border last:border-0 hover:bg-secondary/30 transition-colors"
-                          >
-                            <td className="px-4 py-3">
-                              <div>
-                                <p className="font-medium">{redemption.subscriberName}</p>
-                                <p className="text-xs text-muted-foreground truncate max-w-[180px]">
-                                  {redemption.email}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {redemption.phoneNumber}
-                                </p>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div>
-                                <p className="font-medium">{redemption.drawName}</p>
-                                <p className="text-xs text-muted-foreground font-mono">
-                                  {redemption.raffleCode}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {formatDate(redemption.drawDate)}
-                                </p>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 font-medium">{prizeName}</td>
-                            <td className="px-4 py-3">
-                              <Badge className={getPrizeTypeBadge(redemption.prizeType)}>
-                                {redemption.prizeType}
-                              </Badge>
-                            </td>
-                            <td className="px-4 py-3 tabular-nums font-medium">
-                              {redemption.prizeType === "CASH" && redemption.cashAmount
-                                ? `₦${redemption.cashAmount.toLocaleString()}`
-                                : "—"}
-                            </td>
-                            <td className="px-4 py-3">
-                              <Badge className={getStatusBadge(redemption.status)}>
-                                {redemption.status}
-                              </Badge>
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground text-xs">
-                              {formatDateTime(redemption.redeemedAt)}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground text-xs">
-                              {formatDateTime(redemption.fulfilledAt)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                    return (
+                      <DataTableRow key={redemption.winnerId}>
+                        <DataTableCell>
+                          <DataTableCellStack
+                            primary={redemption.subscriberName}
+                            secondary={redemption.email}
+                          />
+                        </DataTableCell>
+                        <DataTableCell>{redemption.phoneNumber}</DataTableCell>
+                        <DataTableCell>
+                          <DataTableCellStack
+                            primary={redemption.drawName}
+                            secondary={<span className="font-mono" title="Draw code">{redemption.raffleCode}</span>}
+                          />
+                        </DataTableCell>
+                        <DataTableCell>{prizeName}</DataTableCell>
+                        <DataTableCell>
+                          <TypeBadge type={redemption.prizeType} />
+                        </DataTableCell>
+                        <DataTableCell align="right" className="tabular-nums font-medium">
+                          {redemption.prizeType === "CASH" && redemption.cashAmount
+                            ? `₦${redemption.cashAmount.toLocaleString()}`
+                            : "—"}
+                        </DataTableCell>
+                        <DataTableCell>
+                          <StatusBadge status={redemption.status as any} prizeType={redemption.prizeType} />
+                        </DataTableCell>
+                        <DataTableCell className="text-muted-foreground">
+                          {formatDateTime(redemption.redeemedAt)}
+                        </DataTableCell>
+                        <DataTableCell className="text-muted-foreground">
+                          {formatDateTime(redemption.fulfilledAt)}
+                        </DataTableCell>
+                      </DataTableRow>
+                    );
+                  })}
+                </DataTableBody>
+              </DataTableContainer>
 
               {/* Pagination */}
               {redemptionsTotalPages > 1 && (

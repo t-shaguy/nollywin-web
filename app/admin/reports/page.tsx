@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { FileBarChart2, Calendar, Filter, Gift, CreditCard, Smartphone, Users } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FileBarChart2, Calendar, Filter, Gift, CreditCard, Smartphone, Users, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
@@ -8,26 +9,74 @@ import { DownloadMenu } from "@/components/admin/download-menu";
 import { PrintView } from "@/components/admin/print-view";
 import { getReportConfig } from "@/lib/export/report-config";
 import {
+  DataTableContainer,
+  DataTableHeader,
+  DataTableBody,
+  DataTableRow,
+  DataTableHead,
+  DataTableCell,
+  DataTableCellStack,
+  DataTableEmpty,
+  DataTableSkeleton,
+} from "@/components/ui/data-table";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { formatDate, formatDateTime, getDatePresets, createLagosDateTime, getStartOfDay, getEndOfDay } from "@/lib/utils/date-format";
+import {
   getSubscriptionReportSummary,
-  getSubscriptionReportList,
+  getSubscriptionReport,
   getRaffleReport,
   getIncomeReport,
+  getPackages,
   type SubscriptionReportSummary,
   type IncomeReportResponse,
+  type SubscriptionPackage,
 } from "@/lib/api/admin";
 
 type ReportTab = "subscriptions" | "raffles" | "income";
 
+interface SubscriptionEntry {
+  id: string;
+  subscriberName: string;
+  email: string;
+  phoneNumber: string;
+  packageName: string;
+  amount: number;
+  status: "ACTIVE" | "EXPIRED" | "PENDING_PAYMENT";
+  startsAt: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+interface SubscriptionReportResponse {
+  entries: SubscriptionEntry[];
+  page: number;
+  size: number;
+  total: number;
+}
+
 export default function ReportsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<ReportTab>("subscriptions");
   const [showPrintView, setShowPrintView] = useState(false);
   
   // Subscription report state
   const [summary, setSummary] = useState<SubscriptionReportSummary | null>(null);
-  const [listData, setListData] = useState<{ page: number; entries: any[]; size: number; total: number } | null>(null);
+  const [subscriptionData, setSubscriptionData] = useState<SubscriptionReportResponse | null>(null);
+  const [packages, setPackages] = useState<SubscriptionPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [listError, setListError] = useState<string | null>(null);
+  const [subscriptionPage, setSubscriptionPage] = useState(0);
+  const subscriptionPageSize = 50;
+  
+  // Subscription filters
+  const [subscriptionFilters, setSubscriptionFilters] = useState({
+    from: searchParams.get("from") || "",
+    to: searchParams.get("to") || "",
+    search: searchParams.get("search") || "",
+    packageId: searchParams.get("packageId") || "",
+    status: searchParams.get("status") || "",
+  });
 
   // Raffle report state
   const [raffleData, setRaffleData] = useState<{ entries: unknown[]; size: number; total: number } | null>(null);
@@ -51,37 +100,119 @@ export default function ReportsPage() {
     to: "",
   });
 
+  // Load packages on mount
   useEffect(() => {
-    async function loadSummary() {
+    async function loadPackages() {
       try {
-        setLoading(true);
-        setError(null);
-        const data = await getSubscriptionReportSummary();
-        setSummary(data);
+        const data = await getPackages();
+        setPackages(data);
       } catch (err) {
-        console.error("Error loading subscription report summary:", err);
-        setError(err instanceof Error ? err.message : "Failed to load subscription report");
-      } finally {
-        setLoading(false);
+        console.error("Error loading packages:", err);
       }
     }
+    loadPackages();
+  }, []);
 
-    async function checkListEndpoint() {
-      try {
-        const data = await getSubscriptionReportList(0, 10);
-        setListData(data as any);
-      } catch (err: unknown) {
-        if (err && typeof err === "object" && "status" in err && err.status === 404) {
-          setListError("Subscription report list endpoint not available yet (404)");
-        } else {
-          setListError(err instanceof Error ? err.message : "Failed to load subscription list");
-        }
+  // Load subscription report
+  const loadSubscriptionReport = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Build filters with Lagos timezone
+      const apiFilters: Record<string, string> = {
+        page: subscriptionPage.toString(),
+        size: subscriptionPageSize.toString(),
+      };
+      
+      if (subscriptionFilters.from) apiFilters.from = subscriptionFilters.from;
+      if (subscriptionFilters.to) apiFilters.to = subscriptionFilters.to;
+      if (subscriptionFilters.search) apiFilters.search = subscriptionFilters.search;
+      if (subscriptionFilters.packageId) apiFilters.packageId = subscriptionFilters.packageId;
+      if (subscriptionFilters.status) apiFilters.status = subscriptionFilters.status;
+      
+      const [summaryData, reportData] = await Promise.all([
+        getSubscriptionReportSummary({
+          from: subscriptionFilters.from || undefined,
+          to: subscriptionFilters.to || undefined,
+        }),
+        getSubscriptionReport(apiFilters as any),
+      ]);
+      
+      setSummary(summaryData);
+      setSubscriptionData(reportData as SubscriptionReportResponse);
+    } catch (err) {
+      console.error("Error loading subscription report:", err);
+      setError(err instanceof Error ? err.message : "Failed to load subscription report");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Apply subscription filters
+  const applySubscriptionFilters = () => {
+    // Validate from/to
+    if (subscriptionFilters.from && subscriptionFilters.to) {
+      const from = new Date(subscriptionFilters.from);
+      const to = new Date(subscriptionFilters.to);
+      if (from > to) {
+        setError("'from' must be on or before 'to'");
+        return;
       }
     }
     
-    loadSummary();
-    checkListEndpoint();
-  }, []);
+    // Update URL
+    const params = new URLSearchParams();
+    if (subscriptionFilters.from) params.set("from", subscriptionFilters.from);
+    if (subscriptionFilters.to) params.set("to", subscriptionFilters.to);
+    if (subscriptionFilters.search) params.set("search", subscriptionFilters.search);
+    if (subscriptionFilters.packageId) params.set("packageId", subscriptionFilters.packageId);
+    if (subscriptionFilters.status) params.set("status", subscriptionFilters.status);
+    
+    router.push(`/admin/reports?${params.toString()}`);
+    
+    setSubscriptionPage(0);
+    loadSubscriptionReport();
+  };
+
+  // Clear subscription filters
+  const clearSubscriptionFilters = () => {
+    setSubscriptionFilters({
+      from: "",
+      to: "",
+      search: "",
+      packageId: "",
+      status: "",
+    });
+    router.push("/admin/reports");
+    setSubscriptionPage(0);
+  };
+
+  // Apply date preset
+  const applyDatePreset = (preset: "today" | "last7Days" | "thisMonth") => {
+    const presets = getDatePresets();
+    const selected = presets[preset];
+    setSubscriptionFilters({
+      ...subscriptionFilters,
+      from: selected.from,
+      to: selected.to,
+    });
+  };
+
+  // Load on mount and when filters change
+  useEffect(() => {
+    if (activeTab === "subscriptions") {
+      loadSubscriptionReport();
+    }
+  }, [subscriptionPage, activeTab]);
+
+  // Remove old subscription list loading
+  // useEffect(() => {
+  //   async function loadSummary() { ... }
+  //   async function checkListEndpoint() { ... }
+  //   loadSummary();
+  //   checkListEndpoint();
+  // }, []);
 
   // Load raffle report
   const loadRaffleReport = async () => {
@@ -214,168 +345,326 @@ export default function ReportsPage() {
       {/* Subscriptions Tab */}
       {activeTab === "subscriptions" && (
         <>
+          {/* Filters */}
+          <div className="bg-card border border-border rounded-xl p-4 space-y-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Filter size={16} className="text-muted-foreground" />
+                <h3 className="text-sm font-semibold">Filters</h3>
+              </div>
+              <p className="text-xs text-muted-foreground">Times are Lagos time (WAT)</p>
+            </div>
+
+            {/* Date Presets */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => applyDatePreset("today")}
+              >
+                Today
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => applyDatePreset("last7Days")}
+              >
+                Last 7 days
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => applyDatePreset("thisMonth")}
+              >
+                This month
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs font-medium mb-1.5 block">From</label>
+                <input
+                  type="datetime-local"
+                  value={subscriptionFilters.from.replace("+01:00", "")}
+                  onChange={(e) => {
+                    const date = new Date(e.target.value);
+                    setSubscriptionFilters({ ...subscriptionFilters, from: createLagosDateTime(date) });
+                  }}
+                  className="w-full px-3 h-9 text-sm rounded border border-border bg-background"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1.5 block">To</label>
+                <input
+                  type="datetime-local"
+                  value={subscriptionFilters.to.replace("+01:00", "")}
+                  onChange={(e) => {
+                    const date = new Date(e.target.value);
+                    setSubscriptionFilters({ ...subscriptionFilters, to: createLagosDateTime(date) });
+                  }}
+                  className="w-full px-3 h-9 text-sm rounded border border-border bg-background"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1.5 block">Search</label>
+                <input
+                  type="text"
+                  value={subscriptionFilters.search}
+                  onChange={(e) => setSubscriptionFilters({ ...subscriptionFilters, search: e.target.value })}
+                  placeholder="Email or phone"
+                  className="w-full px-3 h-9 text-sm rounded border border-border bg-background"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1.5 block">Package</label>
+                <select
+                  value={subscriptionFilters.packageId}
+                  onChange={(e) => setSubscriptionFilters({ ...subscriptionFilters, packageId: e.target.value })}
+                  className="w-full px-3 h-9 text-sm rounded border border-border bg-background"
+                >
+                  <option value="">All packages</option>
+                  {packages.map((pkg) => (
+                    <option key={pkg.id} value={pkg.id}>{pkg.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1.5 block">Status</label>
+                <select
+                  value={subscriptionFilters.status}
+                  onChange={(e) => setSubscriptionFilters({ ...subscriptionFilters, status: e.target.value })}
+                  className="w-full px-3 h-9 text-sm rounded border border-border bg-background"
+                >
+                  <option value="">All</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="EXPIRED">Expired</option>
+                  <option value="PENDING_PAYMENT">Pending payment</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Active Filters */}
+            {(subscriptionFilters.from || subscriptionFilters.to || subscriptionFilters.search || subscriptionFilters.packageId || subscriptionFilters.status) && (
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-xs text-muted-foreground">Active filters:</span>
+                {subscriptionFilters.from && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-secondary text-xs">
+                    From: {formatDateTime(subscriptionFilters.from)}
+                    <X
+                      size={14}
+                      className="cursor-pointer hover:text-foreground"
+                      onClick={() => setSubscriptionFilters({ ...subscriptionFilters, from: "" })}
+                    />
+                  </span>
+                )}
+                {subscriptionFilters.to && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-secondary text-xs">
+                    To: {formatDateTime(subscriptionFilters.to)}
+                    <X
+                      size={14}
+                      className="cursor-pointer hover:text-foreground"
+                      onClick={() => setSubscriptionFilters({ ...subscriptionFilters, to: "" })}
+                    />
+                  </span>
+                )}
+                {subscriptionFilters.search && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-secondary text-xs">
+                    Search: {subscriptionFilters.search}
+                    <X
+                      size={14}
+                      className="cursor-pointer hover:text-foreground"
+                      onClick={() => setSubscriptionFilters({ ...subscriptionFilters, search: "" })}
+                    />
+                  </span>
+                )}
+                {subscriptionFilters.packageId && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-secondary text-xs">
+                    Package: {packages.find(p => p.id.toString() === subscriptionFilters.packageId)?.name}
+                    <X
+                      size={14}
+                      className="cursor-pointer hover:text-foreground"
+                      onClick={() => setSubscriptionFilters({ ...subscriptionFilters, packageId: "" })}
+                    />
+                  </span>
+                )}
+                {subscriptionFilters.status && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-secondary text-xs">
+                    Status: {subscriptionFilters.status}
+                    <X
+                      size={14}
+                      className="cursor-pointer hover:text-foreground"
+                      onClick={() => setSubscriptionFilters({ ...subscriptionFilters, status: "" })}
+                    />
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button onClick={applySubscriptionFilters} size="sm">
+                Apply Filters
+              </Button>
+              <Button onClick={clearSubscriptionFilters} variant="outline" size="sm">
+                Clear filters
+              </Button>
+            </div>
+          </div>
+
           {/* Error Message */}
           {error && (
-            <div className="bg-destructive/10 border border-destructive/30 rounded p-4 text-destructive text-sm">
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 text-destructive text-sm">
               {error}
             </div>
           )}
 
-          {/* Backend Status Message */}
-          {listError && (
-            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-4 text-yellow-600 text-sm">
-              <p className="font-medium">Note: {listError}</p>
-              <p className="text-xs mt-1 opacity-80">Summary data is available below.</p>
+          {/* Loading State */}
+          {loading && <DataTableSkeleton rows={5} columns={8} />}
+
+          {/* Summary Tiles */}
+          {!loading && summary && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Total Subscriptions */}
+              <div className="bg-card border border-border rounded-xl p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center">
+                    <Users size={18} className="text-muted-foreground" />
+                  </div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">All subscriptions</p>
+                </div>
+                <p className="text-2xl font-bold tabular-nums">{summary.totalSubscriptions.toLocaleString()}</p>
+              </div>
+
+              {/* Total Revenue */}
+              <div className="bg-card border border-border rounded-xl p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center">
+                    <CreditCard size={18} className="text-muted-foreground" />
+                  </div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Revenue (paid)</p>
+                </div>
+                <p className="text-2xl font-bold tabular-nums">₦{summary.totalRevenue.toLocaleString()}</p>
+              </div>
+
+              {/* By Status */}
+              {summary.byStatus && (summary.byStatus as Array<{ status: string; count: number }>).map((item) => (
+                <div key={item.status} className="bg-card border border-border rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <StatusBadge status={item.status as any} size="sm" />
+                  </div>
+                  <p className="text-2xl font-bold tabular-nums">{item.count.toLocaleString()}</p>
+                </div>
+              ))}
             </div>
           )}
 
-          {/* Subscription Report Summary */}
-          {summary && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Total Subscriptions Card */}
-              <div className="bg-card border border-border rounded p-4">
-                <div className="w-8 h-8 rounded bg-secondary/50 flex items-center justify-center mb-3">
-                  <FileBarChart2 size={16} className="text-muted-foreground" />
-                </div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Subscriptions</p>
-                <p className="text-2xl font-bold mt-1 tabular-nums">{summary.totalSubscriptions.toLocaleString()}</p>
-              </div>
-
-              {/* Total Revenue Card */}
-              <div className="bg-card border border-border rounded p-4">
-                <div className="w-8 h-8 rounded bg-secondary/50 flex items-center justify-center mb-3">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
-                    <path d="M21 8v8M3 8v8M7 4h10v16H7z"/>
-                    <path d="M7 10h10M7 14h10"/>
-                  </svg>
-                </div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Revenue</p>
-                <p className="text-2xl font-bold mt-1 tabular-nums">₦{summary.totalRevenue.toLocaleString()}</p>
-              </div>
-
-              {/* By Package (when available) */}
-              {summary.byPackage && summary.byPackage.length > 0 && (
-                <div className="bg-card border border-border rounded p-4 md:col-span-2">
-                  <h3 className="text-sm font-semibold mb-3">By Package</h3>
-                  <div className="space-y-2">
-                    {summary.byPackage.map((item: any, idx: number) => (
-                      <div key={idx} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-[13px]">{item.packageName}</span>
-                          <Badge className="bg-secondary text-muted-foreground text-xs">{item.count} subs</Badge>
-                        </div>
-                        <span className="font-semibold text-[13px] tabular-nums">₦{item.revenue.toLocaleString()}</span>
+          {/* By Package Breakdown */}
+          {!loading && summary && summary.byPackage && summary.byPackage.length > 0 && (
+            <div className="bg-card border border-border rounded-xl p-4">
+              <h3 className="text-sm font-semibold mb-4">By Package</h3>
+              <div className="space-y-3">
+                {(summary.byPackage as Array<{ packageName: string; count: number; revenue: number }>).map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                    <div className="flex items-center gap-3">
+                      <Smartphone size={16} className="text-muted-foreground" />
+                      <div>
+                        <p className="font-medium text-sm">{item.packageName}</p>
+                        <p className="text-xs text-muted-foreground">{item.count} subscriptions</p>
                       </div>
-                    ))}
+                    </div>
+                    <p className="font-semibold tabular-nums">₦{item.revenue.toLocaleString()}</p>
                   </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Table */}
+          {!loading && subscriptionData && subscriptionData.entries.length > 0 && (
+            <>
+              <DataTableContainer>
+                <DataTableHeader>
+                  <DataTableRow>
+                    <DataTableHead>Subscriber</DataTableHead>
+                    <DataTableHead>Phone</DataTableHead>
+                    <DataTableHead>Package</DataTableHead>
+                    <DataTableHead align="right">Amount</DataTableHead>
+                    <DataTableHead>Status</DataTableHead>
+                    <DataTableHead>Starts</DataTableHead>
+                    <DataTableHead>Expires</DataTableHead>
+                    <DataTableHead>Created</DataTableHead>
+                  </DataTableRow>
+                </DataTableHeader>
+                <DataTableBody>
+                  {subscriptionData.entries.map((entry) => (
+                    <DataTableRow key={entry.id}>
+                      <DataTableCell>
+                        <DataTableCellStack
+                          primary={entry.subscriberName}
+                          secondary={entry.email}
+                        />
+                      </DataTableCell>
+                      <DataTableCell>{entry.phoneNumber}</DataTableCell>
+                      <DataTableCell>{entry.packageName}</DataTableCell>
+                      <DataTableCell align="right" className="tabular-nums font-medium">
+                        ₦{entry.amount.toLocaleString()}
+                      </DataTableCell>
+                      <DataTableCell>
+                        <StatusBadge status={entry.status} />
+                      </DataTableCell>
+                      <DataTableCell className="text-muted-foreground">
+                        {formatDate(entry.startsAt)}
+                      </DataTableCell>
+                      <DataTableCell className="text-muted-foreground">
+                        {formatDate(entry.expiresAt)}
+                      </DataTableCell>
+                      <DataTableCell className="text-muted-foreground">
+                        {formatDate(entry.createdAt)}
+                      </DataTableCell>
+                    </DataTableRow>
+                  ))}
+                </DataTableBody>
+              </DataTableContainer>
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Showing {subscriptionData.entries.length} of {subscriptionData.total.toLocaleString()} subscriptions
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSubscriptionPage(p => Math.max(0, p - 1))}
+                    disabled={subscriptionPage === 0 || loading}
+                  >
+                    <ChevronLeft size={16} />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSubscriptionPage(p => p + 1)}
+                    disabled={(subscriptionData?.entries.length || 0) < subscriptionPageSize || loading}
+                  >
+                    Next
+                    <ChevronRight size={16} />
+                  </Button>
                 </div>
-              )}
-
-              {/* By Status (when available) */}
-              {summary.byStatus && summary.byStatus.length > 0 && (
-                <div className="bg-card border border-border rounded p-4 md:col-span-2">
-                  <h3 className="text-sm font-semibold mb-3">By Status</h3>
-                  <div className="flex flex-wrap gap-3">
-                    {summary.byStatus.map((item: any, idx: number) => {
-                      const statusColors: Record<string, string> = {
-                        ACTIVE: "bg-green-500/10 text-green-600 border-green-500/30",
-                        EXPIRED: "bg-secondary text-muted-foreground border-border",
-                        PENDING_PAYMENT: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30",
-                      };
-                      const colorClass = statusColors[item.status] || "bg-secondary text-muted-foreground border-border";
-                      return (
-                        <div key={idx} className={`rounded border px-3 py-2 ${colorClass}`}>
-                          <p className="text-xs font-medium uppercase tracking-wide">{item.status.replace("_", " ")}</p>
-                          <p className="text-xl font-bold mt-0.5 tabular-nums">{item.count}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            </>
           )}
 
-          {!summary && !loading && !error && (
-            <div className="bg-card border border-border rounded p-12 text-center text-muted-foreground text-sm">
-              No subscription data available yet.
-            </div>
-          )}
-
-          {/* Subscription List Data */}
-          {listData && listData.entries && listData.entries.length > 0 && (
-            <div className="bg-card border border-border rounded p-4 mt-6">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold">Subscription Entries</h2>
-                <span className="text-xs text-muted-foreground">
-                  {listData.total} total subscriptions
-                </span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-[13px]">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Subscriber</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Package</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Amount</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Status</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Start Date</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Expires At</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {listData.entries.map((entry: any) => (
-                      <tr key={entry.id} className="border-b border-border last:border-0 hover:bg-secondary/50">
-                        <td className="py-2 px-3">
-                          <div>
-                            <p className="font-medium">{entry.subscriberName}</p>
-                            <p className="text-xs text-muted-foreground">{entry.email}</p>
-                            <p className="text-xs text-muted-foreground">{entry.phoneNumber}</p>
-                          </div>
-                        </td>
-                        <td className="py-2 px-3 font-medium">{entry.packageName}</td>
-                        <td className="py-2 px-3 tabular-nums">₦{entry.amount.toLocaleString()}</td>
-                        <td className="py-2 px-3">
-                          <Badge className={
-                            entry.status === "ACTIVE" 
-                              ? "bg-green-500/10 border-green-500/30 text-green-600"
-                              : entry.status === "EXPIRED"
-                              ? "bg-secondary border-border text-muted-foreground"
-                              : entry.status === "PENDING_PAYMENT"
-                              ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-600"
-                              : "bg-secondary border-border text-muted-foreground"
-                          }>
-                            {entry.status.replace("_", " ")}
-                          </Badge>
-                        </td>
-                        <td className="py-2 px-3 text-muted-foreground">
-                          {entry.startsAt ? new Date(entry.startsAt).toLocaleDateString() : "—"}
-                        </td>
-                        <td className="py-2 px-3 text-muted-foreground">
-                          {entry.expiresAt ? new Date(entry.expiresAt).toLocaleDateString() : "—"}
-                        </td>
-                        <td className="py-2 px-3 text-muted-foreground text-xs">
-                          {new Date(entry.createdAt).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              {/* Pagination info */}
-              <div className="mt-3 text-xs text-muted-foreground text-center">
-                Showing {listData.entries.length} of {listData.total} subscriptions
-              </div>
-            </div>
-          )}
-
-          {/* No entries state */}
-          {listData && listData.entries && listData.entries.length === 0 && (
-            <div className="bg-card border border-border rounded p-12 text-center text-muted-foreground text-sm mt-6">
-              No subscription entries found.
-            </div>
+          {/* Empty State */}
+          {!loading && subscriptionData && subscriptionData.entries.length === 0 && (
+            <DataTableEmpty
+              message="No subscriptions found matching your filters."
+              icon={<Users size={32} className="text-muted-foreground" />}
+              action={
+                <Button onClick={clearSubscriptionFilters} variant="outline" size="sm">
+                  Clear filters
+                </Button>
+              }
+            />
           )}
         </>
       )}
@@ -482,33 +771,33 @@ export default function ReportsPage() {
                 </span>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-[13px]">
+                <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Draw Code</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Prize Name</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Start Date</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">End Date</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Draw Date</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Max Winners</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Schedule</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Status</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Entries</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Winners</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Created</th>
+                    <tr className="border-b border-border bg-secondary/30">
+                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[140px]">Draw Code</th>
+                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[180px]">Prize Name</th>
+                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[120px]">Start Date</th>
+                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[120px]">End Date</th>
+                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[120px]">Draw Date</th>
+                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[100px]">Max Winners</th>
+                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[110px]">Schedule</th>
+                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[100px]">Status</th>
+                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[90px]">Entries</th>
+                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[100px]">Winners</th>
+                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[110px]">Created</th>
                     </tr>
                   </thead>
                   <tbody>
                     {raffleData.entries.map((entry: any, idx: number) => (
-                      <tr key={idx} className="border-b border-border last:border-0 hover:bg-secondary/50">
-                        <td className="py-2 px-3 font-mono text-xs">{entry.raffleCode || "—"}</td>
-                        <td className="py-2 px-3 font-medium">{entry.prizeName || "—"}</td>
-                        <td className="py-2 px-3 text-muted-foreground">{entry.startsOn || "—"}</td>
-                        <td className="py-2 px-3 text-muted-foreground">{entry.endsOn || "—"}</td>
-                        <td className="py-2 px-3 text-muted-foreground">{entry.drawDate || "—"}</td>
-                        <td className="py-2 px-3">{entry.maxWinners || 0}</td>
-                        <td className="py-2 px-3">{entry.scheduleLabel || "—"}</td>
-                        <td className="py-2 px-3">
+                      <tr key={idx} className="border-b border-border last:border-0 hover:bg-secondary/50 transition-colors">
+                        <td className="py-4 px-5 font-mono text-xs whitespace-nowrap">{entry.raffleCode || "—"}</td>
+                        <td className="py-4 px-5 font-medium whitespace-nowrap">{entry.prizeName || "—"}</td>
+                        <td className="py-4 px-5 text-muted-foreground whitespace-nowrap">{entry.startsOn || "—"}</td>
+                        <td className="py-4 px-5 text-muted-foreground whitespace-nowrap">{entry.endsOn || "—"}</td>
+                        <td className="py-4 px-5 text-muted-foreground whitespace-nowrap">{entry.drawDate || "—"}</td>
+                        <td className="py-4 px-5 whitespace-nowrap">{entry.maxWinners || 0}</td>
+                        <td className="py-4 px-5 whitespace-nowrap">{entry.scheduleLabel || "—"}</td>
+                        <td className="py-4 px-5 whitespace-nowrap">
                           <Badge className={
                             entry.status === "ACTIVE" 
                               ? "bg-green-500/10 border-green-500/30 text-green-600"
@@ -523,15 +812,15 @@ export default function ReportsPage() {
                             {entry.status || "—"}
                           </Badge>
                         </td>
-                        <td className="py-2 px-3">{entry.entryCount || 0}</td>
-                        <td className="py-2 px-3">
+                        <td className="py-4 px-5 whitespace-nowrap">{entry.entryCount || 0}</td>
+                        <td className="py-4 px-5 whitespace-nowrap">
                           {entry.winnersSelected ? (
                             <Badge className="bg-green-500/10 border-green-500/30 text-green-600">Selected</Badge>
                           ) : (
                             <span className="text-muted-foreground">Pending</span>
                           )}
                         </td>
-                        <td className="py-2 px-3 text-muted-foreground">
+                        <td className="py-4 px-5 text-muted-foreground whitespace-nowrap">
                           {entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : "—"}
                         </td>
                       </tr>

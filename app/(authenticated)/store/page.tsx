@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, AlertCircle, RefreshCw } from "lucide-react";
-import { getAvailablePackages, getMySubscriptions, type SubscriptionPackage } from "@/lib/api/subscriptions";
+import { getAvailablePackages, type SubscriptionPackage } from "@/lib/api/subscriptions";
 import { usePlayerDashboard } from "@/hooks/use-player-dashboard";
 import { useAuthStore } from "@/store/auth-store";
 import { Button } from "@/components/ui/button";
@@ -20,114 +20,6 @@ import {
 } from "@/lib/utils/payment-state";
 
 type View = "browse" | "checkout";
-
-// Current Plan Card Component
-function CurrentPlanCard({ 
-  dashboard, 
-  packages 
-}: { 
-  dashboard: PlayerDashboard;
-  packages: SubscriptionPackage[];
-}) {
-  // Fetch user subscriptions to get start date
-  const { data: userSubscriptions } = useQuery({
-    queryKey: ["subscriptions", "me"],
-    queryFn: () => getMySubscriptions(),
-    staleTime: 5 * 60_000, // 5 minutes
-    enabled: !!dashboard.subscription, // Only fetch if there's an active subscription
-  });
-
-  // Find the matching subscription entry
-  const currentSub = userSubscriptions?.find(
-    (sub) => sub.packageName === dashboard.subscription?.packageName
-  );
-
-  // Determine start date
-  let startDate: string | null = null;
-
-  if (currentSub?.startsAt) {
-    // Use actual start date from API
-    startDate = currentSub.startsAt;
-  } else if (dashboard.subscription?.expiresAt) {
-    // Derive from expiry - durationDays
-    const matchingPackage = packages.find(
-      (pkg) => pkg.name === dashboard.subscription?.packageName
-    );
-    if (matchingPackage?.durationDays) {
-      const expiryDate = new Date(dashboard.subscription.expiresAt);
-      const derivedStart = new Date(expiryDate);
-      derivedStart.setDate(derivedStart.getDate() - matchingPackage.durationDays);
-      startDate = derivedStart.toISOString();
-    }
-  }
-
-  // Calculate days left (calendar days in Africa/Lagos)
-  const getDaysLeft = (expiryDateStr: string): number | null => {
-    try {
-      const now = new Date();
-      const expiry = new Date(expiryDateStr);
-      
-      // Convert both to Africa/Lagos timezone
-      const nowLagos = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Lagos' }));
-      const expiryLagos = new Date(expiry.toLocaleString('en-US', { timeZone: 'Africa/Lagos' }));
-      
-      // Calculate difference in days
-      const diffTime = expiryLagos.getTime() - nowLagos.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      return Math.max(0, diffDays);
-    } catch {
-      return null;
-    }
-  };
-
-  const daysLeft = dashboard.subscription?.expiresAt 
-    ? getDaysLeft(dashboard.subscription.expiresAt) 
-    : null;
-
-  return (
-    <div className="border border-border rounded-lg p-4 md:p-5 space-y-3">
-      <h2 className="font-bold text-base sm:text-lg">Your Current Plan</h2>
-      <div className="space-y-2">
-        <div className="flex justify-between gap-3">
-          <span className="text-xs sm:text-sm text-muted-foreground">Plan</span>
-          <span className="font-medium text-xs sm:text-sm text-right truncate">{dashboard.subscription?.packageName}</span>
-        </div>
-        {startDate && (
-          <div className="flex justify-between gap-3">
-            <span className="text-xs sm:text-sm text-muted-foreground">Subscribed on</span>
-            <span className="font-medium text-xs sm:text-sm whitespace-nowrap">{formatExpiryDate(startDate)}</span>
-          </div>
-        )}
-        <div className="flex justify-between gap-3">
-          <span className="text-xs sm:text-sm text-muted-foreground">Tokens left</span>
-          <span className="font-medium text-xs sm:text-sm whitespace-nowrap">
-            {dashboard.tokensLeft === null 
-              ? "Unlimited" 
-              : `${dashboard.tokensLeft} token${dashboard.tokensLeft === 1 ? '' : 's'}`
-            }
-          </span>
-        </div>
-        <div className="flex justify-between items-center gap-3">
-          <span className="text-xs sm:text-sm text-muted-foreground">Expires on</span>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="font-medium text-xs sm:text-sm whitespace-nowrap">{formatExpiryDate(dashboard.subscription?.expiresAt)}</span>
-            {daysLeft !== null && (
-              <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium whitespace-nowrap">
-                {daysLeft === 0 ? "Today" : `${daysLeft} day${daysLeft === 1 ? '' : 's'}`}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-      <div className="pt-2 border-t border-border">
-        <p className="text-xs sm:text-sm text-muted-foreground">
-          You can buy another plan once you&apos;ve used all your plays or this plan expires.
-        </p>
-      </div>
-    </div>
-  );
-}
 
 export default function StorePage() {
   const queryClient = useQueryClient();
@@ -170,9 +62,6 @@ export default function StorePage() {
   const buyCheck = canBuyPlan(dashboard);
   const canBuy = buyCheck.allowed;
   const blockReason = buyCheck.reason;
-  
-  // Check if plan exists with 0 plays left (show note, keep enabled)
-  const hasUsedUpPlan = dashboard?.hasActiveSubscription && dashboard?.tokensLeft === 0;
 
   const handleSelect = (item: SubscriptionPackage) => {
     setSelected(item);
@@ -582,27 +471,25 @@ export default function StorePage() {
           </div>
         )}
 
-        {/* Current plan card (when NOT allowed to buy) */}
+        {/* Active plan info - simple message when can't buy */}
         {!canBuy && dashboard?.subscription && (
-          <CurrentPlanCard 
-            dashboard={dashboard} 
-            packages={packages}
-          />
-        )}
-
-        {/* Used up plan note (when allowed but plan exists with 0 plays) */}
-        {canBuy && hasUsedUpPlan && dashboard?.subscription && (
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3">
-            <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-400">
-              You&apos;ve used all plays in your {dashboard.subscription.packageName} plan.
+          <div className="border border-border rounded-lg p-4 space-y-2">
+            <p className="text-sm font-medium">
+              You have an active {dashboard.subscription.packageName} plan
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {dashboard.tokensLeft === null 
+                ? `Expires ${formatExpiryDate(dashboard.subscription.expiresAt)}`
+                : `${dashboard.tokensLeft} play${dashboard.tokensLeft === 1 ? '' : 's'} remaining • Expires ${formatExpiryDate(dashboard.subscription.expiresAt)}`
+              }
             </p>
           </div>
         )}
 
         {/* Subscription Plans Section */}
         <div>
-          <h2 className="text-[10px] sm:text-xs font-bold mb-2 uppercase tracking-wider text-muted-foreground">Subscription Plans</h2>
-          <div className="space-y-2">
+          <h2 className="text-[10px] sm:text-xs font-bold mb-4 uppercase tracking-wider text-muted-foreground">Subscription Plans</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {activePackages.map((plan) => {
               const isBestValue = plan.name === "Monthly" || plan.durationDays === 30;
               const isSelected = selected?.id === plan.id;
@@ -612,33 +499,54 @@ export default function StorePage() {
                   key={plan.id}
                   onClick={() => canBuy && handleSelect(plan)}
                   disabled={!canBuy}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 border rounded-lg transition-all min-h-[60px] gap-3 ${
+                  className={`relative flex flex-col items-center px-4 py-6 border rounded-lg transition-all ${
                     !canBuy 
-                      ? "opacity-50 cursor-not-allowed border-border"
+                      ? "opacity-50 cursor-not-allowed border-border bg-[#1a1a1a]"
                       : isSelected
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
+                        ? "border-[var(--color-brand)] bg-[var(--color-brand)]/5 shadow-lg"
+                        : "border-border bg-[#1a1a1a] hover:border-[var(--color-brand)]/50"
                   }`}
                 >
-                  <div className="flex-1 text-left min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                      <p className="text-sm font-bold">{plan.name}</p>
-                      {isBestValue && (
-                        <span className="bg-[var(--color-brand)] text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                          Best value
-                        </span>
-                      )}
+                  {/* Best value badge */}
+                  {isBestValue && (
+                    <div className="absolute top-2 right-2">
+                      <span className="bg-[var(--color-brand)] text-white text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap">
+                        Best value
+                      </span>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {formatPlanAllowance(plan)}
-                    </p>
+                  )}
+                  
+                  {/* Star icon */}
+                  <div className="w-12 h-12 rounded-full bg-secondary/30 flex items-center justify-center mb-4">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-base font-bold whitespace-nowrap text-[var(--color-brand)]">₦{plan.fee.toLocaleString()}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      per {plan.durationDays === 1 ? 'day' : plan.durationDays === 7 ? 'week' : 'month'}
-                    </p>
-                  </div>
+                  
+                  {/* Package name */}
+                  <p className="text-base font-bold mb-3">{plan.name}</p>
+                  
+                  {/* Price */}
+                  <p className="text-3xl font-bold mb-2 tabular-nums text-[var(--color-brand)]">₦{plan.fee.toLocaleString()}</p>
+                  
+                  {/* Duration */}
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {plan.durationDays} {plan.durationDays === 1 ? 'day' : 'days'}
+                  </p>
+                  
+                  {/* Attempts */}
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {formatPlanAllowance(plan)}
+                  </p>
+                  
+                  {/* Status badge (only show if disabled) */}
+                  {!plan.active && (
+                    <div className="mt-auto">
+                      <span className="text-xs px-3 py-1 rounded-full bg-secondary border border-border text-muted-foreground">
+                        Unavailable
+                      </span>
+                    </div>
+                  )}
                 </button>
               );
             })}

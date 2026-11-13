@@ -177,24 +177,35 @@ export default function PackagesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {packages.map((pkg) => (
+          {/* Sort packages: Daily (1 day), Weekly (7 days), Monthly (30 days) */}
+          {[...packages].sort((a, b) => a.durationDays - b.durationDays).map((pkg) => (
             <div
               key={pkg.id}
-              className="rounded p-4 text-center flex flex-col items-center border bg-card border-border"
+              className="rounded-lg p-6 text-center flex flex-col items-center border bg-[#1a1a1a] border-border"
             >
-              <div className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center">
-                <Star size={20} className="text-muted-foreground" />
+              {/* Star icon */}
+              <div className="w-12 h-12 rounded-full bg-secondary/30 flex items-center justify-center mb-4">
+                <Star size={24} className="text-muted-foreground" />
               </div>
-              <p className="font-semibold text-sm mt-3">{pkg.name}</p>
-              <p className="text-2xl font-bold mt-2 tabular-nums">{formatNaira(pkg.fee)}</p>
-              <p className="text-xs text-muted-foreground mt-1">{pkg.durationDays} {pkg.durationDays === 1 ? 'day' : 'days'}</p>
               
-              {/* Read-only attempts info */}
-              <div className="mt-3 text-xs text-muted-foreground">
+              {/* Package name */}
+              <p className="font-bold text-base mb-3">{pkg.name}</p>
+              
+              {/* Price */}
+              <p className="text-3xl font-bold mb-2 tabular-nums">{formatNaira(pkg.fee)}</p>
+              
+              {/* Duration */}
+              <p className="text-sm text-muted-foreground mb-3">
+                {pkg.durationDays} {pkg.durationDays === 1 ? 'day' : 'days'}
+              </p>
+              
+              {/* Attempts info */}
+              <p className="text-sm text-muted-foreground mb-4">
                 {pkg.attemptsIncluded} attempts {pkg.attemptsPeriod?.toLowerCase()}
-              </div>
+              </p>
               
-              <div className={`mt-4 rounded px-2.5 py-1 text-xs font-medium ${
+              {/* Status badge */}
+              <div className={`mb-4 rounded px-3 py-1.5 text-xs font-medium ${
                 pkg.active 
                   ? "bg-green-500/10 border border-green-500/30 text-green-600" 
                   : "bg-secondary border border-border text-muted-foreground"
@@ -202,16 +213,15 @@ export default function PackagesPage() {
                 {pkg.active ? "Active" : "Disabled"}
               </div>
 
-              <div className="flex gap-2 mt-4 w-full">
-                <AdminActionButton 
-                  variant="secondary" 
-                  onClick={() => handleEdit(pkg)} 
-                  size="sm"
-                  className="flex-1"
-                >
-                  Edit
-                </AdminActionButton>
-              </div>
+              {/* Edit button */}
+              <AdminActionButton 
+                variant="secondary" 
+                onClick={() => handleEdit(pkg)} 
+                size="sm"
+                className="w-full"
+              >
+                Edit
+              </AdminActionButton>
             </div>
           ))}
         </div>

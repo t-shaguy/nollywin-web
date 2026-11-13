@@ -198,10 +198,13 @@ export default function RafflesPage() {
 
       {(!SHOW_ACTIVE_DRAWS || activeTab === "history") && (
         <>
-          <div className="space-y-1">
-            <h2 className="text-base sm:text-lg font-bold">History</h2>
-            <p className="text-xs sm:text-sm text-muted-foreground">Draws you've taken part in</p>
-          </div>
+          {/* History Section - styled as subsection */}
+          {!SHOW_ACTIVE_DRAWS && (
+            <div className="space-y-1">
+              <h2 className="text-sm sm:text-base font-semibold text-muted-foreground uppercase tracking-wide">History</h2>
+              <p className="text-xs sm:text-sm text-muted-foreground">Draws you've taken part in</p>
+            </div>
+          )}
           <RaffleHistoryList />
         </>
       )}

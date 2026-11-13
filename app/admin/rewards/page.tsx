@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { AdminModal, ModalSection, FormGrid, ModalFooter } from "@/components/admin/admin-modal";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { AdminInput } from "@/components/admin/admin-field";
-import { StatusBadge } from "@/components/admin/status-badge";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { formatDate, formatDateTime } from "@/lib/utils/date-format";
 import {
   getAdminDraws,
   getAdminDraw,
@@ -41,21 +42,6 @@ interface CreateDrawForm {
     prizeType?: "CASH" | "ITEM";
     cashAmount?: number;
   }[];
-}
-
-// Helper: format UTC date as "DD MMM YYYY"
-function formatDrawDate(dateStr: string | null): string {
-  if (!dateStr) return "-";
-  try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "-";
-    const day = date.getUTCDate().toString().padStart(2, "0");
-    const month = date.toLocaleString("en-GB", { month: "short", timeZone: "UTC" });
-    const year = date.getUTCFullYear();
-    return `${day} ${month} ${year}`;
-  } catch {
-    return "-";
-  }
 }
 
 // Helper: get projected tier for a rank
@@ -487,12 +473,12 @@ export default function AdminRewardsPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Qualifying Period</span>
                     <span className="font-medium">
-                      {formatDrawDate(draw.startsOn)} - {formatDrawDate(draw.endsOn)}
+                      {formatDate(draw.startsOn)} - {formatDate(draw.endsOn)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Draw Date</span>
-                    <span className="font-medium">{formatDrawDate(draw.drawDate)}</span>
+                    <span className="font-medium">{formatDate(draw.drawDate)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Entries</span>
@@ -625,7 +611,7 @@ export default function AdminRewardsPage() {
               {/* Live summary once all three dates are set */}
               {watch("startsOn") && watch("endsOn") && watch("drawDate") && (
                 <div className="mt-2 p-2 bg-primary/10 rounded-lg text-xs text-foreground">
-                  <strong>Summary:</strong> Players qualify from {formatDrawDate(watch("startsOn"))} to {formatDrawDate(watch("endsOn"))}. Draw date {formatDrawDate(watch("drawDate"))}.
+                  <strong>Summary:</strong> Players qualify from {formatDate(watch("startsOn"))} to {formatDate(watch("endsOn"))}. Draw date {formatDate(watch("drawDate"))}.
                 </div>
               )}
             </ModalSection>

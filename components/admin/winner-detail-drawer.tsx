@@ -65,12 +65,14 @@ export function WinnerDetailDrawer({
   const handleViewProof = async (proof: Proof) => {
     try {
       setLoadingProof(true);
+      console.log('Fetching proof:', { winnerId, proofId: proof.id, fileName: proof.fileName });
       const result = await fetchProofBlob(winnerId!, proof.id);
       setProofBlob(result.blob);
       setViewingProof(proof);
     } catch (err) {
       console.error("Error loading proof:", err);
-      alert(err instanceof Error ? err.message : "Failed to load proof");
+      const errorMessage = err instanceof Error ? err.message : "Failed to load proof";
+      alert(`${errorMessage}\n\nPlease check:\n1. The proof file exists on the server\n2. You have permission to view it\n3. The backend endpoint is configured correctly`);
     } finally {
       setLoadingProof(false);
     }
