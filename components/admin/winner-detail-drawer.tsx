@@ -11,7 +11,10 @@ import { useState, useEffect } from "react";
 import { X, User, Trophy, Gift, Clock, CheckCircle, FileText, Image as ImageIcon, FileIcon, ExternalLink, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getWinner, fetchProofBlob, type WinnerDetail, type Proof } from "@/lib/api/admin-winners";
+import { getWinnerStatusLabel, getStepHistoryLabel, getStatusBadgeClasses, type PrizeType } from "@/lib/utils/winner-status";
+import { formatDateTime as sharedFormatDateTime, formatDate as sharedFormatDate } from "@/lib/utils/date-format";
 
 interface WinnerDetailDrawerProps {
   /** Whether the drawer is open */
@@ -122,26 +125,16 @@ export function WinnerDetailDrawer({
     URL.revokeObjectURL(url);
   };
 
-  // Format date
+  // Format date (use shared formatter)
   const formatDate = (isoString: string | null) => {
     if (!isoString) return "—";
-    return new Date(isoString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return sharedFormatDate(isoString);
   };
 
-  // Format date with time
+  // Format date with time (use shared formatter)
   const formatDateTime = (isoString: string | null) => {
     if (!isoString) return "—";
-    return new Date(isoString).toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return sharedFormatDateTime(isoString);
   };
 
   // Format file size
@@ -159,18 +152,9 @@ export function WinnerDetailDrawer({
       .join(" ");
   };
 
-  // Get status badge color
+  // Get status badge color (use shared helper)
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "SELECTED":
-        return "bg-blue-500/10 border-blue-500/30 text-blue-600";
-      case "REDEEMED":
-        return "bg-amber-500/10 border-amber-500/30 text-amber-600";
-      case "DISBURSED":
-        return "bg-green-500/10 border-green-500/30 text-green-600";
-      default:
-        return "bg-secondary border-border text-muted-foreground";
-    }
+    return getStatusBadgeClasses(status as any);
   };
 
   // Get prize type badge
@@ -457,7 +441,10 @@ export function WinnerDetailDrawer({
                   <div className="flex justify-between items-center text-[13px]">
                     <span className="text-muted-foreground">Current Status:</span>
                     <Badge className={getStatusBadge(detail.winner.status)}>
-                      {detail.winner.status}
+                      {getWinnerStatusLabel(
+                        detail.winner.status as any,
+                        detail.winner.prizeType as PrizeType
+                      )}
                     </Badge>
                   </div>
                   
@@ -559,10 +546,10 @@ export function WinnerDetailDrawer({
                   {/* Selected */}
                   <div className="bg-secondary/50 rounded-lg p-3 text-[13px]">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium">Selected</span>
-                      <Badge className="bg-blue-500/10 border-blue-500/30 text-blue-600 text-xs">
-                        Completed
-                      </Badge>
+                      <span className="font-medium">
+                        {getStepHistoryLabel("SELECTED", detail.winner.prizeType as PrizeType)}
+                      </span>
+                      <StatusBadge status="APPROVED" />
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {formatDateTime(detail.winner.selectedAt)}
@@ -573,10 +560,10 @@ export function WinnerDetailDrawer({
                   {detail.winner.redeemedAt && (
                     <div className="bg-secondary/50 rounded-lg p-3 text-[13px]">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium">Redeemed</span>
-                        <Badge className="bg-amber-500/10 border-amber-500/30 text-amber-600 text-xs">
-                          Completed
-                        </Badge>
+                        <span className="font-medium">
+                          {getStepHistoryLabel("REDEEMED", detail.winner.prizeType as PrizeType)}
+                        </span>
+                        <StatusBadge status="APPROVED" />
                       </div>
                       <div className="text-xs text-muted-foreground space-y-0.5">
                         <div>{formatDateTime(detail.winner.redeemedAt)}</div>
@@ -590,20 +577,24 @@ export function WinnerDetailDrawer({
                     </div>
                   )}
 
-                  {/* Fulfilled */}
+                  {/* Disbursed/Collected */}
                   {detail.winner.fulfilledAt && (
                     <div className="bg-secondary/50 rounded-lg p-3 text-[13px]">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium">Fulfilled</span>
-                        <Badge className="bg-green-500/10 border-green-500/30 text-green-600 text-xs">
-                          Completed
-                        </Badge>
+                        <span className="font-medium">
+                          {getStepHistoryLabel("DISBURSED", detail.winner.prizeType as PrizeType)}
+                        </span>
+                        <StatusBadge status="APPROVED" />
                       </div>
                       <div className="text-xs text-muted-foreground space-y-0.5">
-                        <div>{formatDateTime(detail.winner.fulfilledAt)}</div>
-                        {detail.redemption?.fulfilledOn && (
-                          <div>Fulfilled on: {detail.redemption.fulfilledOn}</div>
-                        )}
+                        <div>
+                          {getStepHistoryLabel(
+                            "DISBURSED",
+                            detail.winner.prizeType as PrizeType,
+                            true,
+                            detail.redemption?.fulfilledOn ? formatDate(detail.redemption.fulfilledOn) : null
+                          )}
+                        </div>
                         {detail.redemption?.fulfilApprovedBy && (
                           <div>Approved by: {detail.redemption.fulfilApprovedBy}</div>
                         )}
