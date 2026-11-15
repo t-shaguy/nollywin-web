@@ -11,7 +11,7 @@
  * 5. Response typing: Use AdminJson = Record<string, unknown> for unconfirmed shapes
  */
 
-import { adminApiClient, adminApiClientMultipart } from "./admin-client";
+import { adminApiClient, adminApiClientMultipart, adminApiClientBlob } from "./admin-client";
 
 // Flexible JSON type for unconfirmed API response shapes
 type AdminJson = Record<string, unknown>;
@@ -728,8 +728,9 @@ export async function getSubscriptionReportSummary(filters?: {
   
   if (filters && (filters.from || filters.to)) {
     const params = new URLSearchParams();
-    if (filters.from) params.append("from", encodeURIComponent(filters.from));
-    if (filters.to) params.append("to", encodeURIComponent(filters.to));
+    // DO NOT use encodeURIComponent - URLSearchParams handles encoding
+    if (filters.from) params.append("from", filters.from);
+    if (filters.to) params.append("to", filters.to);
     url += `?${params.toString()}`;
   }
   
@@ -763,8 +764,9 @@ export async function getSubscriptionReport(filters?: {
 }): Promise<{ page: number; entries: unknown[]; size: number; total: number }> {
   const params = new URLSearchParams();
   
-  if (filters?.from) params.append("from", encodeURIComponent(filters.from));
-  if (filters?.to) params.append("to", encodeURIComponent(filters.to));
+  // DO NOT use encodeURIComponent - URLSearchParams handles encoding automatically
+  if (filters?.from) params.append("from", filters.from);
+  if (filters?.to) params.append("to", filters.to);
   if (filters?.search) params.append("search", filters.search);
   if (filters?.packageId) params.append("packageId", filters.packageId);
   if (filters?.status) params.append("status", filters.status);
@@ -1077,32 +1079,8 @@ export async function rejectChangeRequest(id: string, rejectionReason: string): 
  * Returns: Binary blob (image or PDF)
  * Requires: hasFile: true on the change request
  */
-export async function getChangeRequestFile(id: string): Promise<Blob> {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_CORE_API_BASE_URL || ''}/api/v1/admin/change-requests/${id}/file`, {
-    method: 'GET',
-    headers: {
-      'X-Client-Token': process.env.NEXT_PUBLIC_CLIENT_TOKEN || '',
-      'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('admin_access_token') : ''}`,
-    },
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    let errorMessage = `Failed to fetch file: ${response.status} ${response.statusText}`;
-    
-    try {
-      const errorJson = JSON.parse(errorText);
-      if (errorJson.message) {
-        errorMessage = errorJson.message;
-      }
-    } catch {
-      // Not JSON, use default message
-    }
-    
-    throw new Error(errorMessage);
-  }
-
-  return response.blob();
+export async function getChangeRequestFile(id: string): Promise<{ blob: Blob; contentType: string; fileName: string }> {
+  return adminApiClientBlob(`/api/v1/admin/change-requests/${id}/file`);
 }
 
 // ============================================================================

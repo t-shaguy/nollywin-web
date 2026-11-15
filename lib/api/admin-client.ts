@@ -261,6 +261,146 @@ export async function adminApiClient<T = unknown>(
 }
 
 /**
+ * Admin API client for blob/binary responses (images, PDFs, etc.)
+ * Uses the same three-layer auth as adminApiClient
+ * Returns blob with content-type and filename
+ */
+export async function adminApiClientBlob(
+  endpoint: string,
+  options: RequestInit = {},
+  isRetry: boolean = false
+): Promise<{ blob: Blob; contentType: string; fileName: string }> {
+  // Get client token (cached and shared with player client)
+  const clientToken = await getSharedClientToken();
+
+  // Get admin token from admin auth store
+  let adminToken: string | null = null;
+  if (typeof window !== "undefined") {
+    try {
+      const { useAdminAuthStore } = await import("@/store/admin-auth-store");
+      const session = useAdminAuthStore.getState().session;
+      adminToken = session?.token ?? null;
+    } catch {
+      // Store not available yet, continue without admin token
+    }
+  }
+
+  // Set up abort controller for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+  try {
+    const headers: Record<string, string> = {
+      ...(options.headers as Record<string, string>),
+    };
+
+    // CRITICAL: Add X-Client-Token header (required on ALL requests)
+    headers["X-Client-Token"] = clientToken;
+
+    // Add Authorization header if admin token exists
+    if (adminToken) {
+      headers["Authorization"] = `Bearer ${adminToken}`;
+    }
+
+    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    // Handle non-2xx responses
+    if (!res.ok) {
+      // Handle expired/invalid admin session
+      if (res.status === 401 && adminToken) {
+        const isOnAdminPage = typeof window !== "undefined" && window.location.pathname.startsWith("/admin");
+        
+        if (isOnAdminPage) {
+          if (typeof window !== "undefined") {
+            const { useAdminAuthStore } = await import("@/store/admin-auth-store");
+            useAdminAuthStore.getState().logout();
+            // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+            window.location.href = "/admin/login";
+          }
+        }
+      }
+
+      // Try to parse error message
+      let errorMessage = `Request failed with status ${res.status}`;
+      try {
+        const errorData = await res.json();
+        const typedError = errorData as { error?: string; message?: string };
+        errorMessage = typedError.message || errorMessage;
+      } catch {
+        // Not JSON, use default message
+      }
+
+      throw createAdminApiError({
+        status: res.status,
+        error: res.statusText,
+        message: errorMessage,
+      });
+    }
+
+    // Get content type and filename
+    const contentType = res.headers.get("content-type") || "application/octet-stream";
+    
+    // Try to extract filename from content-disposition header
+    const disposition = res.headers.get("content-disposition");
+    let fileName = "file";
+    if (disposition) {
+      const match = disposition.match(/filename="?([^"]+)"?/);
+      if (match) {
+        fileName = match[1];
+      }
+    }
+
+    const blob = await res.blob();
+    
+    return { blob, contentType, fileName };
+  } catch (error: unknown) {
+    clearTimeout(timeoutId);
+
+    // Handle timeout
+    if (error instanceof Error && error.name === "AbortError") {
+      throw createAdminApiError({
+        status: 408,
+        error: "Request Timeout",
+        message: "Request timed out after 15 seconds",
+      });
+    }
+
+    // Handle network errors
+    if (error instanceof TypeError && error.message === "Failed to fetch") {
+      throw createAdminApiError({
+        status: 0,
+        error: "Network Error",
+        message: "Network error - please check your connection",
+      });
+    }
+
+    // Check if this is a client token error and retry if needed
+    const shouldRetry = await handleClientTokenError(error, isRetry);
+    if (shouldRetry) {
+      return adminApiClientBlob(endpoint, options, true);
+    }
+
+    // Re-throw admin API errors as-is
+    if (error && typeof error === "object" && "status" in error && "message" in error) {
+      throw error;
+    }
+
+    // Unknown error
+    throw createAdminApiError({
+      status: 500,
+      error: "Unknown Error",
+      message: error instanceof Error ? error.message : "An unknown error occurred",
+    });
+  }
+}
+
+/**
  * Admin API client for multipart/form-data requests (file uploads)
  * Uses the same three-layer auth as adminApiClient
  * 

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ActiveDrawCard } from "../../features/raffles/presentation/active-draw-card";
+import { CinemaTicketCard } from "../../features/raffles/presentation/cinema-ticket-card";
 import { RaffleHistoryList } from "../../features/raffles/presentation/raffle-history-list";
 import { DrawCountdownModal } from "@/components/ui/draw-countdown-modal";
 import { getActiveDraws } from "@/lib/api/leaderboard";
@@ -32,15 +32,15 @@ export default function RafflesPage() {
   // TEMP DEV LOGGING: Check data sources (remove after verification)
   useEffect(() => {
     if (process.env.NODE_ENV === 'development' && dashboard && draws.length > 0) {
-      console.log('[RAFFLES DEBUG] Dashboard activeRaffles:', dashboard.activeRaffles);
-      console.log('[RAFFLES DEBUG] Active draws:', draws);
+      console.log('[DRAWS DEBUG] Dashboard active draws:', dashboard.activeRaffles);
+      console.log('[DRAWS DEBUG] Active draws:', draws);
       
       // Find Samsung Test draw in both sources
       const samsungDashboard = dashboard.activeRaffles?.find(r => r.prizeName.includes('Samsung'));
       const samsungDraw = draws.find(d => d.prizeName.includes('Samsung'));
       
       if (samsungDashboard) {
-        console.log('[RAFFLES DEBUG] Samsung from dashboard:', {
+        console.log('[DRAWS DEBUG] Samsung from dashboard:', {
           id: samsungDashboard.id,
           myPoints: samsungDashboard.myPoints,
           entered: samsungDashboard.entered,
@@ -49,7 +49,7 @@ export default function RafflesPage() {
       }
       
       if (samsungDraw) {
-        console.log('[RAFFLES DEBUG] Samsung from /draws/active:', {
+        console.log('[DRAWS DEBUG] Samsung from /draws/active:', {
           id: samsungDraw.id,
           myPoints: samsungDraw.myPoints,
           entered: samsungDraw.entered,
@@ -105,6 +105,28 @@ export default function RafflesPage() {
       console.warn("Session storage not available:", err);
     }
   }, [activeDraws, dashboard, hasShownAutoModal]);
+
+  // Determine card state based on draw data
+  const getCardState = (draw: RaffleDraw): "WINNER" | "NOT_SELECTED" | "PENDING" | "ACTIVE" => {
+    // If draw date has passed
+    if (draw.drawDate) {
+      const drawDate = new Date(draw.drawDate);
+      const now = new Date();
+      if (now > drawDate) {
+        // Check if user won (would need winner data from backend)
+        // For now, assume NOT_SELECTED if draw ended
+        return "NOT_SELECTED";
+      }
+    }
+
+    // Map backend status to card state
+    if (draw.status === "UPCOMING") return "PENDING";
+    if (draw.status === "ACTIVE") return "ACTIVE";
+    if (draw.status === "COMPLETED") return "NOT_SELECTED";
+    if (draw.status === "CANCELLED" || draw.status === "CLOSED") return "NOT_SELECTED";
+
+    return "ACTIVE"; // Default fallback
+  };
 
   const handleDrawClick = (draw: RaffleDraw) => {
     // Get user points for this draw from dashboard (verified source)
@@ -162,28 +184,26 @@ export default function RafflesPage() {
               Loading draws...
             </div>
           ) : activeDraws.length > 0 ? (
-            <div className="space-y-5 md:space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6">
               {activeDraws.map((draw) => {
                 // CRITICAL FIX: Merge dashboard data (verified source for myPoints/entered) with draw data
-                // Dashboard activeRaffles has the user's actual points, /draws/active may not
                 const raffleData = dashboard?.activeRaffles?.find(r => r.id === draw.id);
                 
-                // Create enriched draw with user data from dashboard
                 const enrichedDraw: RaffleDraw = {
                   ...draw,
-                  // Use dashboard data if available (verified source), fallback to draw data
                   myPoints: raffleData?.myPoints ?? draw.myPoints ?? null,
                   entered: raffleData?.entered ?? draw.entered ?? false,
                   myTickets: raffleData?.myTickets ?? draw.myTickets,
                 };
 
+                const cardState = getCardState(enrichedDraw);
+
                 return (
-                  <ActiveDrawCard
+                  <CinemaTicketCard
                     key={draw.id}
                     draw={enrichedDraw}
+                    state={cardState}
                     onShowCountdown={() => handleDrawClick(enrichedDraw)}
-                    hasActiveSubscription={hasActiveSubscription}
-                    tokensLeft={dashboard?.tokensLeft ?? null}
                   />
                 );
               })}

@@ -4,6 +4,7 @@
  */
 
 import type { ChangeRequest } from "@/lib/api/admin";
+import { cleanLabel } from "./label-cleaner";
 
 /**
  * Generate a concise, human-readable summary of a change request
@@ -161,20 +162,20 @@ export function summarizeChangeRequest(request: ChangeRequest): string {
 /**
  * Convert camelCase to Title Case
  * @example "triviaQuestion" → "Trivia Question"
- * @example "RaffleWinner" → "Winner"
+ * @example "RaffleWinner" → "Draw Winner"
  */
 function humanizeResourceType(resourceType: string): string {
-  // Special case for raffleDraw -> "Draw"
+  // Special case mappings for raffle-related types
   if (resourceType.toLowerCase() === 'raffledraw') {
     return 'Draw';
   }
   
-  // Special case for RaffleWinner -> "Winner"
   if (resourceType.toLowerCase() === 'rafflewinner') {
-    return 'Winner';
+    return 'Draw Winner';
   }
   
-  return resourceType
+  // Convert camelCase to Title Case, then clean any remaining "raffle" references
+  const humanized = resourceType
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, (str) => str.toUpperCase())
     .trim()
@@ -182,6 +183,8 @@ function humanizeResourceType(resourceType: string): string {
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+  
+  return cleanLabel(humanized);
 }
 
 /**
@@ -192,16 +195,20 @@ function humanizeResourceType(resourceType: string): string {
  */
 function humanizeAction(action: string): string {
   const upperAction = action.toUpperCase();
+  let result: string;
+  
   switch (upperAction) {
-    case "CREATE": return "Create";
-    case "UPDATE": return "Update";
-    case "DELETE": return "Delete";
-    case "CLOSE": return "Close";
-    case "APPROVE": return "Approve";
-    case "REDEEM": return "Redeem (claim details)";
-    case "FULFIL": return "Fulfil (payout or handover)";
+    case "CREATE": result = "Create"; break;
+    case "UPDATE": result = "Update"; break;
+    case "DELETE": result = "Delete"; break;
+    case "CLOSE": result = "Close"; break;
+    case "APPROVE": result = "Approve"; break;
+    case "REDEEM": result = "Redeem (claim details)"; break;
+    case "FULFIL": result = "Fulfil (payout or handover)"; break;
     default: 
       // Capitalize first letter of original action
-      return action.charAt(0).toUpperCase() + action.slice(1).toLowerCase();
+      result = action.charAt(0).toUpperCase() + action.slice(1).toLowerCase();
   }
+  
+  return cleanLabel(result);
 }

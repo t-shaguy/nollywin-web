@@ -36,6 +36,7 @@ export function WinnerDetailDrawer({
   const [viewingProof, setViewingProof] = useState<Proof | null>(null);
   const [proofBlob, setProofBlob] = useState<Blob | null>(null);
   const [loadingProof, setLoadingProof] = useState(false);
+  const [proofError, setProofError] = useState<{ status: number; message: string } | null>(null);
 
   useEffect(() => {
     if (!open || !winnerId) {
@@ -65,16 +66,39 @@ export function WinnerDetailDrawer({
   const handleViewProof = async (proof: Proof) => {
     try {
       setLoadingProof(true);
+      setProofError(null);
       console.log('Fetching proof:', { winnerId, proofId: proof.id, fileName: proof.fileName });
       const result = await fetchProofBlob(winnerId!, proof.id);
       setProofBlob(result.blob);
       setViewingProof(proof);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error loading proof:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to load proof";
-      alert(`${errorMessage}\n\nPlease check:\n1. The proof file exists on the server\n2. You have permission to view it\n3. The backend endpoint is configured correctly`);
+      
+      // Extract status and message from error
+      const status = err?.status || 500;
+      let message = "Failed to load proof file";
+      
+      if (status === 401) {
+        message = "Your session expired. Please log in again.";
+      } else if (status === 403) {
+        message = "You don't have permission to view this file.";
+      } else if (status === 404) {
+        message = "This file could not be found on the server.";
+      } else if (err?.message) {
+        message = err.message;
+      }
+      
+      setProofError({ status, message });
+      setViewingProof(proof);
     } finally {
       setLoadingProof(false);
+    }
+  };
+
+  // Retry loading proof
+  const handleRetryProof = () => {
+    if (viewingProof) {
+      handleViewProof(viewingProof);
     }
   };
 
@@ -82,6 +106,7 @@ export function WinnerDetailDrawer({
   const closeProofViewer = () => {
     setViewingProof(null);
     setProofBlob(null);
+    setProofError(null);
   };
 
   // Download proof
@@ -159,9 +184,9 @@ export function WinnerDetailDrawer({
   if (!open) return null;
 
   // Proof viewer modal
-  if (viewingProof && proofBlob) {
+  if (viewingProof) {
     const isImage = viewingProof.contentType.startsWith("image/");
-    const blobUrl = URL.createObjectURL(proofBlob);
+    const blobUrl = proofBlob ? URL.createObjectURL(proofBlob) : null;
 
     return (
       <>
@@ -184,14 +209,16 @@ export function WinnerDetailDrawer({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDownloadProof}
-                >
-                  <Download size={14} className="mr-1" />
-                  Download
-                </Button>
+                {proofBlob && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadProof}
+                  >
+                    <Download size={14} className="mr-1" />
+                    Download
+                  </Button>
+                )}
                 <button
                   onClick={closeProofViewer}
                   className="p-1.5 hover:bg-secondary rounded-lg transition-colors"
@@ -204,24 +231,53 @@ export function WinnerDetailDrawer({
 
             {/* Content */}
             <div className="flex-1 overflow-auto p-4 bg-secondary/30">
-              {isImage ? (
-                <img
-                  src={blobUrl}
-                  alt={viewingProof.fileName}
-                  className="max-w-full h-auto mx-auto rounded border border-border"
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <FileIcon size={48} className="text-muted-foreground mb-4" />
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Preview not available for this file type
-                  </p>
-                  <Button onClick={handleDownloadProof}>
-                    <Download size={14} className="mr-2" />
-                    Download to view
-                  </Button>
+              {proofError ? (
+                <div className="flex flex-col items-center justify-center py-12 px-4">
+                  <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-6 max-w-md text-center">
+                    <FileIcon size={48} className="text-destructive mb-4 mx-auto" />
+                    <h4 className="text-sm font-semibold text-destructive mb-2">
+                      {proofError.status === 401 && "Session Expired"}
+                      {proofError.status === 403 && "Access Denied"}
+                      {proofError.status === 404 && "File Not Found"}
+                      {proofError.status !== 401 && proofError.status !== 403 && proofError.status !== 404 && "Error Loading File"}
+                    </h4>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      {proofError.message}
+                    </p>
+                    <Button
+                      onClick={handleRetryProof}
+                      variant="outline"
+                      size="sm"
+                      disabled={loadingProof}
+                    >
+                      {loadingProof ? "Loading..." : "Retry"}
+                    </Button>
+                  </div>
                 </div>
-              )}
+              ) : proofBlob && blobUrl ? (
+                isImage ? (
+                  <img
+                    src={blobUrl}
+                    alt={viewingProof.fileName}
+                    className="max-w-full h-auto mx-auto rounded border border-border"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <FileIcon size={48} className="text-muted-foreground mb-4" />
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Preview not available for this file type
+                    </p>
+                    <Button onClick={handleDownloadProof}>
+                      <Download size={14} className="mr-2" />
+                      Download to view
+                    </Button>
+                  </div>
+                )
+              ) : loadingProof ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-sm text-muted-foreground">Loading file...</div>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

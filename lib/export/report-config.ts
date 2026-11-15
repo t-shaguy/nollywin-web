@@ -27,7 +27,7 @@ export type ReportKey =
   | "audit-log"
   | "change-requests"
   | "users"
-  | "raffles"
+  | "draws"
   | "notifications"
   | "income"
   | "subscriptions"
@@ -219,7 +219,7 @@ export const REPORT_CONFIGS: Record<ReportKey, ReportConfig> = {
     ],
   },
 
-  raffles: {
+  draws: {
     label: "Draws",
     fetchAll: async (filters = {}) => {
       const result = await fetchAllPages<Record<string, unknown>>(

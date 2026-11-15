@@ -12,11 +12,11 @@ import { Icon } from "@/components/admin/icon";
 import { DetailValue } from "@/components/admin/value-renderer";
 import { DownloadMenu } from "@/components/admin/download-menu";
 import { PrintView } from "@/components/admin/print-view";
+import { formatDateTime } from "@/lib/utils/date-format";
 import { 
   formatNumber, 
   formatRelativeTime, 
-  humanizeResourceType,
-  formatDate 
+  humanizeResourceType
 } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import { getReportConfig } from "@/lib/export/report-config";

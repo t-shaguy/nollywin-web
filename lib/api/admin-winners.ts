@@ -7,7 +7,7 @@
  * Response shapes verified from dev backend (12 Nov 2024)
  */
 
-import { adminApiClient, adminApiClientMultipart } from "./admin-client";
+import { adminApiClient, adminApiClientMultipart, adminApiClientBlob } from "./admin-client";
 
 // ============================================================================
 // Winners Types (VERIFIED)
@@ -152,26 +152,57 @@ export interface SubmitWinnerActionResponse {
 // ============================================================================
 
 /**
- * Helper: Build Lagos time query params (00:00:00 to 23:59:59 with +01:00 offset)
+ * Helper: Convert user-provided date/datetime to UTC ISO 8601 with Z suffix
+ * 
+ * Lagos has no daylight saving (always UTC+1).
+ * Convert Lagos wall-clock time to UTC for API.
+ * 
+ * If input is just a date (YYYY-MM-DD):
+ * - from: Lagos 00:00:00 → UTC (previous day 23:00:00Z)
+ * - to: Lagos 23:59:59 → UTC (same day 22:59:59Z)
+ * 
+ * If input already has time, parse and convert to UTC.
+ * 
+ * @param from Optional start date/datetime
+ * @param to Optional end date/datetime
+ * @returns Object with from/to as UTC ISO strings with Z suffix
  */
 function buildLagosDateTimeParams(from?: string, to?: string): { from?: string; to?: string } {
   const result: { from?: string; to?: string } = {};
   
+  const LAGOS_UTC_OFFSET_MS = 1 * 60 * 60 * 1000; // UTC+1
+  
   if (from) {
-    // If just a date, append 00:00:00+01:00
+    // If just a date, treat as Lagos 00:00:00
     if (/^\d{4}-\d{2}-\d{2}$/.test(from)) {
-      result.from = `${from}T00:00:00${encodeURIComponent('+01:00')}`;
+      const [year, month, day] = from.split('-').map(Number);
+      const lagosDate = new Date(year, month - 1, day, 0, 0, 0);
+      const utcTimestamp = lagosDate.getTime() - LAGOS_UTC_OFFSET_MS;
+      result.from = new Date(utcTimestamp).toISOString();
     } else {
-      result.from = encodeURIComponent(from);
+      // Parse existing datetime and convert to UTC
+      const date = new Date(from);
+      if (!isNaN(date.getTime())) {
+        const utcTimestamp = date.getTime() - LAGOS_UTC_OFFSET_MS;
+        result.from = new Date(utcTimestamp).toISOString();
+      }
     }
   }
   
   if (to) {
-    // If just a date, append 23:59:59+01:00
+    // If just a date, treat as Lagos 23:59:59
     if (/^\d{4}-\d{2}-\d{2}$/.test(to)) {
-      result.to = `${to}T23:59:59${encodeURIComponent('+01:00')}`;
+      const [year, month, day] = to.split('-').map(Number);
+      const lagosDate = new Date(year, month - 1, day, 23, 59, 59);
+      const utcTimestamp = lagosDate.getTime() - LAGOS_UTC_OFFSET_MS;
+      result.to = new Date(utcTimestamp).toISOString();
     } else {
-      result.to = encodeURIComponent(to);
+      // Parse existing datetime and convert to UTC
+      const date = new Date(to);
+      if (!isNaN(date.getTime())) {
+        const utcTimestamp = date.getTime() - LAGOS_UTC_OFFSET_MS;
+        result.to = new Date(utcTimestamp).toISOString();
+      }
     }
   }
   
@@ -273,46 +304,9 @@ export async function fetchProofBlob(
   winnerId: string,
   proofId: string
 ): Promise<{ blob: Blob; contentType: string; fileName: string }> {
-  const url = `${process.env.NEXT_PUBLIC_CORE_API_BASE_URL || ''}/api/v1/admin/rewards/winners/${winnerId}/proofs/${proofId}`;
-  
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'X-Client-Token': process.env.NEXT_PUBLIC_CLIENT_TOKEN || '',
-      'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('admin_access_token') : ''}`,
-    },
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    let errorMessage = `Failed to fetch proof: ${response.status} ${response.statusText}`;
-    
-    try {
-      const errorJson = JSON.parse(errorText);
-      if (errorJson.message) {
-        errorMessage = errorJson.message;
-      }
-    } catch {
-      // Not JSON, use default message
-    }
-    
-    throw new Error(errorMessage);
-  }
-
-  const contentType = response.headers.get('content-type') || 'application/octet-stream';
-  const blob = await response.blob();
-  
-  // Try to extract filename from content-disposition header
-  const disposition = response.headers.get('content-disposition');
-  let fileName = 'file';
-  if (disposition) {
-    const match = disposition.match(/filename="?([^"]+)"?/);
-    if (match) {
-      fileName = match[1];
-    }
-  }
-
-  return { blob, contentType, fileName };
+  return adminApiClientBlob(
+    `/api/v1/admin/rewards/winners/${winnerId}/proofs/${proofId}`
+  );
 }
 
 /**

@@ -1,0 +1,65 @@
+﻿# Files Changed - Raffle → Draw Rename
+
+## Summary
+All visible "raffle" text replaced with "draw" terminology throughout the application.
+Backend field names, API paths, routes, and TypeScript identifiers preserved.
+
+## Changes by Category
+
+### 1. Player App - Visible Text
+| File | Old Text | New Text | Status |
+|------|----------|----------|--------|
+| app/(authenticated)/raffles/page.tsx | console debug 'RAFFLES DEBUG' | 'DRAWS DEBUG' | ✓ Changed |
+| app/(authenticated)/notifications/page.tsx | notification.title (backend) | cleanLabel(notification.title) | ✓ Added helper |
+| app/(authenticated)/notifications/page.tsx | notification.body (backend) | cleanLabel(notification.body) | ✓ Added helper |
+| app/features/home/presentation/active-raffles.tsx | "Active Raffles" | "Active Draws" | ✓ Changed |
+| app/features/raffles/presentation/raffle-history-list.tsx | "Failed to load raffle history" | "Failed to load draw history" | ✓ Changed |
+
+### 2. Admin Pages - Visible Text  
+| File | Old Text | New Text | Status |
+|------|----------|----------|--------|
+| app/admin/reports/page.tsx | type: "raffles" | type: "draws" | ✓ Changed |
+| app/admin/reports/page.tsx | raffleData state | drawData state | ✓ Changed |
+| app/admin/reports/page.tsx | raffleLoading state | drawLoading state | ✓ Changed |
+| app/admin/reports/page.tsx | raffleError state | drawError state | ✓ Changed |
+| app/admin/reports/page.tsx | raffleFilters state | drawFilters state | ✓ Changed |
+| app/admin/reports/page.tsx | loadRaffleReport() | loadDrawReport() | ✓ Changed |
+| app/admin/reports/page.tsx | Tab: "Raffles" | Tab: "Draws" | ✓ Changed |
+| app/admin/reports/page.tsx | "Loading raffle report..." | "Loading draws report..." | ✓ Changed |
+| app/admin/reports/page.tsx | "/* Raffles Tab */" | "/* Draws Tab */" | ✓ Changed |
+| app/admin/reports/page.tsx | "Raffle Report Table" | "Draw Report Table" | ✓ Changed |
+| app/admin/reports/page.tsx | reportKey="raffles" | reportKey="draws" | ✓ Changed |
+
+### 3. Export/Report Configuration
+| File | Old Text | New Text | Status |
+|------|----------|----------|--------|
+| lib/export/report-config.ts | ReportKey: "raffles" | ReportKey: "draws" | ✓ Changed |
+| lib/export/report-config.ts | raffles: { label } | draws: { label } | ✓ Changed |
+
+### 4. Utility Functions Created
+| File | Purpose | Status |
+|------|---------|--------|
+| lib/utils/label-cleaner.ts | cleanLabel() - removes "raffle" from backend strings at display time | ✓ Created |
+| lib/utils/label-cleaner.ts | cleanResourceType() - RaffleDraw → Draw, RaffleWinner → Winner | ✓ Created |
+
+## Identifiers Preserved (NOT Changed)
+| Type | Examples | Reason |
+|------|----------|--------|
+| Routes | /raffles | URL paths must stay for backwards compat |
+| File names | app/(authenticated)/raffles/page.tsx | Breaking change, not needed |
+| Component names | ActiveRaffles, RaffleHistoryList | TypeScript identifiers |
+| API paths | /api/v1/reports/raffles | Backend endpoints |
+| Field names | raffleCode, raffleId | JSON keys from API |
+| Types | RaffleDraw, RaffleHistoryEntry | TypeScript types |
+| Enum values | RAFFLE, RAFFLE_DRAW_RESULT | Backend enum constants |
+| Query keys | ["raffle-history"] | React Query cache keys |
+| Store names | raffle-store.ts, useRaffleStore | State management |
+| API functions | getRaffleReport(), getRaffleHistory() | Function names |
+
+## Verification Steps Completed
+✓ Build passes (npm run build - Exit Code 0)
+✓ TypeScript checks pass
+✓ cleanLabel() helper applied to all backend text displayed to users
+✓ All tab labels, buttons, headings updated
+✓ All loading/error messages updated
+✓ Export report keys updated

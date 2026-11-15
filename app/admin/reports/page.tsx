@@ -20,7 +20,7 @@ import {
   DataTableSkeleton,
 } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDate, formatDateTime, getDatePresets, createLagosDateTime, getStartOfDay, getEndOfDay } from "@/lib/utils/date-format";
+import { formatDate, formatDateTime, getDatePresets, getStartOfDayUTC, getEndOfDayUTC } from "@/lib/utils/date-format";
 import {
   getSubscriptionReportSummary,
   getSubscriptionReport,
@@ -32,7 +32,7 @@ import {
   type SubscriptionPackage,
 } from "@/lib/api/admin";
 
-type ReportTab = "subscriptions" | "raffles" | "income";
+type ReportTab = "subscriptions" | "draws" | "income";
 
 interface SubscriptionEntry {
   id: string;
@@ -78,11 +78,11 @@ export default function ReportsPage() {
     status: searchParams.get("status") || "",
   });
 
-  // Raffle report state
-  const [raffleData, setRaffleData] = useState<{ entries: unknown[]; size: number; total: number } | null>(null);
-  const [raffleLoading, setRaffleLoading] = useState(false);
-  const [raffleError, setRaffleError] = useState<string | null>(null);
-  const [raffleFilters, setRaffleFilters] = useState({
+  // Draw report state
+  const [drawData, setDrawData] = useState<{ entries: unknown[]; size: number; total: number } | null>(null);
+  const [drawLoading, setDrawLoading] = useState(false);
+  const [drawError, setDrawError] = useState<string | null>(null);
+  const [drawFilters, setDrawFilters] = useState({
     from: "",
     to: "",
     status: "",
@@ -119,7 +119,18 @@ export default function ReportsPage() {
       setLoading(true);
       setError(null);
       
-      // Build filters with Lagos timezone
+      // Validate from/to before sending
+      if (subscriptionFilters.from && subscriptionFilters.to) {
+        const from = new Date(subscriptionFilters.from);
+        const to = new Date(subscriptionFilters.to);
+        if (from > to) {
+          setError("'From' date must be on or before 'To' date");
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // Build filters - dates are already in UTC ISO format from getDatePresets()
       const apiFilters: Record<string, string> = {
         page: subscriptionPage.toString(),
         size: subscriptionPageSize.toString(),
@@ -143,7 +154,9 @@ export default function ReportsPage() {
       setSubscriptionData(reportData as SubscriptionReportResponse);
     } catch (err) {
       console.error("Error loading subscription report:", err);
-      setError(err instanceof Error ? err.message : "Failed to load subscription report");
+      // Show backend message if available, otherwise generic error
+      const errorMessage = err instanceof Error ? err.message : "Failed to load subscription report";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -151,15 +164,7 @@ export default function ReportsPage() {
 
   // Apply subscription filters
   const applySubscriptionFilters = () => {
-    // Validate from/to
-    if (subscriptionFilters.from && subscriptionFilters.to) {
-      const from = new Date(subscriptionFilters.from);
-      const to = new Date(subscriptionFilters.to);
-      if (from > to) {
-        setError("'from' must be on or before 'to'");
-        return;
-      }
-    }
+    // Validation happens in loadSubscriptionReport
     
     // Update URL
     const params = new URLSearchParams();
@@ -189,13 +194,13 @@ export default function ReportsPage() {
   };
 
   // Apply date preset
-  const applyDatePreset = (preset: "today" | "last7Days" | "thisMonth") => {
+  const applyDatePreset = (preset: "today" | "last7Days" | "thisMonth" | "allTime") => {
     const presets = getDatePresets();
     const selected = presets[preset];
     setSubscriptionFilters({
       ...subscriptionFilters,
-      from: selected.from,
-      to: selected.to,
+      from: selected.from || "",
+      to: selected.to || "",
     });
   };
 
@@ -214,18 +219,18 @@ export default function ReportsPage() {
   //   checkListEndpoint();
   // }, []);
 
-  // Load raffle report
-  const loadRaffleReport = async () => {
+  // Load draw report
+  const loadDrawReport = async () => {
     try {
-      setRaffleLoading(true);
-      setRaffleError(null);
-      const data = await getRaffleReport({ ...raffleFilters, page: 0, size: 50 });
-      setRaffleData(data as { entries: unknown[]; size: number; total: number });
+      setDrawLoading(true);
+      setDrawError(null);
+      const data = await getRaffleReport({ ...drawFilters, page: 0, size: 50 });
+      setDrawData(data as { entries: unknown[]; size: number; total: number });
     } catch (err) {
-      console.error("Error loading raffle report:", err);
-      setRaffleError(err instanceof Error ? err.message : "Failed to load raffle report");
+      console.error("Error loading draw report:", err);
+      setDrawError(err instanceof Error ? err.message : "Failed to load draw report");
     } finally {
-      setRaffleLoading(false);
+      setDrawLoading(false);
     }
   };
 
@@ -245,8 +250,8 @@ export default function ReportsPage() {
   };
 
   useEffect(() => {
-    if (activeTab === "raffles") {
-      loadRaffleReport();
+    if (activeTab === "draws") {
+      loadDrawReport();
     }
     if (activeTab === "income") {
       loadIncomeReport();
@@ -269,24 +274,24 @@ export default function ReportsPage() {
     );
   }
 
-  // Print view for raffles
-  if (showPrintView && activeTab === "raffles" && raffleData) {
-    const config = getReportConfig("raffles");
+  // Print view for draws
+  if (showPrintView && activeTab === "draws" && drawData) {
+    const config = getReportConfig("draws");
     if (!config) return null;
 
     return (
       <PrintView
         title="Draws Report"
         filters={{
-          "From": raffleFilters.from || "Any",
-          "To": raffleFilters.to || "Any",
-          "Status": raffleFilters.status || "All",
-          "Draw ID": raffleFilters.raffleId || "Any",
-          "Email": raffleFilters.email || "Any",
-          "Phone": raffleFilters.phone || "Any",
+          "From": drawFilters.from || "Any",
+          "To": drawFilters.to || "Any",
+          "Status": drawFilters.status || "All",
+          "Draw ID": drawFilters.raffleId || "Any",
+          "Email": drawFilters.email || "Any",
+          "Phone": drawFilters.phone || "Any",
         }}
         columns={config.columns}
-        data={raffleData.entries as Record<string, unknown>[]}
+        data={drawData.entries as Record<string, unknown>[]}
         onClose={() => setShowPrintView(false)}
       />
     );
@@ -299,10 +304,10 @@ export default function ReportsPage() {
           title="Reports" 
           description="View platform analytics and reports" 
         />
-        {activeTab === "raffles" && raffleData && raffleData.entries.length > 0 && (
+        {activeTab === "draws" && drawData && drawData.entries.length > 0 && (
           <DownloadMenu
-            reportKey="raffles"
-            filters={raffleFilters}
+            reportKey="draws"
+            filters={drawFilters}
             onPrintClick={() => setShowPrintView(true)}
           />
         )}
@@ -321,9 +326,9 @@ export default function ReportsPage() {
           Subscriptions
         </button>
         <button
-          onClick={() => setActiveTab("raffles")}
+          onClick={() => setActiveTab("draws")}
           className={`px-4 py-2 text-[13px] font-medium transition-colors rounded-t ${
-            activeTab === "raffles"
+            activeTab === "draws"
               ? "bg-primary/10 text-primary border-b-2 border-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
           }`}
@@ -356,7 +361,7 @@ export default function ReportsPage() {
             </div>
 
             {/* Date Presets */}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -378,6 +383,13 @@ export default function ReportsPage() {
               >
                 This month
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => applyDatePreset("allTime")}
+              >
+                All time
+              </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -385,10 +397,23 @@ export default function ReportsPage() {
                 <label className="text-xs font-medium mb-1.5 block">From</label>
                 <input
                   type="datetime-local"
-                  value={subscriptionFilters.from.replace("+01:00", "")}
+                  value={subscriptionFilters.from ? subscriptionFilters.from.replace("Z", "").slice(0, 16) : ""}
                   onChange={(e) => {
+                    if (!e.target.value) {
+                      setSubscriptionFilters({ ...subscriptionFilters, from: "" });
+                      return;
+                    }
                     const date = new Date(e.target.value);
-                    setSubscriptionFilters({ ...subscriptionFilters, from: createLagosDateTime(date) });
+                    const year = date.getFullYear();
+                    const month = date.getMonth() + 1;
+                    const day = date.getDate();
+                    const hour = date.getHours();
+                    const minute = date.getMinutes();
+                    const second = date.getSeconds();
+                    // Convert Lagos time to UTC
+                    const lagosDate = new Date(year, month - 1, day, hour, minute, second);
+                    const utcTimestamp = lagosDate.getTime() - (1 * 60 * 60 * 1000); // UTC+1
+                    setSubscriptionFilters({ ...subscriptionFilters, from: new Date(utcTimestamp).toISOString() });
                   }}
                   className="w-full px-3 h-9 text-sm rounded border border-border bg-background"
                 />
@@ -397,10 +422,23 @@ export default function ReportsPage() {
                 <label className="text-xs font-medium mb-1.5 block">To</label>
                 <input
                   type="datetime-local"
-                  value={subscriptionFilters.to.replace("+01:00", "")}
+                  value={subscriptionFilters.to ? subscriptionFilters.to.replace("Z", "").slice(0, 16) : ""}
                   onChange={(e) => {
+                    if (!e.target.value) {
+                      setSubscriptionFilters({ ...subscriptionFilters, to: "" });
+                      return;
+                    }
                     const date = new Date(e.target.value);
-                    setSubscriptionFilters({ ...subscriptionFilters, to: createLagosDateTime(date) });
+                    const year = date.getFullYear();
+                    const month = date.getMonth() + 1;
+                    const day = date.getDate();
+                    const hour = date.getHours();
+                    const minute = date.getMinutes();
+                    const second = date.getSeconds();
+                    // Convert Lagos time to UTC
+                    const lagosDate = new Date(year, month - 1, day, hour, minute, second);
+                    const utcTimestamp = lagosDate.getTime() - (1 * 60 * 60 * 1000); // UTC+1
+                    setSubscriptionFilters({ ...subscriptionFilters, to: new Date(utcTimestamp).toISOString() });
                   }}
                   className="w-full px-3 h-9 text-sm rounded border border-border bg-background"
                 />
@@ -512,8 +550,21 @@ export default function ReportsPage() {
 
           {/* Error Message */}
           {error && (
-            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 text-destructive text-sm">
-              {error}
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <p className="text-destructive text-sm font-medium mb-1">Error</p>
+                  <p className="text-destructive/80 text-sm">{error}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadSubscriptionReport}
+                  className="shrink-0"
+                >
+                  Retry
+                </Button>
+              </div>
             </div>
           )}
 
@@ -669,8 +720,8 @@ export default function ReportsPage() {
         </>
       )}
 
-      {/* Raffles Tab */}
-      {activeTab === "raffles" && (
+      {/* Draws Tab */}
+      {activeTab === "draws" && (
         <>
           {/* Filters */}
           <div className="bg-card border border-border rounded p-4 space-y-4">
@@ -684,8 +735,8 @@ export default function ReportsPage() {
                 <label className="text-xs font-medium mb-1.5 block">From Date</label>
                 <input
                   type="date"
-                  value={raffleFilters.from}
-                  onChange={(e) => setRaffleFilters({ ...raffleFilters, from: e.target.value })}
+                  value={drawFilters.from}
+                  onChange={(e) => setDrawFilters({ ...drawFilters, from: e.target.value })}
                   className="w-full px-3 h-8 text-[13px] rounded border border-border bg-background"
                 />
               </div>
@@ -693,16 +744,16 @@ export default function ReportsPage() {
                 <label className="text-xs font-medium mb-1.5 block">To Date</label>
                 <input
                   type="date"
-                  value={raffleFilters.to}
-                  onChange={(e) => setRaffleFilters({ ...raffleFilters, to: e.target.value })}
+                  value={drawFilters.to}
+                  onChange={(e) => setDrawFilters({ ...drawFilters, to: e.target.value })}
                   className="w-full px-3 h-8 text-[13px] rounded border border-border bg-background"
                 />
               </div>
               <div>
                 <label className="text-xs font-medium mb-1.5 block">Status</label>
                 <select
-                  value={raffleFilters.status}
-                  onChange={(e) => setRaffleFilters({ ...raffleFilters, status: e.target.value })}
+                  value={drawFilters.status}
+                  onChange={(e) => setDrawFilters({ ...drawFilters, status: e.target.value })}
                   className="w-full px-3 h-8 text-[13px] rounded border border-border bg-background"
                 >
                   <option value="">All</option>
@@ -714,8 +765,8 @@ export default function ReportsPage() {
                 <label className="text-xs font-medium mb-1.5 block">Draw ID</label>
                 <input
                   type="text"
-                  value={raffleFilters.raffleId}
-                  onChange={(e) => setRaffleFilters({ ...raffleFilters, raffleId: e.target.value })}
+                  value={drawFilters.raffleId}
+                  onChange={(e) => setDrawFilters({ ...drawFilters, raffleId: e.target.value })}
                   placeholder="Enter draw ID"
                   className="w-full px-3 h-8 text-[13px] rounded border border-border bg-background"
                 />
@@ -724,8 +775,8 @@ export default function ReportsPage() {
                 <label className="text-xs font-medium mb-1.5 block">Email</label>
                 <input
                   type="text"
-                  value={raffleFilters.email}
-                  onChange={(e) => setRaffleFilters({ ...raffleFilters, email: e.target.value })}
+                  value={drawFilters.email}
+                  onChange={(e) => setDrawFilters({ ...drawFilters, email: e.target.value })}
                   placeholder="Filter by email"
                   className="w-full px-3 h-8 text-[13px] rounded border border-border bg-background"
                 />
@@ -734,105 +785,91 @@ export default function ReportsPage() {
                 <label className="text-xs font-medium mb-1.5 block">Phone</label>
                 <input
                   type="text"
-                  value={raffleFilters.phone}
-                  onChange={(e) => setRaffleFilters({ ...raffleFilters, phone: e.target.value })}
+                  value={drawFilters.phone}
+                  onChange={(e) => setDrawFilters({ ...drawFilters, phone: e.target.value })}
                   placeholder="Filter by phone"
                   className="w-full px-3 h-8 text-[13px] rounded border border-border bg-background"
                 />
               </div>
             </div>
             
-            <Button onClick={loadRaffleReport} size="sm" className="w-full md:w-auto">
+            <Button onClick={loadDrawReport} size="sm" className="w-full md:w-auto">
               Apply Filters
             </Button>
           </div>
 
           {/* Error Message */}
-          {raffleError && (
+          {drawError && (
             <div className="bg-destructive/10 border border-destructive/30 rounded p-4 text-destructive text-sm">
-              {raffleError}
+              {drawError}
             </div>
           )}
 
           {/* Loading State */}
-          {raffleLoading && (
+          {drawLoading && (
             <div className="bg-card border border-border rounded p-12 text-center text-muted-foreground text-sm">
-              Loading raffle report...
+              Loading draws report...
             </div>
           )}
 
-          {/* Raffle Report Table */}
-          {!raffleLoading && raffleData && raffleData.entries && raffleData.entries.length > 0 && (
+          {/* Draw Report Table */}
+          {!drawLoading && drawData && drawData.entries && drawData.entries.length > 0 && (
             <div className="bg-card border border-border rounded p-4">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold">Draws</h2>
                 <span className="text-xs text-muted-foreground">
-                  {raffleData.total} total entries
+                  {drawData.total} total entries
                 </span>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-secondary/30">
-                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[140px]">Draw Code</th>
-                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[180px]">Prize Name</th>
-                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[120px]">Start Date</th>
-                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[120px]">End Date</th>
-                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[120px]">Draw Date</th>
-                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[100px]">Max Winners</th>
-                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[110px]">Schedule</th>
-                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[100px]">Status</th>
-                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[90px]">Entries</th>
-                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[100px]">Winners</th>
-                      <th className="text-left py-4 px-5 font-semibold text-foreground whitespace-nowrap min-w-[110px]">Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {raffleData.entries.map((entry: any, idx: number) => (
-                      <tr key={idx} className="border-b border-border last:border-0 hover:bg-secondary/50 transition-colors">
-                        <td className="py-4 px-5 font-mono text-xs whitespace-nowrap">{entry.raffleCode || "—"}</td>
-                        <td className="py-4 px-5 font-medium whitespace-nowrap">{entry.prizeName || "—"}</td>
-                        <td className="py-4 px-5 text-muted-foreground whitespace-nowrap">{entry.startsOn || "—"}</td>
-                        <td className="py-4 px-5 text-muted-foreground whitespace-nowrap">{entry.endsOn || "—"}</td>
-                        <td className="py-4 px-5 text-muted-foreground whitespace-nowrap">{entry.drawDate || "—"}</td>
-                        <td className="py-4 px-5 whitespace-nowrap">{entry.maxWinners || 0}</td>
-                        <td className="py-4 px-5 whitespace-nowrap">{entry.scheduleLabel || "—"}</td>
-                        <td className="py-4 px-5 whitespace-nowrap">
-                          <Badge className={
-                            entry.status === "ACTIVE" 
-                              ? "bg-green-500/10 border-green-500/30 text-green-600"
-                              : entry.status === "CLOSED"
-                              ? "bg-amber-500/10 border-amber-500/30 text-amber-600"
-                              : entry.status === "CANCELLED"
-                              ? "bg-red-500/10 border-red-500/30 text-red-600"
-                              : entry.status === "UPCOMING"
-                              ? "bg-blue-500/10 border-blue-500/30 text-blue-600"
-                              : ""
-                          }>
-                            {entry.status || "—"}
-                          </Badge>
-                        </td>
-                        <td className="py-4 px-5 whitespace-nowrap">{entry.entryCount || 0}</td>
-                        <td className="py-4 px-5 whitespace-nowrap">
-                          {entry.winnersSelected ? (
-                            <Badge className="bg-green-500/10 border-green-500/30 text-green-600">Selected</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">Pending</span>
-                          )}
-                        </td>
-                        <td className="py-4 px-5 text-muted-foreground whitespace-nowrap">
-                          {entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTableContainer>
+                <DataTableHeader>
+                  <DataTableRow>
+                    <DataTableHead>Draw Code</DataTableHead>
+                    <DataTableHead>Prize Name</DataTableHead>
+                    <DataTableHead>Start Date</DataTableHead>
+                    <DataTableHead>End Date</DataTableHead>
+                    <DataTableHead>Draw Date</DataTableHead>
+                    <DataTableHead>Max Winners</DataTableHead>
+                    <DataTableHead>Schedule</DataTableHead>
+                    <DataTableHead>Status</DataTableHead>
+                    <DataTableHead>Entries</DataTableHead>
+                    <DataTableHead>Winners</DataTableHead>
+                    <DataTableHead>Created</DataTableHead>
+                  </DataTableRow>
+                </DataTableHeader>
+                <DataTableBody>
+                  {drawData.entries.map((entry: any, idx: number) => (
+                    <DataTableRow key={idx}>
+                      <DataTableCell className="font-mono text-xs">{entry.raffleCode || "—"}</DataTableCell>
+                      <DataTableCell className="font-medium">{entry.prizeName || "—"}</DataTableCell>
+                      <DataTableCell className="text-muted-foreground">{entry.startsOn || "—"}</DataTableCell>
+                      <DataTableCell className="text-muted-foreground">{entry.endsOn || "—"}</DataTableCell>
+                      <DataTableCell className="text-muted-foreground">{entry.drawDate || "—"}</DataTableCell>
+                      <DataTableCell>{entry.maxWinners || 0}</DataTableCell>
+                      <DataTableCell>{entry.scheduleLabel || "—"}</DataTableCell>
+                      <DataTableCell>
+                        <StatusBadge status={entry.status || "PENDING"} />
+                      </DataTableCell>
+                      <DataTableCell>{entry.entryCount || 0}</DataTableCell>
+                      <DataTableCell>
+                        {entry.winnersSelected ? (
+                          <StatusBadge status="SELECTED" />
+                        ) : (
+                          <span className="text-muted-foreground">Pending</span>
+                        )}
+                      </DataTableCell>
+                      <DataTableCell className="text-muted-foreground">
+                        {entry.createdAt ? formatDate(entry.createdAt) : "—"}
+                      </DataTableCell>
+                    </DataTableRow>
+                  ))}
+                </DataTableBody>
+              </DataTableContainer>
             </div>
           )}
 
           {/* Empty State */}
-          {!raffleLoading && raffleData && raffleData.entries.length === 0 && (
+          {!drawLoading && drawData && drawData.entries.length === 0 && (
             <div className="bg-card border border-border rounded p-12 text-center">
               <Gift size={32} className="mx-auto text-muted-foreground mb-3" />
               <p className="text-muted-foreground text-sm">No draws found matching your filters.</p>

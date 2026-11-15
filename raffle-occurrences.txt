@@ -1,0 +1,189 @@
+﻿app\(authenticated)\notifications\page.tsx:10: raffle: Ticket,
+app\(authenticated)\notifications\page.tsx:16: RAFFLE: Ticket,
+app\(authenticated)\notifications\page.tsx:21: RAFFLE_DRAW_RESULT: Ticket,
+app\(authenticated)\notifications\page.tsx:27: RAFFLE_WON: Trophy,
+app\(authenticated)\notifications\page.tsx:34: raffle: "bg-orange-500/20",
+app\(authenticated)\notifications\page.tsx:41: raffle_draw_result: "bg-orange-500/20",
+app\(authenticated)\notifications\page.tsx:43: raffle_won: "bg-amber-500/20",
+app\(authenticated)\notifications\page.tsx:50: raffle: "text-orange-500",
+app\(authenticated)\notifications\page.tsx:57: raffle_draw_result: "text-orange-500",
+app\(authenticated)\notifications\page.tsx:59: raffle_won: "text-amber-500",
+app\(authenticated)\profile\notification-preferences\page.tsx:42: preferences.raffleDrawResults ? 'bg-[var(--color-brand)]' : 'bg-secondary'
+app\(authenticated)\profile\notification-preferences\page.tsx:44: <Bell size={16} className={`sm:w-[18px] sm:h-[18px] ${preferences.raffleDrawResults ? 'text-white' : 'text-muted-foreground'}`} />
+app\(authenticated)\profile\notification-preferences\page.tsx:52: checked={preferences.raffleDrawResults}
+app\(authenticated)\profile\notification-preferences\page.tsx:53: onChange={() => handleToggle("raffleDrawResults")}
+app\(authenticated)\raffles\page.tsx:4: import { ActiveDrawCard } from "../../features/raffles/presentation/active-draw-card";
+app\(authenticated)\raffles\page.tsx:5: import { RaffleHistoryList } from "../../features/raffles/presentation/raffle-history-list";
+app\(authenticated)\raffles\page.tsx:9: import { type RaffleDraw } from "@/lib/api/leaderboard";
+app\(authenticated)\raffles\page.tsx:14: export default function RafflesPage() {
+app\(authenticated)\raffles\page.tsx:16: const [selectedDraw, setSelectedDraw] = useState<RaffleDraw | null>(null);
+app\(authenticated)\raffles\page.tsx:20: // Fetch dashboard for subscription status and active raffles with points
+app\(authenticated)\raffles\page.tsx:35: console.log('[RAFFLES DEBUG] Dashboard activeRaffles:', dashboard.activeRaffles);
+app\(authenticated)\raffles\page.tsx:36: console.log('[RAFFLES DEBUG] Active draws:', draws);
+app\(authenticated)\raffles\page.tsx:39: const samsungDashboard = dashboard.activeRaffles?.find(r => r.prizeName.includes('Samsung'));
+app\(authenticated)\raffles\page.tsx:43: console.log('[RAFFLES DEBUG] Samsung from dashboard:', {
+app\(authenticated)\raffles\page.tsx:52: console.log('[RAFFLES DEBUG] Samsung from /draws/active:', {
+app\(authenticated)\raffles\page.tsx:67: if (!SHOW_ACTIVE_DRAWS || hasShownAutoModal || activeDraws.length === 0 || !dashboard?.activeRaffles) return;
+app\(authenticated)\raffles\page.tsx:86: const raffleData = dashboard.activeRaffles.find(r => r.id === nearest.id);
+app\(authenticated)\raffles\page.tsx:89: const drawWithPoints: RaffleDraw = {
+app\(authenticated)\raffles\page.tsx:91: myPoints: raffleData?.myPoints ?? nearest.myPoints ?? 0,
+app\(authenticated)\raffles\page.tsx:109: const handleDrawClick = (draw: RaffleDraw) => {
+app\(authenticated)\raffles\page.tsx:111: const raffleData = dashboard?.activeRaffles?.find(r => r.id === draw.id);
+app\(authenticated)\raffles\page.tsx:114: myPoints: raffleData?.myPoints ?? draw.myPoints ?? 0,
+app\(authenticated)\raffles\page.tsx:168: // Dashboard activeRaffles has the user's actual points, /draws/active may not
+app\(authenticated)\raffles\page.tsx:169: const raffleData = dashboard?.activeRaffles?.find(r => r.id === draw.id);
+app\(authenticated)\raffles\page.tsx:172: const enrichedDraw: RaffleDraw = {
+app\(authenticated)\raffles\page.tsx:175: myPoints: raffleData?.myPoints ?? draw.myPoints ?? null,
+app\(authenticated)\raffles\page.tsx:176: entered: raffleData?.entered ?? draw.entered ?? false,
+app\(authenticated)\raffles\page.tsx:177: myTickets: raffleData?.myTickets ?? draw.myTickets,
+app\(authenticated)\raffles\page.tsx:208: <RaffleHistoryList />
+app\admin\reports\page.tsx:27: getRaffleReport,
+app\admin\reports\page.tsx:35: type ReportTab = "subscriptions" | "raffles" | "income";
+app\admin\reports\page.tsx:81: // Raffle report state
+app\admin\reports\page.tsx:82: const [raffleData, setRaffleData] = useState<{ entries: unknown[]; size: number; total: number } | null>(null);
+app\admin\reports\page.tsx:83: const [raffleLoading, setRaffleLoading] = useState(false);
+app\admin\reports\page.tsx:84: const [raffleError, setRaffleError] = useState<string | null>(null);
+app\admin\reports\page.tsx:85: const [raffleFilters, setRaffleFilters] = useState({
+app\admin\reports\page.tsx:89: raffleId: "",
+app\admin\reports\page.tsx:217: // Load raffle report
+app\admin\reports\page.tsx:218: const loadRaffleReport = async () => {
+app\admin\reports\page.tsx:220: setRaffleLoading(true);
+app\admin\reports\page.tsx:221: setRaffleError(null);
+app\admin\reports\page.tsx:222: const data = await getRaffleReport({ ...raffleFilters, page: 0, size: 50 });
+app\admin\reports\page.tsx:223: setRaffleData(data as { entries: unknown[]; size: number; total: number });
+app\admin\reports\page.tsx:225: console.error("Error loading raffle report:", err);
+app\admin\reports\page.tsx:226: setRaffleError(err instanceof Error ? err.message : "Failed to load raffle report");
+app\admin\reports\page.tsx:228: setRaffleLoading(false);
+app\admin\reports\page.tsx:248: if (activeTab === "raffles") {
+app\admin\reports\page.tsx:249: loadRaffleReport();
+app\admin\reports\page.tsx:272: // Print view for raffles
+app\admin\reports\page.tsx:273: if (showPrintView && activeTab === "raffles" && raffleData) {
+app\admin\reports\page.tsx:274: const config = getReportConfig("raffles");
+app\admin\reports\page.tsx:281: "From": raffleFilters.from || "Any",
+app\admin\reports\page.tsx:282: "To": raffleFilters.to || "Any",
+app\admin\reports\page.tsx:283: "Status": raffleFilters.status || "All",
+app\admin\reports\page.tsx:284: "Draw ID": raffleFilters.raffleId || "Any",
+app\admin\reports\page.tsx:285: "Email": raffleFilters.email || "Any",
+app\admin\reports\page.tsx:286: "Phone": raffleFilters.phone || "Any",
+app\admin\reports\page.tsx:289: data={raffleData.entries as Record<string, unknown>[]}
+app\admin\reports\page.tsx:302: {activeTab === "raffles" && raffleData && raffleData.entries.length > 0 && (
+app\admin\reports\page.tsx:304: reportKey="raffles"
+app\admin\reports\page.tsx:305: filters={raffleFilters}
+app\admin\reports\page.tsx:324: onClick={() => setActiveTab("raffles")}
+app\admin\reports\page.tsx:326: activeTab === "raffles"
+app\admin\reports\page.tsx:672: {/* Raffles Tab */}
+app\admin\reports\page.tsx:673: {activeTab === "raffles" && (
+app\admin\reports\page.tsx:687: value={raffleFilters.from}
+app\admin\reports\page.tsx:688: onChange={(e) => setRaffleFilters({ ...raffleFilters, from: e.target.value })}
+app\admin\reports\page.tsx:696: value={raffleFilters.to}
+app\admin\reports\page.tsx:697: onChange={(e) => setRaffleFilters({ ...raffleFilters, to: e.target.value })}
+app\admin\reports\page.tsx:704: value={raffleFilters.status}
+app\admin\reports\page.tsx:705: onChange={(e) => setRaffleFilters({ ...raffleFilters, status: e.target.value })}
+app\admin\reports\page.tsx:717: value={raffleFilters.raffleId}
+app\admin\reports\page.tsx:718: onChange={(e) => setRaffleFilters({ ...raffleFilters, raffleId: e.target.value })}
+app\admin\reports\page.tsx:727: value={raffleFilters.email}
+app\admin\reports\page.tsx:728: onChange={(e) => setRaffleFilters({ ...raffleFilters, email: e.target.value })}
+app\admin\reports\page.tsx:737: value={raffleFilters.phone}
+app\admin\reports\page.tsx:738: onChange={(e) => setRaffleFilters({ ...raffleFilters, phone: e.target.value })}
+app\admin\reports\page.tsx:745: <Button onClick={loadRaffleReport} size="sm" className="w-full md:w-auto">
+app\admin\reports\page.tsx:751: {raffleError && (
+app\admin\reports\page.tsx:753: {raffleError}
+app\admin\reports\page.tsx:758: {raffleLoading && (
+app\admin\reports\page.tsx:760: Loading raffle report...
+app\admin\reports\page.tsx:764: {/* Raffle Report Table */}
+app\admin\reports\page.tsx:765: {!raffleLoading && raffleData && raffleData.entries && raffleData.entries.length > 0 && (
+app\admin\reports\page.tsx:770: {raffleData.total} total entries
+app\admin\reports\page.tsx:790: {raffleData.entries.map((entry: any, idx: number) => (
+app\admin\reports\page.tsx:792: <DataTableCell className="font-mono text-xs">{entry.raffleCode || "—"}</DataTableCell>
+app\admin\reports\page.tsx:821: {!raffleLoading && raffleData && raffleData.entries.length === 0 && (
+app\admin\rewards\page.tsx:472: <p className="text-xs text-muted-foreground mt-0.5">{draw.raffleCode}</p>
+app\admin\rewards\page.tsx:873: <div className="font-medium">{selectedDraw.raffleCode}</div>
+app\admin\winners\page.tsx:460: secondary={<span className="font-mono" title="Draw code">{winner.raffleCode}</span>}
+app\admin\winners\page.tsx:720: secondary={<span className="font-mono" title="Draw code">{redemption.raffleCode}</span>}
+app\features\game\presentation\trivia-flow.tsx:151: queryClient.invalidateQueries({ queryKey: ["raffle-history"] });
+app\features\game\presentation\trivia-flow.tsx:204: queryClient.invalidateQueries({ queryKey: ["raffle-history"] });
+app\features\game\presentation\trivia-flow.tsx:259: queryClient.invalidateQueries({ queryKey: ["raffle-history"] });
+app\features\home\presentation\active-raffles.tsx:4: import { type RaffleDraw } from "@/lib/api/leaderboard";
+app\features\home\presentation\active-raffles.tsx:8: interface ActiveRafflesProps {
+app\features\home\presentation\active-raffles.tsx:11: raffleCode: string;
+app\features\home\presentation\active-raffles.tsx:22: export function ActiveRaffles({ dashboardDraws }: ActiveRafflesProps) {
+app\features\home\presentation\active-raffles.tsx:27: const draws = dashboardDraws || dashboard?.activeRaffles || [];
+app\features\home\presentation\active-raffles.tsx:34: <h2 className="text-[15px] font-bold">Active Raffles</h2>
+app\features\home\presentation\active-raffles.tsx:45: <h2 className="text-[15px] font-bold">Active Raffles</h2>
+app\features\home\presentation\active-raffles.tsx:65: onClick={() => router.push("/raffles")}
+app\features\home\presentation\active-raffles.tsx:81: onClick={() => router.push("/raffles")}
+app\features\profile\presentation\notification-preferences.tsx:7: { key: "raffleDrawResults" as const, label: "Draw results" },
+app\features\raffles\presentation\active-draw-card.tsx:4: import { type RaffleDraw } from "@/lib/api/leaderboard";
+app\features\raffles\presentation\active-draw-card.tsx:8: draw: RaffleDraw;
+app\features\raffles\presentation\raffle-history-list.tsx:3: import { getRaffleHistory, type RaffleHistoryEntry } from "@/lib/api/leaderboard";
+app\features\raffles\presentation\raffle-history-list.tsx:6: export function RaffleHistoryList() {
+app\features\raffles\presentation\raffle-history-list.tsx:7: const [history, setHistory] = useState<RaffleHistoryEntry[]>([]);
+app\features\raffles\presentation\raffle-history-list.tsx:12: getRaffleHistory()
+app\features\raffles\presentation\raffle-history-list.tsx:15: console.error("Failed to load raffle history:", err);
+app\features\raffles\presentation\raffle-history-list.tsx:47: const getWinStatus = (entry: RaffleHistoryEntry) => {
+components\admin\value-renderer.tsx:39: raffleCode: "Draw code",
+components\admin\winner-detail-drawer.tsx:329: <span className="font-mono text-xs">{detail.winner.raffleCode}</span>
+components\layout\nav-items.ts:16: { icon: Ticket, label: "Draws", href: "/raffles" },
+lib\api\admin-winners.ts:19: raffleCode: string;
+lib\api\admin-winners.ts:103: raffleCode: string;
+lib\api\admin-winners.ts:320: * GET /api/v1/admin/reports/raffles/redemptions
+lib\api\admin-winners.ts:356: `/api/v1/admin/reports/raffles/redemptions?${params.toString()}`
+lib\api\admin.ts:886: // Raffle Report API Functions
+lib\api\admin.ts:889: export async function getRaffleReport(params: {
+lib\api\admin.ts:890: from?: string; to?: string; status?: string; raffleId?: string; email?: string; phone?: string; page?: number; size?: number;
+lib\api\admin.ts:894: return adminApiClient<AdminJson>(`/api/v1/admin/reports/raffles?${q.toString()}`);
+lib\api\admin.ts:1035: * GET /api/v1/admin/change-requests?status=PENDING&resourceType=RaffleDraw
+lib\api\admin.ts:1191: // raffleCode is generated by backend, NOT sent in request
+lib\api\admin.ts:1212: raffleCode: string;
+lib\api\admin.ts:1318: * NOTE: raffleCode is auto-generated by backend, do NOT include in request
+lib\api\auth.ts:295: activeRaffles: Array<{
+lib\api\auth.ts:297: raffleCode: string;
+lib\api\leaderboard.ts:4: * Leaderboard rankings and raffle/rewards endpoints
+lib\api\leaderboard.ts:37: // Rewards/Raffle Types (V37 - Points-based draws)
+lib\api\leaderboard.ts:53: export interface RaffleDraw {
+lib\api\leaderboard.ts:55: raffleCode: string; // V37: unique code like "NW-202611-0001"
+lib\api\leaderboard.ts:75: export type ActiveDrawsResponse = RaffleDraw[];
+lib\api\leaderboard.ts:104: // Rewards/Raffle API Functions
+lib\api\leaderboard.ts:108: * Get active raffle draws
+lib\api\leaderboard.ts:120: // Raffle History Types (V37 - Points-based)
+lib\api\leaderboard.ts:128: * Fields: drawId, raffleCode, prizeName, drawStatus, myTickets (legacy),
+lib\api\leaderboard.ts:132: export interface RaffleHistoryEntry {
+lib\api\leaderboard.ts:134: raffleCode: string;
+lib\api\leaderboard.ts:145: export type RaffleHistoryResponse = RaffleHistoryEntry[];
+lib\api\leaderboard.ts:148: * Get user's raffle entry history
+lib\api\leaderboard.ts:151: export async function getRaffleHistory(page: number = 0, size: number = 20): Promise<RaffleHistoryResponse> {
+lib\api\leaderboard.ts:156: return apiClient<RaffleHistoryResponse>(`/api/v1/rewards/draws/history?${params.toString()}`, {
+lib\api\payments.ts:14: export type PaymentPurpose = "WALLET_TOPUP" | "SUBSCRIPTION" | "RAFFLE_TICKET" | string;
+lib\export\report-config.ts:14: getRaffleReport,
+lib\export\report-config.ts:30: | "raffles"
+lib\export\report-config.ts:222: raffles: {
+lib\export\report-config.ts:227: getRaffleReport({
+lib\export\report-config.ts:238: { key: "raffleCode", label: "Draw Code" },
+lib\export\report-config.ts:325: { key: "raffleCode", label: "Draw Code" },
+lib\export\report-config.ts:365: { key: "raffleCode", label: "Draw Code" },
+lib\utils\change-request-summary.ts:58: case "raffleDraw":
+lib\utils\change-request-summary.ts:65: // For raffleDraw
+lib\utils\change-request-summary.ts:85: case "RaffleWinner":
+lib\utils\change-request-summary.ts:164: * @example "RaffleWinner" → "Winner"
+lib\utils\change-request-summary.ts:167: // Special case for raffleDraw -> "Draw"
+lib\utils\change-request-summary.ts:168: if (resourceType.toLowerCase() === 'raffledraw') {
+lib\utils\change-request-summary.ts:172: // Special case for RaffleWinner -> "Winner"
+lib\utils\change-request-summary.ts:173: if (resourceType.toLowerCase() === 'rafflewinner') {
+store\notification-preferences-store.ts:5: // Games & Raffles
+store\notification-preferences-store.ts:6: raffleDrawResults: boolean;
+store\notification-preferences-store.ts:26: raffleDrawResults: true,
+store\raffle-store.ts:3: import { type RaffleDraw } from "@/lib/api/leaderboard";
+store\raffle-store.ts:5: // V37: Use RaffleDraw type from API directly
+store\raffle-store.ts:6: export type Raffle = RaffleDraw;
+store\raffle-store.ts:8: interface RaffleState {
+store\raffle-store.ts:9: raffles: Raffle[];
+store\raffle-store.ts:11: setRaffles: (raffles: Raffle[]) => void;
+store\raffle-store.ts:15: export const useRaffleStore = create<RaffleState>()(
+store\raffle-store.ts:18: raffles: [],
+store\raffle-store.ts:21: setRaffles: (raffles) => set({ raffles, isLoading: false }),
+store\raffle-store.ts:25: { name: "raffle-storage" }
+store\raffle-store.ts:30: * Fetch active raffle draws from the API (V37)
+store\raffle-store.ts:31: * Call this when the raffles/home page is loaded or when data needs to be refreshed
+store\raffle-store.ts:36: useRaffleStore.getState().setLoading(true);
+store\raffle-store.ts:41: useRaffleStore.getState().setRaffles(draws);
+store\raffle-store.ts:45: useRaffleStore.getState().setLoading(false);

@@ -29,6 +29,6 @@ export const HOW_TO_PLAY_STEPS: HowToPlayStep[] = [
   },
   {
     title: "Win prizes",
-    description: "Points you earn while a draw is running count toward that draw. The top players win when it ends.",
+    description: "Points you earn while a draw is running count toward that draw. When it ends, the players with the most points win.",
   },
 ];

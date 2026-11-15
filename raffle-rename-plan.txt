@@ -1,0 +1,63 @@
+﻿# Raffle → Draw Rename Analysis
+
+## Files Requiring Visible Text Changes
+
+### Player App Pages
+1. app/(authenticated)/notifications/page.tsx
+   - Line 268: notification.title display - needs cleanLabel()
+   
+2. app/(authenticated)/profile/notification-preferences/page.tsx
+   - Line 34: "GAMES & DRAWS" - already correct ✓
+   - Line 47: "Draw Results" - already correct ✓
+   - Line 48: "Get notified when draws happen" - already correct ✓
+
+3. app/(authenticated)/raffles/page.tsx
+   - All visible text already says "Draws" ✓
+   - Debug logs updated
+
+### Player App Components
+4. app/features/home/presentation/active-raffles.tsx
+   - Line 34: "Active Raffles" → "Active Draws"
+   - Line 45: "Active Raffles" → "Active Draws"
+   
+5. app/features/raffles/presentation/raffle-history-list.tsx
+   - Check for visible "raffle" text
+
+6. components/layout/nav-items.ts
+   - Line 16: label: "Draws" - already correct ✓
+
+### Admin Pages
+7. app/admin/reports/page.tsx
+   - Multiple: "Raffles" tab → "Draws" tab
+   - "Loading raffle report" → "Loading draws report"
+   - "raffle report" → "draws report"
+   - Table headers and labels
+
+8. app/admin/rewards/page.tsx
+   - Display raffleCode with cleanLabel
+
+9. app/admin/winners/page.tsx
+   - Display raffleCode with cleanLabel
+
+10. components/admin/winner-detail-drawer.tsx
+    - Display raffleCode with cleanLabel
+
+11. components/admin/value-renderer.tsx
+    - Line 39: raffleCode: "Draw code" - already correct ✓
+
+### Export/Report Config
+12. lib/export/report-config.ts
+    - Report titles and column headers
+
+13. lib/utils/change-request-summary.ts
+    - Already handles RaffleDraw → Draw via cleanResourceType
+
+### Notification Components
+14. app/features/profile/presentation/notification-preferences.tsx
+    - Line 7: label: "Draw results" - already correct ✓
+
+## Files with Backend Values Only (No Changes Needed)
+- lib/api/*.ts - API field names, types, enums
+- store/*.ts - State management identifiers
+- All route paths (/raffles)
+- All component file names

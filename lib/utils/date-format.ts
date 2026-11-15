@@ -5,9 +5,15 @@
  * - Dates: "13 Nov 2026"
  * - Date-times: "13 Nov 2026, 02:00" (24-hour, Africa/Lagos)
  * - Null dates: "—"
+ * 
+ * API Date Conversion:
+ * - Lagos has NO daylight saving (always UTC+1)
+ * - Convert Lagos wall-clock time to UTC for API
+ * - Never send timezone offsets (+01:00) - use Z format only
  */
 
 const LAGOS_TIMEZONE = "Africa/Lagos";
+const LAGOS_UTC_OFFSET_HOURS = 1; // Lagos is always UTC+1
 
 /**
  * Format a date string as "13 Nov 2026"
@@ -55,109 +61,101 @@ export function formatDateTime(dateStr: string | null | undefined): string {
 }
 
 /**
- * Format a date for input[type="date"] (YYYY-MM-DD)
+ * Convert Lagos wall-clock time to UTC ISO 8601 string with Z suffix
+ * 
+ * Lagos has no daylight saving, so UTC = Lagos time minus 1 hour.
+ * 
+ * Examples:
+ * - Lagos 2026-11-06 00:00:00 → 2026-11-05T23:00:00Z
+ * - Lagos 2026-11-13 23:59:59 → 2026-11-13T22:59:59Z
+ * 
+ * @param year Lagos year
+ * @param month Lagos month (1-12)
+ * @param day Lagos day (1-31)
+ * @param hour Lagos hour (0-23)
+ * @param minute Lagos minute (0-59)
+ * @param second Lagos second (0-59)
+ * @returns UTC ISO 8601 string with Z suffix (e.g., "2026-11-05T23:00:00Z")
  */
-export function formatDateForInput(dateStr: string | null | undefined): string {
-  if (!dateStr) return "";
+export function lagosToUtcISO(
+  year: number,
+  month: number,
+  day: number,
+  hour: number = 0,
+  minute: number = 0,
+  second: number = 0
+): string {
+  // Create UTC Date from Lagos wall-clock values
+  // Date.UTC uses 0-indexed months
+  const lagosUtcTimestamp = Date.UTC(year, month - 1, day, hour, minute, second);
   
-  try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "";
-    
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    
-    return `${year}-${month}-${day}`;
-  } catch {
-    return "";
-  }
+  // Subtract 1 hour to convert from Lagos (UTC+1) to UTC
+  const utcTimestamp = lagosUtcTimestamp - (LAGOS_UTC_OFFSET_HOURS * 60 * 60 * 1000);
+  const utcDate = new Date(utcTimestamp);
+  
+  // Format as ISO 8601 with Z suffix (without milliseconds)
+  return utcDate.toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
 /**
- * Format a date-time for input[type="datetime-local"] (YYYY-MM-DDTHH:mm)
+ * Get start of day in Lagos time, converted to UTC ISO 8601 with Z suffix
+ * 
+ * @param date Date object (any timezone, we only use year/month/day)
+ * @returns UTC ISO string for Lagos 00:00:00 (e.g., "2026-11-05T23:00:00Z")
  */
-export function formatDateTimeForInput(dateStr: string | null | undefined): string {
-  if (!dateStr) return "";
-  
-  try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "";
-    
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  } catch {
-    return "";
-  }
-}
-
-/**
- * Create a date-time string with Lagos offset for API
- * Example: "2026-11-06T14:25+01:00"
- */
-export function createLagosDateTime(date: Date): string {
+export function getStartOfDayUTC(date: Date): string {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
   
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+01:00`;
+  return lagosToUtcISO(year, month, day, 0, 0, 0);
 }
 
 /**
- * Get start of day in Lagos time (00:00:00)
+ * Get end of day in Lagos time, converted to UTC ISO 8601 with Z suffix
+ * 
+ * @param date Date object (any timezone, we only use year/month/day)
+ * @returns UTC ISO string for Lagos 23:59:59 (e.g., "2026-11-13T22:59:59Z")
  */
-export function getStartOfDay(date: Date): string {
+export function getEndOfDayUTC(date: Date): string {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
   
-  return `${year}-${month}-${day}T00:00:00+01:00`;
-}
-
-/**
- * Get end of day in Lagos time (23:59:59)
- */
-export function getEndOfDay(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  
-  return `${year}-${month}-${day}T23:59:59+01:00`;
+  return lagosToUtcISO(year, month, day, 23, 59, 59);
 }
 
 /**
  * Date presets for filters
+ * All times converted to UTC ISO 8601 with Z suffix
  */
 export function getDatePresets() {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   
+  // Last 7 days = today plus previous 6 days (7 total)
   const sevenDaysAgo = new Date(today);
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
   
   const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+  const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   
   return {
     today: {
-      from: getStartOfDay(today),
-      to: getEndOfDay(today)
+      from: getStartOfDayUTC(today),
+      to: getEndOfDayUTC(today)
     },
     last7Days: {
-      from: getStartOfDay(sevenDaysAgo),
-      to: getEndOfDay(today)
+      from: getStartOfDayUTC(sevenDaysAgo),
+      to: getEndOfDayUTC(today)
     },
     thisMonth: {
-      from: getStartOfDay(firstOfMonth),
-      to: createLagosDateTime(lastOfMonth)
+      from: getStartOfDayUTC(firstOfMonth),
+      to: getEndOfDayUTC(lastOfMonth)
+    },
+    allTime: {
+      from: undefined,
+      to: undefined
     }
   };
 }

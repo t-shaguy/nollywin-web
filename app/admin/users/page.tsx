@@ -11,6 +11,15 @@ import { PrintView } from "@/components/admin/print-view";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate } from "@/lib/utils/date-format";
 import { getReportConfig } from "@/lib/export/report-config";
+import {
+  DataTableContainer,
+  DataTableHeader,
+  DataTableBody,
+  DataTableRow,
+  DataTableHead,
+  DataTableCell,
+  DataTableCellStack,
+} from "@/components/ui/data-table";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<AdminUserListItem[]>([]);
@@ -69,15 +78,6 @@ export default function UsersPage() {
     
     return matchesSearch && matchesPlan && matchesStatus;
   });
-
-  // Format date
-  const formatDate = (isoString: string) => {
-    return new Date(isoString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
 
   // Get user display name (alias > firstName lastName > email > phone)
   const getDisplayName = (user: AdminUserListItem) => {
@@ -233,62 +233,55 @@ export default function UsersPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-secondary/50 border-b border-border">
-              <tr>
-                <th className="text-left px-4 py-3 text-[13px] font-semibold text-foreground">User</th>
-                <th className="text-left px-4 py-3 text-[13px] font-semibold text-foreground">Plan</th>
-                <th className="text-left px-4 py-3 text-[13px] font-semibold text-foreground">Tokens</th>
-                <th className="text-left px-4 py-3 text-[13px] font-semibold text-foreground">Joined</th>
-                <th className="text-left px-4 py-3 text-[13px] font-semibold text-foreground">Status</th>
-                <th className="text-left px-4 py-3 text-[13px] font-semibold text-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((user) => (
-                <tr key={user.authUserId} className="border-b border-border last:border-0 hover:bg-secondary/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <div>
-                      <p className="text-[13px] font-medium text-foreground">{getDisplayName(user)}</p>
-                      <p className="text-[12px] text-muted-foreground truncate max-w-[200px]">{user.email}</p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-medium ${
-                      user.packageName
-                        ? "bg-primary/10 border border-primary/30 text-primary" 
-                        : "bg-secondary border border-border text-muted-foreground"
-                    }`}>
-                      {user.packageName || "None"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-[13px] text-foreground">{user.tokenBalance.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-[13px] text-muted-foreground">{formatDate(user.joinedAt)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className={`h-1.5 w-1.5 rounded-full ${
-                        user.subscriptionStatus === "ACTIVE" 
-                          ? "bg-green-500" 
-                          : user.subscriptionStatus === "EXPIRED" 
-                          ? "bg-yellow-500"
-                          : "bg-gray-400"
-                      }`} />
-                      <span className="text-[13px] text-foreground">{user.subscriptionStatus || "Inactive"}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link href={`/admin/users/${user.authUserId}`}>
-                      <Button variant="outline" size="sm">
-                        View
-                      </Button>
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <DataTableContainer>
+        <DataTableHeader>
+          <DataTableRow>
+            <DataTableHead>User</DataTableHead>
+            <DataTableHead>Plan</DataTableHead>
+            <DataTableHead>Tokens</DataTableHead>
+            <DataTableHead>Joined</DataTableHead>
+            <DataTableHead>Status</DataTableHead>
+            <DataTableHead>Actions</DataTableHead>
+          </DataTableRow>
+        </DataTableHeader>
+        <DataTableBody>
+          {filteredUsers.map((user) => (
+            <DataTableRow key={user.authUserId}>
+              <DataTableCell>
+                <DataTableCellStack
+                  primary={getDisplayName(user)}
+                  secondary={user.email}
+                />
+              </DataTableCell>
+              <DataTableCell>
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-medium ${
+                  user.packageName
+                    ? "bg-primary/10 border border-primary/30 text-primary" 
+                    : "bg-secondary border border-border text-muted-foreground"
+                }`}>
+                  {user.packageName || "None"}
+                </span>
+              </DataTableCell>
+              <DataTableCell>{user.tokenBalance.toLocaleString()}</DataTableCell>
+              <DataTableCell className="text-muted-foreground">{formatDate(user.joinedAt)}</DataTableCell>
+              <DataTableCell>
+                {user.subscriptionStatus ? (
+                  <StatusBadge status={user.subscriptionStatus as "ACTIVE" | "EXPIRED"} />
+                ) : (
+                  <span className="text-[13px] text-muted-foreground">Inactive</span>
+                )}
+              </DataTableCell>
+              <DataTableCell>
+                <Link href={`/admin/users/${user.authUserId}`}>
+                  <Button variant="outline" size="sm">
+                    View
+                  </Button>
+                </Link>
+              </DataTableCell>
+            </DataTableRow>
+          ))}
+        </DataTableBody>
+      </DataTableContainer>
           {filteredUsers.length === 0 && !loading && (
             <div className="text-center py-12 text-muted-foreground text-[13px]">
               {searchTerm || planFilter !== "all" || statusFilter !== "all"
@@ -297,8 +290,6 @@ export default function UsersPage() {
               }
             </div>
           )}
-        </div>
-      </div>
 
       {/* Pagination */}
       {totalPages > 1 && (

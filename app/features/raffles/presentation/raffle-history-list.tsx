@@ -12,7 +12,7 @@ export function RaffleHistoryList() {
     getRaffleHistory()
       .then((data) => setHistory(data))
       .catch((err) => {
-        console.error("Failed to load raffle history:", err);
+        console.error("Failed to load draw history:", err);
         setError("Failed to load history");
       })
       .finally(() => setLoading(false));

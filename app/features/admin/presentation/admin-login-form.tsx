@@ -135,7 +135,7 @@ export function AdminLoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4">
+    <div className="theme-admin min-h-screen bg-black flex items-center justify-center px-4">
       {/* Card Container - Balanced width */}
       <div className="w-full max-w-[440px] bg-[#1A1A1A] rounded-2xl p-7">
         {/* Back Button */}
@@ -165,7 +165,7 @@ export function AdminLoginForm() {
               type="email"
               placeholder="admin@nollywin.com"
               {...register("email")}
-              className="bg-[#0D0D0D] border-[#2A2A2A] text-white placeholder:text-white/30 h-11 rounded-lg focus:border-[#F40289] focus:ring-[#F40289] text-sm"
+              className="bg-[#0D0D0D] border-[#2A2A2A] text-white placeholder:text-white/30 h-11 rounded-lg focus:border-primary focus:ring-primary text-sm"
             />
             {errors.email && <p className="text-[#FC0D28] text-xs mt-1.5">{errors.email.message}</p>}
           </div>
@@ -177,7 +177,7 @@ export function AdminLoginForm() {
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 {...register("password")}
-                className="bg-[#0D0D0D] border-[#2A2A2A] text-white placeholder:text-white/30 h-11 rounded-lg focus:border-[#F40289] focus:ring-[#F40289] pr-11 text-sm"
+                className="bg-[#0D0D0D] border-[#2A2A2A] text-white placeholder:text-white/30 h-11 rounded-lg focus:border-primary focus:ring-primary pr-11 text-sm"
               />
               <button
                 type="button"
@@ -205,7 +205,7 @@ export function AdminLoginForm() {
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full h-11 bg-[#F40289] hover:opacity-90 text-white font-semibold rounded-lg transition-opacity justify-center text-sm"
+            className="w-full h-11 bg-primary hover:opacity-90 text-white font-semibold rounded-lg transition-opacity justify-center text-sm"
           >
             {isSubmitting ? "Logging in..." : "Login with Password"}
           </Button>
@@ -225,7 +225,7 @@ export function AdminLoginForm() {
             type="button"
             onClick={handleMagicLink}
             disabled={magicLinkLoading}
-            className="w-full h-11 bg-[#0D0D0D] border-2 border-[#2A2A2A] hover:border-[#F40289] text-white font-semibold rounded-lg transition-colors justify-center text-sm"
+            className="w-full h-11 bg-[#0D0D0D] border-2 border-[#2A2A2A] hover:border-primary text-white font-semibold rounded-lg transition-colors justify-center text-sm"
           >
             {magicLinkLoading ? "Sending..." : "Login with Magic Link"}
           </Button>

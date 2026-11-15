@@ -9,6 +9,15 @@ import { AdminInput } from "@/components/admin/admin-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate, formatDateTime } from "@/lib/utils/date-format";
 import {
+  DataTableContainer,
+  DataTableHeader,
+  DataTableBody,
+  DataTableRow,
+  DataTableHead,
+  DataTableCell,
+  DataTableEmpty,
+} from "@/components/ui/data-table";
+import {
   getAdminDraws,
   getAdminDraw,
   createDraw,
@@ -870,12 +879,12 @@ export default function AdminRewardsPage() {
                 <div>
                   <div className="text-muted-foreground mb-1">Qualifying Period</div>
                   <div className="font-medium">
-                    {formatDrawDate(selectedDraw.startsOn)} - {formatDrawDate(selectedDraw.endsOn)}
+                    {formatDate(selectedDraw.startsOn)} - {formatDate(selectedDraw.endsOn)}
                   </div>
                 </div>
                 <div>
                   <div className="text-muted-foreground mb-1">Draw Date</div>
-                  <div className="font-medium">{formatDrawDate(selectedDraw.drawDate)}</div>
+                  <div className="font-medium">{formatDate(selectedDraw.drawDate)}</div>
                 </div>
                 <div>
                   <div className="text-muted-foreground mb-1">Entry Count</div>
@@ -1061,56 +1070,48 @@ export default function AdminRewardsPage() {
             No qualifying players yet
           </div>
         ) : (
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
-            <table className="w-full text-[13px]">
-              <thead className="bg-secondary/30">
-                <tr>
-                  <th className="text-left py-3 px-4 font-medium">Position</th>
-                  <th className="text-left py-3 px-4 font-medium">Email</th>
-                  <th className="text-right py-3 px-4 font-medium">Points</th>
-                  <th className="text-right py-3 px-4 font-medium">Correct Answers</th>
-                  {hasTiers && <th className="text-left py-3 px-4 font-medium">Projected Tier</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {(standings ?? []).map((entry) => {
-                  const isWinningPosition = entry.position <= maxWinners;
-                  const projectedTier = hasTiers ? getProjectedTier(entry.position, selectedDraw.prizeTiers ?? []) : null;
-                  
-                  return (
-                    <tr 
-                      key={entry.authUserId} 
-                      className={cn(
-                        "border-t border-border hover:bg-secondary/20",
-                        isWinningPosition && "bg-primary/5"
-                      )}
-                    >
-                      <td className={cn(
-                        "py-3 px-4 font-bold",
-                        isWinningPosition && "text-primary"
-                      )}>
-                        #{entry.position}
-                      </td>
-                      <td className="py-3 px-4">{entry.email}</td>
-                      <td className="py-3 px-4 text-right font-semibold">{entry.points.toLocaleString()}</td>
-                      <td className="py-3 px-4 text-right text-muted-foreground">{entry.correctAnswers}</td>
-                      {hasTiers && (
-                        <td className="py-3 px-4">
-                          {projectedTier ? (
-                            <span className="inline-block px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
-                              {projectedTier}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">-</span>
-                          )}
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTableContainer>
+            <DataTableHeader>
+              <DataTableRow>
+                <DataTableHead>Position</DataTableHead>
+                <DataTableHead>Email</DataTableHead>
+                <DataTableHead align="right">Points</DataTableHead>
+                <DataTableHead align="right">Correct Answers</DataTableHead>
+                {hasTiers && <DataTableHead>Projected Tier</DataTableHead>}
+              </DataTableRow>
+            </DataTableHeader>
+            <DataTableBody>
+              {(standings ?? []).map((entry) => {
+                const isWinningPosition = entry.position <= maxWinners;
+                const projectedTier = hasTiers ? getProjectedTier(entry.position, selectedDraw.prizeTiers ?? []) : null;
+                
+                return (
+                  <DataTableRow 
+                    key={entry.authUserId}
+                    className={isWinningPosition ? "bg-primary/5" : undefined}
+                  >
+                    <DataTableCell className={cn("font-bold", isWinningPosition && "text-primary")}>
+                      #{entry.position}
+                    </DataTableCell>
+                    <DataTableCell>{entry.email}</DataTableCell>
+                    <DataTableCell align="right" className="font-semibold">{entry.points.toLocaleString()}</DataTableCell>
+                    <DataTableCell align="right" className="text-muted-foreground">{entry.correctAnswers}</DataTableCell>
+                    {hasTiers && (
+                      <DataTableCell>
+                        {projectedTier ? (
+                          <span className="inline-block px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
+                            {projectedTier}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">-</span>
+                        )}
+                      </DataTableCell>
+                    )}
+                  </DataTableRow>
+                );
+              })}
+            </DataTableBody>
+          </DataTableContainer>
         )}
       </div>
     );
@@ -1142,50 +1143,42 @@ export default function AdminRewardsPage() {
             No winners selected yet
           </div>
         ) : (
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
-            <table className="w-full text-[13px]">
-              <thead className="bg-secondary/30">
-                <tr>
-                  <th className="text-left py-3 px-4 font-medium">Rank</th>
-                  <th className="text-left py-3 px-4 font-medium">Display Name</th>
-                  <th className="text-left py-3 px-4 font-medium">Email</th>
-                  <th className="text-left py-3 px-4 font-medium">Phone</th>
-                  <th className="text-right py-3 px-4 font-medium">Points</th>
-                  {winners.some(w => w.tier || w.tierName) && <th className="text-left py-3 px-4 font-medium">Tier</th>}
-                  {winners.some(w => w.prize || w.prizeName) && <th className="text-left py-3 px-4 font-medium">Prize</th>}
-                  <th className="text-left py-3 px-4 font-medium">Selected At</th>
-                </tr>
-              </thead>
-              <tbody>
-                {winners.map((winner, idx) => (
-                  <tr key={idx} className="border-t border-border hover:bg-secondary/20">
-                    <td className="py-3 px-4 font-bold text-primary">
-                      #{winner.rankPosition ?? idx + 1}
-                    </td>
-                    <td className="py-3 px-4 font-medium">{winner.displayName ?? "-"}</td>
-                    <td className="py-3 px-4">{winner.email ?? "-"}</td>
-                    <td className="py-3 px-4 text-muted-foreground">{winner.phoneNumber ?? "-"}</td>
-                    <td className="py-3 px-4 font-semibold text-right">{winner.points?.toLocaleString() ?? "-"}</td>
-                    {winners.some(w => w.tier || w.tierName) && (
-                      <td className="py-3 px-4">{winner.tierName ?? winner.tier ?? "-"}</td>
-                    )}
-                    {winners.some(w => w.prize || w.prizeName) && (
-                      <td className="py-3 px-4">{winner.prizeName ?? winner.prize ?? "-"}</td>
-                    )}
-                    <td className="py-3 px-4 text-muted-foreground text-xs">
-                      {winner.selectedAt ? new Date(winner.selectedAt).toLocaleString('en-GB', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      }) : "-"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTableContainer>
+            <DataTableHeader>
+              <DataTableRow>
+                <DataTableHead>Rank</DataTableHead>
+                <DataTableHead>Display Name</DataTableHead>
+                <DataTableHead>Email</DataTableHead>
+                <DataTableHead>Phone</DataTableHead>
+                <DataTableHead align="right">Points</DataTableHead>
+                {winners.some(w => w.tier || w.tierName) && <DataTableHead>Tier</DataTableHead>}
+                {winners.some(w => w.prize || w.prizeName) && <DataTableHead>Prize</DataTableHead>}
+                <DataTableHead>Selected At</DataTableHead>
+              </DataTableRow>
+            </DataTableHeader>
+            <DataTableBody>
+              {winners.map((winner, idx) => (
+                <DataTableRow key={idx}>
+                  <DataTableCell className="font-bold text-primary">
+                    #{winner.rankPosition ?? idx + 1}
+                  </DataTableCell>
+                  <DataTableCell className="font-medium">{winner.displayName ?? "-"}</DataTableCell>
+                  <DataTableCell>{winner.email ?? "-"}</DataTableCell>
+                  <DataTableCell className="text-muted-foreground">{winner.phoneNumber ?? "-"}</DataTableCell>
+                  <DataTableCell align="right" className="font-semibold">{winner.points?.toLocaleString() ?? "-"}</DataTableCell>
+                  {winners.some(w => w.tier || w.tierName) && (
+                    <DataTableCell>{winner.tierName ?? winner.tier ?? "-"}</DataTableCell>
+                  )}
+                  {winners.some(w => w.prize || w.prizeName) && (
+                    <DataTableCell>{winner.prizeName ?? winner.prize ?? "-"}</DataTableCell>
+                  )}
+                  <DataTableCell className="text-muted-foreground text-xs">
+                    {winner.selectedAt ? formatDateTime(winner.selectedAt) : "-"}
+                  </DataTableCell>
+                </DataTableRow>
+              ))}
+            </DataTableBody>
+          </DataTableContainer>
         )}
       </div>
     );

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 import { getNotifications, markAsRead, markAllAsRead, deleteNotification, type Notification } from "@/lib/api/notifications";
+import { cleanLabel } from "@/lib/utils/label-cleaner";
 
 const NOTIFICATION_ICONS: Record<string, any> = {
   game: Play,
@@ -265,13 +266,13 @@ export default function NotificationsPage() {
                     <Icon size={18} className={textClass} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm mb-0.5">{notification.title}</h3>
+                    <h3 className="font-semibold text-sm mb-0.5">{cleanLabel(notification.title)}</h3>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      {notification.body
+                      {cleanLabel(notification.body
                         .replace(/We'll be in touch about your prize\.?/gi, '')
                         .replace(/We will be in touch about your prize\.?/gi, '')
                         .trim()
-                      }
+                      )}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

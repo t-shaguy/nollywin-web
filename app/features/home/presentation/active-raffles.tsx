@@ -31,7 +31,7 @@ export function ActiveRaffles({ dashboardDraws }: ActiveRafflesProps) {
     return (
       <div className="bg-card border border-border rounded-[16px] p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-[15px] font-bold">Active Raffles</h2>
+          <h2 className="text-[15px] font-bold">Active Draws</h2>
         </div>
         <p className="text-sm text-muted-foreground">Loading...</p>
       </div>
@@ -42,7 +42,7 @@ export function ActiveRaffles({ dashboardDraws }: ActiveRafflesProps) {
     return (
       <div className="bg-card border border-border rounded-[16px] p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-[15px] font-bold">Active Raffles</h2>
+          <h2 className="text-[15px] font-bold">Active Draws</h2>
         </div>
         <p className="text-sm text-muted-foreground">No active draws at the moment</p>
       </div>

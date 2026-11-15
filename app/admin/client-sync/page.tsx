@@ -14,6 +14,15 @@ import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminTableWrapper } from "@/components/admin/admin-table-wrapper";
 import { AdminActionButton } from "@/components/admin/admin-action-button";
 import { AdminCard } from "@/components/admin/admin-card";
+import {
+  DataTableContainer,
+  DataTableHeader,
+  DataTableBody,
+  DataTableRow,
+  DataTableHead,
+  DataTableCell,
+  DataTableCellStack,
+} from "@/components/ui/data-table";
 
 export default function ClientSyncPage() {
   const [clients, setClients] = useState<SyncedClient[]>([]);
@@ -276,76 +285,76 @@ export default function ClientSyncPage() {
             No synced clients yet. Click "Refresh from Auth" to sync clients.
           </div>
         ) : (
-          <AdminTableWrapper>
-            <table className="w-full min-w-[640px]">
-              <thead className="bg-secondary/50 border-b border-border">
-                <tr>
-                  <th className="text-left px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold">Client</th>
-                  <th className="text-left px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold">Channel</th>
-                  <th className="text-left px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold">Status</th>
-                  <th className="text-left px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold">Last Sync</th>
-                  <th className="text-left px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clients.map((client) => {
-                  const enabled = isClientEnabled(client);
-                  return (
-                    <tr key={client.id} className="border-b border-border last:border-0 hover:bg-secondary/30">
-                      <td className="px-4 sm:px-6 py-3 sm:py-4">
-                        <p className="font-medium text-sm">{client.displayName}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{client.email}</p>
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4">
-                        <span className={`rounded px-2 py-0.5 text-xs font-medium border ${getChannelColor(client.channel)}`}>
-                          {client.channel}
-                        </span>
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2">
-                            {enabled ? (
-                              <CheckCircle size={16} className="text-green-600" />
-                            ) : (
-                              <XCircle size={16} className="text-red-600" />
-                            )}
-                            <span className={`text-xs sm:text-sm font-medium ${
-                              enabled ? "text-green-600" : "text-red-600"
-                            }`}>
-                              {enabled ? "Enabled" : "Disabled"}
-                            </span>
-                          </div>
-                          {client.status === "ACTIVE" && client.locallyDisabled && (
-                            <span className="text-xs text-muted-foreground">
-                              (Locally disabled)
-                            </span>
+          <DataTableContainer>
+            <DataTableHeader>
+              <DataTableRow>
+                <DataTableHead>Client</DataTableHead>
+                <DataTableHead>Channel</DataTableHead>
+                <DataTableHead>Status</DataTableHead>
+                <DataTableHead>Last Sync</DataTableHead>
+                <DataTableHead>Actions</DataTableHead>
+              </DataTableRow>
+            </DataTableHeader>
+            <DataTableBody>
+              {clients.map((client) => {
+                const enabled = isClientEnabled(client);
+                return (
+                  <DataTableRow key={client.id}>
+                    <DataTableCell>
+                      <DataTableCellStack
+                        primary={client.displayName}
+                        secondary={client.email}
+                      />
+                    </DataTableCell>
+                    <DataTableCell>
+                      <span className={`rounded px-2 py-0.5 text-xs font-medium border ${getChannelColor(client.channel)}`}>
+                        {client.channel}
+                      </span>
+                    </DataTableCell>
+                    <DataTableCell>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          {enabled ? (
+                            <CheckCircle size={16} className="text-green-600" />
+                          ) : (
+                            <XCircle size={16} className="text-red-600" />
                           )}
+                          <span className={`text-sm font-medium ${
+                            enabled ? "text-green-600" : "text-red-600"
+                          }`}>
+                            {enabled ? "Enabled" : "Disabled"}
+                          </span>
                         </div>
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-muted-foreground">
-                        {formatDate(client.lastSyncedAt)}
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4">
-                        <AdminActionButton
-                          onClick={() => handleToggleStatus(client.email, enabled)}
-                          disabled={actioningEmail === client.email}
-                          variant={enabled ? "danger" : "secondary"}
-                          size="sm"
-                        >
-                          {actioningEmail === client.email 
-                            ? "Submitting..." 
-                            : enabled 
-                              ? "Disable" 
-                              : "Enable"
-                          }
-                        </AdminActionButton>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </AdminTableWrapper>
+                        {client.status === "ACTIVE" && client.locallyDisabled && (
+                          <span className="text-xs text-muted-foreground">
+                            (Locally disabled)
+                          </span>
+                        )}
+                      </div>
+                    </DataTableCell>
+                    <DataTableCell className="text-muted-foreground">
+                      {formatDate(client.lastSyncedAt)}
+                    </DataTableCell>
+                    <DataTableCell>
+                      <AdminActionButton
+                        onClick={() => handleToggleStatus(client.email, enabled)}
+                        disabled={actioningEmail === client.email}
+                        variant={enabled ? "danger" : "secondary"}
+                        size="sm"
+                      >
+                        {actioningEmail === client.email 
+                          ? "Submitting..." 
+                          : enabled 
+                            ? "Disable" 
+                            : "Enable"
+                        }
+                      </AdminActionButton>
+                    </DataTableCell>
+                  </DataTableRow>
+                );
+              })}
+            </DataTableBody>
+          </DataTableContainer>
         )}
       </AdminCard>
     </div>
