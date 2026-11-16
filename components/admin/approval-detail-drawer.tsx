@@ -10,13 +10,14 @@
  */
 
 "use client";
-import { X, ChevronLeft, FileText, Download, CheckCircle, XCircle } from "lucide-react";
+import { X, ChevronLeft, FileText, Download, CheckCircle, XCircle, FileIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateTime } from "@/lib/utils/date-format";
 import { cleanLabel } from "@/lib/utils/label-cleaner";
+import { getChangeRequestFile } from "@/lib/api/admin";
 import type { ChangeRequest } from "@/lib/api/admin";
 
 interface ApprovalDetailDrawerProps {
@@ -52,8 +53,165 @@ export function ApprovalDetailDrawer({
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [approvalNote, setApprovalNote] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
+  
+  // File viewer state
+  const [viewingFile, setViewingFile] = useState(false);
+  const [fileBlob, setFileBlob] = useState<Blob | null>(null);
+  const [fileName, setFileName] = useState("");
+  const [fileContentType, setFileContentType] = useState("");
+  const [loadingFile, setLoadingFile] = useState(false);
+  const [fileError, setFileError] = useState<{ status: number; message: string } | null>(null);
+
+  // File viewer handlers - use function declarations for hoisting
+  function closeFileViewer() {
+    setViewingFile(false);
+    setFileBlob(null);
+    setFileError(null);
+    setFileName("");
+    setFileContentType("");
+  }
+
+  function handleDownloadFile() {
+    if (!fileBlob) return;
+    const url = URL.createObjectURL(fileBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName || "attachment";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function handleRetryFile() {
+    handleViewFile();
+  }
+
+  async function handleViewFile() {
+    if (!request?.hasFile) return;
+    
+    try {
+      setLoadingFile(true);
+      setFileError(null);
+      console.log('Fetching change request file:', request.id);
+      const result = await getChangeRequestFile(request.id);
+      setFileBlob(result.blob);
+      setFileName(result.fileName);
+      setFileContentType(result.contentType);
+      setViewingFile(true);
+    } catch (err: any) {
+      console.error("Error loading file:", err);
+      
+      const status = err?.status || 500;
+      let message = "Failed to load attached file";
+      
+      if (status === 401) {
+        message = "Your session expired. Please log in again.";
+      } else if (status === 403) {
+        message = "You don't have permission to view this file.";
+      } else if (status === 404) {
+        message = "This file could not be found on the server.";
+      } else if (err?.message) {
+        message = err.message;
+      }
+      
+      setFileError({ status, message });
+      setViewingFile(true);
+    } finally {
+      setLoadingFile(false);
+    }
+  }
 
   if (!open || !request) return null;
+
+  // File viewer modal
+  if (viewingFile) {
+    const isImage = fileContentType.startsWith("image/");
+    const blobUrl = fileBlob ? URL.createObjectURL(fileBlob) : null;
+
+    return (
+      <>
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 bg-black/80 z-[60]"
+          onClick={closeFileViewer}
+          aria-hidden="true"
+        />
+
+        {/* Modal */}
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="bg-background border border-border rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+              <div>
+                <h3 className="text-sm font-semibold">Attached File</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{fileName}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {fileBlob && (
+                  <Button variant="outline" size="sm" onClick={handleDownloadFile}>
+                    <Download size={14} className="mr-1" />
+                    Download
+                  </Button>
+                )}
+                <button
+                  onClick={closeFileViewer}
+                  className="p-1.5 hover:bg-secondary rounded-lg transition-colors"
+                  aria-label="Close file viewer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-auto p-4 bg-secondary/30">
+              {fileError ? (
+                <div className="flex flex-col items-center justify-center py-12 px-4">
+                  <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-6 max-w-md text-center">
+                    <FileIcon size={48} className="text-destructive mb-4 mx-auto" />
+                    <h4 className="text-sm font-semibold text-destructive mb-2">
+                      {fileError.status === 401 && "Session Expired"}
+                      {fileError.status === 403 && "Access Denied"}
+                      {fileError.status === 404 && "File Not Found"}
+                      {fileError.status !== 401 && fileError.status !== 403 && fileError.status !== 404 && "Error Loading File"}
+                    </h4>
+                    <p className="text-xs text-muted-foreground mb-4">{fileError.message}</p>
+                    <Button onClick={handleRetryFile} variant="outline" size="sm" disabled={loadingFile}>
+                      {loadingFile ? "Loading..." : "Retry"}
+                    </Button>
+                  </div>
+                </div>
+              ) : fileBlob && blobUrl ? (
+                isImage ? (
+                  <img
+                    src={blobUrl}
+                    alt={fileName}
+                    className="max-w-full h-auto mx-auto rounded border border-border"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <FileIcon size={48} className="text-muted-foreground mb-4" />
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Preview not available for this file type
+                    </p>
+                    <Button onClick={handleDownloadFile}>
+                      <Download size={14} className="mr-2" />
+                      Download to view
+                    </Button>
+                  </div>
+                )
+              ) : loadingFile ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-sm text-muted-foreground">Loading file...</div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // Parse request body to extract fields
   const parseRequestBody = (body: string | null): Record<string, any> => {
@@ -127,9 +285,6 @@ export function ApprovalDetailDrawer({
     setShowRejectModal(false);
     setRejectionReason("");
   };
-
-  // Get file attachment URL if available
-  const fileUrl = request.hasFile ? `/api/admin/change-requests/${request.id}/file` : null;
 
   return (
     <>
@@ -254,27 +409,25 @@ export function ApprovalDetailDrawer({
             )}
 
             {/* File Attachment */}
-            {fileUrl && (
+            {request.hasFile && (
               <div>
                 <div className="text-xs text-muted-foreground mb-2">Attached file</div>
-                <div className="border border-border rounded-lg p-3 flex items-center gap-3">
+                <button
+                  onClick={handleViewFile}
+                  disabled={loadingFile}
+                  className="w-full border border-border rounded-lg p-3 flex items-center gap-3 hover:bg-secondary/50 transition-colors disabled:opacity-50"
+                >
                   <div className="p-2 bg-muted rounded">
                     <FileText size={20} className="text-muted-foreground" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">Attachment</div>
-                    <div className="text-xs text-muted-foreground">View or download file</div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className="text-sm font-medium truncate">
+                      {loadingFile ? "Loading..." : "Attachment"}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Click to view or download</div>
                   </div>
-                  <a
-                    href={fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 hover:bg-secondary rounded-lg transition-colors"
-                    aria-label="Download attachment"
-                  >
-                    <Download size={18} className="text-muted-foreground" />
-                  </a>
-                </div>
+                  <Download size={18} className="text-muted-foreground" />
+                </button>
               </div>
             )}
           </div>
