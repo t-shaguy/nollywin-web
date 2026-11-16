@@ -45,7 +45,7 @@ const STATUS_MAP: Record<StatusType, StatusConfig> = {
     dot: true
   },
   DISBURSED: {
-    label: "Paid", // Will be overridden for ITEM type
+    label: "Disbursed", // Will be overridden for ITEM type
     className: "bg-green-500/10 border-green-500/30 text-green-600",
     dot: true
   },
@@ -147,7 +147,7 @@ export function StatusBadge({ status, prizeType, className, size = "md" }: Statu
   // Override DISBURSED label based on prize type
   let label = config.label;
   if (statusUpper === "DISBURSED" && prizeType) {
-    label = prizeType === "CASH" ? "Paid" : "Collected";
+    label = prizeType === "CASH" ? "Disbursed" : "Collected";
   }
   
   return (

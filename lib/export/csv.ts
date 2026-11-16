@@ -11,7 +11,7 @@
 export interface CsvColumn {
   key: string;
   label: string;
-  format?: (value: unknown) => string;
+  format?: (value: unknown, row?: Record<string, unknown>) => string;
 }
 
 export interface CsvOptions {
@@ -58,7 +58,7 @@ export function generateCsv(options: CsvOptions): string {
     return columns
       .map((col) => {
         const value = row[col.key];
-        const formatted = col.format ? col.format(value) : value;
+        const formatted = col.format ? col.format(value, row) : value;
         return escapeCsvCell(formatted);
       })
       .join(",");

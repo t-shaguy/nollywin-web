@@ -20,6 +20,7 @@ import {
   type WinnerRow, 
   type RedemptionRow 
 } from "@/lib/api/admin-winners";
+import { getRaffleReport } from "@/lib/api/admin";
 import {
   DataTableContainer,
   DataTableHeader,
@@ -33,12 +34,23 @@ import {
 } from "@/components/ui/data-table";
 import { StatusBadge, AwaitingApprovalBadge, TypeBadge } from "@/components/ui/status-badge";
 import { formatDate, formatDateTime } from "@/lib/utils/date-format";
+import { getWinnerStatusLabel, getStatusFilterLabel, type WinnerStatus, type PrizeType } from "@/lib/utils/winner-status";
 
 type TabType = "winners" | "redemptions";
+
+interface DrawOption {
+  id: string;
+  raffleCode: string;
+  prizeName: string;
+}
 
 export default function WinnersPage() {
   const [activeTab, setActiveTab] = useState<TabType>("winners");
   const [showPrintView, setShowPrintView] = useState(false);
+
+  // Draws list for filter
+  const [draws, setDraws] = useState<DrawOption[]>([]);
+  const [drawsLoading, setDrawsLoading] = useState(true);
 
   // Winners state
   const [winners, setWinners] = useState<WinnerRow[]>([]);
@@ -137,6 +149,26 @@ export default function WinnersPage() {
     loadWinners();
   };
 
+  // Load draws for filter
+  const loadDraws = async () => {
+    try {
+      setDrawsLoading(true);
+      const response = await getRaffleReport({ size: 1000 });
+      if (Array.isArray(response.entries)) {
+        const drawOptions: DrawOption[] = response.entries.map((entry: any) => ({
+          id: String(entry.raffleId || entry.id || ""),
+          raffleCode: entry.raffleCode || "",
+          prizeName: entry.prizeName || "",
+        }));
+        setDraws(drawOptions);
+      }
+    } catch (err) {
+      console.error("Error loading draws:", err);
+    } finally {
+      setDrawsLoading(false);
+    }
+  };
+
   // Load winners
   const loadWinners = async () => {
     try {
@@ -181,6 +213,7 @@ export default function WinnersPage() {
 
   // Load winners on mount and when page/filters change
   useEffect(() => {
+    loadDraws(); // Load draws once on mount
     if (activeTab === "winners") {
       loadWinners();
     }
@@ -219,11 +252,18 @@ export default function WinnersPage() {
     const config = getReportConfig("winners");
     if (!config) return null;
 
+    const selectedDraw = winnersFilters.drawId 
+      ? draws.find(d => d.id === winnersFilters.drawId)
+      : null;
+    const drawLabel = selectedDraw 
+      ? `${selectedDraw.raffleCode} · ${selectedDraw.prizeName}`
+      : "All draws";
+
     return (
       <PrintView
         title="Winners Report"
         filters={{
-          "Draw ID": winnersFilters.drawId || "Any",
+          "Draw": drawLabel,
           "Status": winnersFilters.status || "All",
           "Prize Type": winnersFilters.prizeType || "All",
           "Search": winnersFilters.search || "None",
@@ -242,11 +282,18 @@ export default function WinnersPage() {
     const config = getReportConfig("redemptions");
     if (!config) return null;
 
+    const selectedDraw = redemptionsFilters.drawId 
+      ? draws.find(d => d.id === redemptionsFilters.drawId)
+      : null;
+    const drawLabel = selectedDraw 
+      ? `${selectedDraw.raffleCode} · ${selectedDraw.prizeName}`
+      : "All draws";
+
     return (
       <PrintView
         title="Redemptions Report"
         filters={{
-          "Draw ID": redemptionsFilters.drawId || "Any",
+          "Draw": drawLabel,
           "Type": redemptionsFilters.redeemType || "All",
           "Status": redemptionsFilters.status || "All",
           "Search": redemptionsFilters.search || "None",
@@ -314,16 +361,22 @@ export default function WinnersPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <label className="text-xs font-medium mb-1.5 block">Draw ID</label>
-                <input
-                  type="text"
+                <label className="text-xs font-medium mb-1.5 block">Draw</label>
+                <select
                   value={winnersFilters.drawId}
                   onChange={(e) =>
                     setWinnersFilters({ ...winnersFilters, drawId: e.target.value })
                   }
-                  placeholder="Enter draw ID"
                   className="w-full px-3 h-8 text-[13px] rounded border border-border bg-background"
-                />
+                  disabled={drawsLoading}
+                >
+                  <option value="">All draws</option>
+                  {draws.map((draw) => (
+                    <option key={draw.id} value={draw.id}>
+                      {draw.raffleCode} · {draw.prizeName}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -336,9 +389,9 @@ export default function WinnersPage() {
                   className="w-full px-3 h-8 text-[13px] rounded border border-border bg-background"
                 >
                   <option value="">All</option>
-                  <option value="SELECTED">Selected</option>
-                  <option value="REDEEMED">Redeemed</option>
-                  <option value="DISBURSED">Disbursed</option>
+                  <option value="SELECTED">{getStatusFilterLabel("SELECTED")}</option>
+                  <option value="REDEEMED">{getStatusFilterLabel("REDEEMED")}</option>
+                  <option value="DISBURSED">{getStatusFilterLabel("DISBURSED")}</option>
                 </select>
               </div>
 
@@ -585,16 +638,22 @@ export default function WinnersPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <label className="text-xs font-medium mb-1.5 block">Draw ID</label>
-                <input
-                  type="text"
+                <label className="text-xs font-medium mb-1.5 block">Draw</label>
+                <select
                   value={redemptionsFilters.drawId}
                   onChange={(e) =>
                     setRedemptionsFilters({ ...redemptionsFilters, drawId: e.target.value })
                   }
-                  placeholder="Enter draw ID"
                   className="w-full px-3 h-8 text-[13px] rounded border border-border bg-background"
-                />
+                  disabled={drawsLoading}
+                >
+                  <option value="">All draws</option>
+                  {draws.map((draw) => (
+                    <option key={draw.id} value={draw.id}>
+                      {draw.raffleCode} · {draw.prizeName}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -622,8 +681,8 @@ export default function WinnersPage() {
                   className="w-full px-3 h-8 text-[13px] rounded border border-border bg-background"
                 >
                   <option value="">All</option>
-                  <option value="REDEEMED">Redeemed</option>
-                  <option value="DISBURSED">Disbursed</option>
+                  <option value="REDEEMED">{getStatusFilterLabel("REDEEMED")}</option>
+                  <option value="DISBURSED">{getStatusFilterLabel("DISBURSED")}</option>
                 </select>
               </div>
 
@@ -698,7 +757,7 @@ export default function WinnersPage() {
                     <DataTableHead align="right">Amount</DataTableHead>
                     <DataTableHead>Status</DataTableHead>
                     <DataTableHead>Redeemed on</DataTableHead>
-                    <DataTableHead>Paid/Collected on</DataTableHead>
+                    <DataTableHead>Disbursed/Collected on</DataTableHead>
                   </DataTableRow>
                 </DataTableHeader>
                 <DataTableBody>

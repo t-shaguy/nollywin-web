@@ -22,6 +22,7 @@ import {
   type RedemptionRow,
 } from "@/lib/api/admin-winners";
 import { CsvColumn } from "./csv";
+import { getWinnerStatusLabel, type WinnerStatus } from "@/lib/utils/winner-status";
 
 export type ReportKey =
   | "audit-log"
@@ -336,11 +337,23 @@ export const REPORT_CONFIGS: Record<ReportKey, ReportConfig> = {
       { key: "cashAmount", label: "Cash Amount" },
       { key: "rankPosition", label: "Rank" },
       { key: "points", label: "Points" },
-      { key: "status", label: "Status" },
+      { 
+        key: "status", 
+        label: "Status",
+        format: (value: unknown, row?: Record<string, unknown>) => {
+          if (typeof value !== "string") return String(value);
+          const prizeType = row?.prizeType as "CASH" | "ITEM" | undefined;
+          return getWinnerStatusLabel(value as WinnerStatus, prizeType);
+        }
+      },
       { key: "pendingAction", label: "Pending Action" },
       { key: "selectedAt", label: "Selected At", format: formatDateTimeLagos },
       { key: "redeemedAt", label: "Redeemed At", format: formatDateTimeLagos },
-      { key: "fulfilledAt", label: "Fulfilled At", format: formatDateTimeLagos },
+      { 
+        key: "fulfilledAt", 
+        label: "Disbursed/Collected At", 
+        format: formatDateTimeLagos 
+      },
     ],
   },
 
@@ -371,9 +384,21 @@ export const REPORT_CONFIGS: Record<ReportKey, ReportConfig> = {
       { key: "prizeName", label: "Prize Name" },
       { key: "redeemType", label: "Type" },
       { key: "cashAmount", label: "Cash Amount" },
-      { key: "status", label: "Status" },
+      { 
+        key: "status", 
+        label: "Status",
+        format: (value: unknown, row?: Record<string, unknown>) => {
+          if (typeof value !== "string") return String(value);
+          const redeemType = row?.redeemType as "CASH" | "ITEM" | undefined;
+          return getWinnerStatusLabel(value as WinnerStatus, redeemType);
+        }
+      },
       { key: "redeemedAt", label: "Redeemed At", format: formatDateTimeLagos },
-      { key: "fulfilledAt", label: "Fulfilled At", format: formatDateTimeLagos },
+      { 
+        key: "fulfilledAt", 
+        label: "Disbursed/Collected At", 
+        format: formatDateTimeLagos 
+      },
     ],
   },
 };
