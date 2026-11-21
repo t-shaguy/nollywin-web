@@ -13,6 +13,28 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // Custom rules
+  {
+    rules: {
+      // Ban browser dialogs
+      "no-alert": "error",
+      "no-restricted-globals": [
+        "error",
+        {
+          name: "alert",
+          message: "Use toast notifications instead of alert(). Import useAdminToast or useToast.",
+        },
+        {
+          name: "confirm",
+          message: "Use ConfirmDialog component instead of confirm().",
+        },
+        {
+          name: "prompt",
+          message: "Use a proper input dialog instead of prompt().",
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

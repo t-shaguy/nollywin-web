@@ -8,7 +8,7 @@
 
 "use client";
 import { useState, useEffect } from "react";
-import { X, User, Trophy, Gift, Clock, CheckCircle, FileText, Image as ImageIcon, FileIcon, ExternalLink, Download } from "lucide-react";
+import { X, User, Trophy, Gift, Clock, CheckCircle, FileText, Image as ImageIcon, FileIcon, ExternalLink, Download, Eye, EyeOff, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -40,11 +40,13 @@ export function WinnerDetailDrawer({
   const [proofBlob, setProofBlob] = useState<Blob | null>(null);
   const [loadingProof, setLoadingProof] = useState(false);
   const [proofError, setProofError] = useState<{ status: number; message: string } | null>(null);
+  const [showAccountNumber, setShowAccountNumber] = useState(false);
 
   useEffect(() => {
     if (!open || !winnerId) {
       setDetail(null);
       setError(null);
+      setShowAccountNumber(false); // Reset account number visibility when drawer closes
       return;
     }
 
@@ -144,12 +146,34 @@ export function WinnerDetailDrawer({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // Humanize proof kind
+  // Humanize proof kind with specific labels
   const humanizeProofKind = (kind: string) => {
+    const labels: Record<string, string> = {
+      NAME_ENQUIRY: "Account-name check screenshot",
+      PAYOUT_RECEIPT: "Transfer receipt",
+      COLLECTION_PHOTO: "Collection photo",
+    };
+    
+    if (labels[kind]) return labels[kind];
+    
+    // Fallback: humanize SNAKE_CASE
     return kind
       .split("_")
-      .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(" ");
+  };
+
+  // Copy account number to clipboard
+  const handleCopyAccountNumber = () => {
+    if (!detail?.redemption?.accountNumber) return;
+    navigator.clipboard.writeText(detail.redemption.accountNumber);
+  };
+
+  // Mask account number: show ••••6789 format
+  const maskAccountNumber = (accountNumber: string) => {
+    if (!accountNumber || accountNumber.length < 4) return accountNumber;
+    const lastFour = accountNumber.slice(-4);
+    return `••••${lastFour}`;
   };
 
   // Get status badge color (use shared helper)
@@ -463,10 +487,10 @@ export function WinnerDetailDrawer({
                         className="w-full"
                         size="sm"
                       >
-                        {detail.requires === "REDEEM_CASH" && "Redeem (CASH)"}
-                        {detail.requires === "REDEEM_ITEM" && "Redeem (ITEM)"}
-                        {detail.requires === "FULFIL_CASH" && "Fulfil (CASH)"}
-                        {detail.requires === "FULFIL_ITEM" && "Fulfil (ITEM)"}
+                        {detail.requires === "REDEEM_CASH" && "Record bank details"}
+                        {detail.requires === "REDEEM_ITEM" && "Record delivery details"}
+                        {detail.requires === "FULFIL_CASH" && "Record payout"}
+                        {detail.requires === "FULFIL_ITEM" && "Record handover"}
                       </Button>
                     </div>
                   )}
@@ -491,13 +515,35 @@ export function WinnerDetailDrawer({
                           <span className="text-muted-foreground">Account Name:</span>
                           <span className="font-medium">{detail.redemption.accountName || "—"}</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Account Number:</span>
-                          <span className="font-mono text-xs">
-                            {detail.redemption.accountNumber
-                              ? `****${detail.redemption.accountNumber.slice(-4)}`
-                              : "—"}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs">
+                              {detail.redemption.accountNumber
+                                ? showAccountNumber 
+                                  ? detail.redemption.accountNumber
+                                  : maskAccountNumber(detail.redemption.accountNumber)
+                                : "—"}
+                            </span>
+                            {detail.redemption.accountNumber && (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => setShowAccountNumber(!showAccountNumber)}
+                                  className="text-[10px] text-primary hover:underline"
+                                  type="button"
+                                >
+                                  {showAccountNumber ? "Hide" : "Show"}
+                                </button>
+                                <button
+                                  onClick={handleCopyAccountNumber}
+                                  className="text-[10px] text-primary hover:underline"
+                                  type="button"
+                                >
+                                  Copy
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         {detail.redemption.payoutReference && (
                           <div className="flex justify-between">

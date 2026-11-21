@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 
 interface AdminModalProps {
   open: boolean;
@@ -29,6 +30,7 @@ export function AdminModal({
   preventClose = false,
 }: AdminModalProps) {
   const [mounted, setMounted] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
@@ -41,10 +43,7 @@ export function AdminModal({
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (preventClose) {
-          // Show discard confirmation
-          if (confirm("You have unsaved changes. Discard them?")) {
-            onClose();
-          }
+          setShowDiscardConfirm(true);
         } else {
           onClose();
         }
@@ -94,17 +93,21 @@ export function AdminModal({
 
   const handleBackdropClick = () => {
     if (preventClose) {
-      if (confirm("You have unsaved changes. Discard them?")) {
-        onClose();
-      }
+      setShowDiscardConfirm(true);
     } else {
       onClose();
     }
   };
 
+  const handleConfirmDiscard = () => {
+    setShowDiscardConfirm(false);
+    onClose();
+  };
+
   const content = (
-    <AnimatePresence>
-      {open && (
+    <>
+      <AnimatePresence>
+        {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
           <motion.div
@@ -176,6 +179,18 @@ export function AdminModal({
         </div>
       )}
     </AnimatePresence>
+
+      <ConfirmDialog
+        open={showDiscardConfirm}
+        onClose={() => setShowDiscardConfirm(false)}
+        onConfirm={handleConfirmDiscard}
+        title="Discard changes?"
+        description="You have unsaved changes. Are you sure you want to close without saving?"
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        variant="danger"
+      />
+    </>
   );
 
   return createPortal(content, document.body);

@@ -92,6 +92,7 @@ export default function WinnersPage() {
   // Selected winner for detail drawer
   const [selectedWinnerId, setSelectedWinnerId] = useState<string | null>(null);
   const [selectedWinnerName, setSelectedWinnerName] = useState<string>("");
+  const [selectedRedeemDate, setSelectedRedeemDate] = useState<string | null>(null);
   const [showDetailDrawer, setShowDetailDrawer] = useState(false);
 
   // Action modals state
@@ -113,6 +114,7 @@ export default function WinnersPage() {
     setShowDetailDrawer(false);
     setSelectedWinnerId(null);
     setSelectedWinnerName("");
+    setSelectedRedeemDate(null);
   };
 
   // Handle action from detail drawer (redeem/fulfil)
@@ -123,6 +125,7 @@ export default function WinnersPage() {
     const winner = winners.find((w) => w.id === winnerId);
     setSelectedWinnerId(winnerId);
     setSelectedWinnerName(winner?.subscriberName || "Unknown");
+    setSelectedRedeemDate(winner?.redeemedAt || null);
     
     // Close detail drawer
     setShowDetailDrawer(false);
@@ -881,6 +884,7 @@ export default function WinnersPage() {
         onClose={() => setShowFulfilCashModal(false)}
         winnerId={selectedWinnerId || ""}
         winnerName={selectedWinnerName}
+        redeemDate={selectedRedeemDate}
         onSuccess={handleActionSuccess}
       />
 
@@ -889,6 +893,7 @@ export default function WinnersPage() {
         onClose={() => setShowFulfilItemModal(false)}
         winnerId={selectedWinnerId || ""}
         winnerName={selectedWinnerName}
+        redeemDate={selectedRedeemDate}
         onSuccess={handleActionSuccess}
       />
     </div>

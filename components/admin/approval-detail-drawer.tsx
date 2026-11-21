@@ -10,7 +10,7 @@
  */
 
 "use client";
-import { X, ChevronLeft, FileText, Download, CheckCircle, XCircle, FileIcon } from "lucide-react";
+import { X, ChevronLeft, FileText, Download, CheckCircle, XCircle, FileIcon, Eye, EyeOff, Copy } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -53,6 +53,7 @@ export function ApprovalDetailDrawer({
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [approvalNote, setApprovalNote] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
+  const [showAccountNumber, setShowAccountNumber] = useState(false);
   
   // File viewer state
   const [viewingFile, setViewingFile] = useState(false);
@@ -61,6 +62,43 @@ export function ApprovalDetailDrawer({
   const [fileContentType, setFileContentType] = useState("");
   const [loadingFile, setLoadingFile] = useState(false);
   const [fileError, setFileError] = useState<{ status: number; message: string } | null>(null);
+
+  // Helper: determine file label from request context
+  function getFileLabel(request: ChangeRequest): string {
+    const body = typeof request.requestBody === 'string' ? parseRequestBody(request.requestBody) : (request.requestBody || {});
+    
+    // REDEEM with bank account
+    if (request.action === "REDEEM" && body?.accountNumber) {
+      return "Account-name check screenshot";
+    }
+    
+    // FULFIL with payout reference (CASH)
+    if (request.action === "FULFIL" && body?.payoutReference) {
+      return "Transfer receipt";
+    }
+    
+    // FULFIL without payout reference (ITEM)
+    if (request.action === "FULFIL" && !body?.payoutReference) {
+      return "Collection photo";
+    }
+    
+    return "Attached file";
+  }
+
+  // Helper: mask account number
+  function maskAccountNumber(accountNumber: string): string {
+    if (!accountNumber || accountNumber.length < 4) return accountNumber;
+    const lastFour = accountNumber.slice(-4);
+    return `••••${lastFour}`;
+  }
+
+  // Helper: copy account number
+  function handleCopyAccountNumber() {
+    const body = typeof request?.requestBody === 'string' ? parseRequestBody(request.requestBody) : (request?.requestBody || {});
+    const accountNumber = body?.accountNumber;
+    if (!accountNumber) return;
+    navigator.clipboard.writeText(accountNumber);
+  }
 
   // File viewer handlers - use function declarations for hoisting
   function closeFileViewer() {
@@ -144,7 +182,7 @@ export function ApprovalDetailDrawer({
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
               <div>
-                <h3 className="text-sm font-semibold">Attached File</h3>
+                <h3 className="text-sm font-semibold">{getFileLabel(request)}</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">{fileName}</p>
               </div>
               <div className="flex items-center gap-2">
@@ -241,17 +279,34 @@ export function ApprovalDetailDrawer({
       .trim();
   };
 
-  // Mask account number (show last 4 digits)
-  const maskAccountNumber = (value: string): string => {
-    const str = String(value);
-    if (str.length <= 4) return str;
-    return "****" + str.slice(-4);
-  };
-
-  // Format field value
-  const formatValue = (key: string, value: any): string => {
+  // Format field value for display
+  const formatValue = (key: string, value: any): React.ReactNode => {
     if (key.toLowerCase().includes("accountnumber")) {
-      return maskAccountNumber(value);
+      // Show masked by default with Show/Copy buttons
+      const fullNumber = String(value);
+      return (
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs">
+            {showAccountNumber ? fullNumber : maskAccountNumber(fullNumber)}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowAccountNumber(!showAccountNumber)}
+              className="text-[10px] text-primary hover:underline"
+              type="button"
+            >
+              {showAccountNumber ? "Hide" : "Show"}
+            </button>
+            <button
+              onClick={handleCopyAccountNumber}
+              className="text-[10px] text-primary hover:underline"
+              type="button"
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+      );
     }
     if (typeof value === "boolean") return value ? "Yes" : "No";
     if (typeof value === "object") return JSON.stringify(value, null, 2);
@@ -411,7 +466,7 @@ export function ApprovalDetailDrawer({
             {/* File Attachment */}
             {request.hasFile && (
               <div>
-                <div className="text-xs text-muted-foreground mb-2">Attached file</div>
+                <div className="text-xs text-muted-foreground mb-2">{getFileLabel(request)}</div>
                 <button
                   onClick={handleViewFile}
                   disabled={loadingFile}

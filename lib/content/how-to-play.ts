@@ -15,7 +15,7 @@ export interface HowToPlayStep {
 export const HOW_TO_PLAY_STEPS: HowToPlayStep[] = [
   {
     title: "Get a package",
-    description: "Choose a Daily, Weekly or Monthly package on the Packages page.",
+    description: "Buy a Daily, Weekly or Monthly package on the Packages page. Your package gives you tokens, and each game uses 1 token. Pay by card or, where it's available, with MTN airtime. You can hold one package at a time, so buy again when your tokens run out or your package ends.",
     linkText: "View packages",
     linkHref: "/store",
   },

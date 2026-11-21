@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Wallet, BarChart3, Users, Settings, LucideIcon } from "lucide-react";
+import { Wallet, BarChart3, Settings, LucideIcon } from "lucide-react";
 
 interface QuickAction {
   icon: LucideIcon;
@@ -8,17 +8,16 @@ interface QuickAction {
 }
 
 // NOTE: /tokens and /stats aren't built yet (Payments Day 16-17, My Stats Day 20-21 on the
-// tracker) — routing there now for when they exist. /refer-earn and /profile already work.
+// tracker) — routing there now for when they exist. /profile already works.
 const ACTIONS: QuickAction[] = [
   { icon: Wallet, label: "Recharge", href: "/tokens" },
   { icon: BarChart3, label: "My Stats", href: "/stats" },
-  { icon: Users, label: "Refer", href: "/refer-earn" },
   { icon: Settings, label: "Settings", href: "/profile" },
 ];
 
 export function QuickActions() {
   return (
-    <div className="grid grid-cols-4 gap-3">
+    <div className="grid grid-cols-3 gap-3">
       {ACTIONS.map((action) => (
         <Link
           key={action.label}

@@ -2,6 +2,7 @@
 import { usePathname } from "next/navigation";
 import { AdminAuthGuard } from "@/components/layout/admin-auth-guard";
 import { AdminShell } from "@/components/layout/admin-shell";
+import { AdminToastProvider } from "@/components/admin/toast";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -13,9 +14,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="theme-admin">
-      <AdminAuthGuard>
-        <AdminShell>{children}</AdminShell>
-      </AdminAuthGuard>
+      <AdminToastProvider>
+        <AdminAuthGuard>
+          <AdminShell>{children}</AdminShell>
+        </AdminAuthGuard>
+      </AdminToastProvider>
     </div>
   );
 }

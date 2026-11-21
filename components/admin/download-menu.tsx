@@ -12,6 +12,8 @@ import { Download, FileText, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ReportKey, getReportConfig } from "@/lib/export/report-config";
 import { downloadCsv } from "@/lib/export/csv";
+import { useAdminToast } from "@/components/admin/toast";
+import { adminLogger } from "@/lib/utils/admin-response-handler";
 
 interface DownloadMenuProps {
   reportKey: ReportKey;
@@ -25,6 +27,7 @@ export function DownloadMenu({ reportKey, filters = {}, disabled = false, onPrin
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const toast = useAdminToast();
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -79,12 +82,14 @@ export function DownloadMenu({ reportKey, filters = {}, disabled = false, onPrin
 
       // Show warning if we hit the limit
       if (hitLimit) {
-        alert("Exported the first 10,000 rows. Apply filters to export a smaller subset.");
+        toast.warning("Export limited to 10,000 rows", "Apply filters to export a smaller subset.");
+      } else {
+        toast.success("Export complete", `Downloaded ${data.length} rows`);
       }
     } catch (err) {
-      console.error("CSV download error:", err);
+      adminLogger.error("CSV download failed", err);
       setError(err instanceof Error ? err.message : "Failed to download CSV");
-      alert(`Download failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+      toast.error("Download failed", err instanceof Error ? err.message : "An error occurred");
     } finally {
       setDownloading(false);
     }
